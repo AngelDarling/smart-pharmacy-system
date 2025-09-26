@@ -1,11 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=vietnamese');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --primary: #22c55e; /* xanh lá đậm hơn */
+  --primary-soft: #a7f3d0; /* pastel nhạt */
+  --primary-dark: #16a34a;
+  --text: #0f172a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --bg: #f5f7fb;
+
+  color-scheme: light;
+  color: var(--text);
+  background-color: var(--bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,10 +34,26 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+}
+
+/* Form controls light theme */
+input, select, textarea {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+input::placeholder, textarea::placeholder { color: #9ca3af; }
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
 }
 
 h1 {
@@ -36,33 +62,46 @@ h1 {
 }
 
 button {
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--primary);
+  color: #ffffff;
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--primary-dark);
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Palette xanh lá pastel cho admin */
+.btn-primary { background: var(--primary); color: #ffffff; border-color: var(--primary-dark); }
+
+.card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
 }
+
+.admin-header {
+  background: #ecfeff;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Tables */
+table { border-collapse: collapse; background: #fff; }
+th, td { padding: 12px 14px; border: 1px solid var(--border); }
+th { background: #dcfce7; color: #065f46; font-weight: 600; }
+
+/* Headings */
+h1 { font-size: 28px; font-weight: 700; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 18px; font-weight: 600; }
