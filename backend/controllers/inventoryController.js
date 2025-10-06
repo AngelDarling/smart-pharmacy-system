@@ -1,6 +1,7 @@
 import { z } from "zod";
 import InventoryTransaction from "../models/InventoryTransaction.js";
 import Product from "../models/Product.js";
+import Inventory from "../models/Inventory.js";
 
 const txSchema = z.object({
   productId: z.string(),
@@ -39,6 +40,16 @@ export async function createTx(req, res, next) {
 export async function listByProduct(req, res) {
   const items = await InventoryTransaction.find({ productId: req.params.productId }).sort({ createdAt: -1 });
   res.json(items);
+}
+
+export async function nearExpiry(req, res) {
+  const days = Math.max(1, parseInt(req.query.days || "30", 10));
+  const threshold = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  const batches = await Inventory.find({ expiryDate: { $exists: true, $ne: null, $lte: threshold } })
+    .sort({ expiryDate: 1 })
+    .limit(200)
+    .lean();
+  res.json(batches);
 }
 
 

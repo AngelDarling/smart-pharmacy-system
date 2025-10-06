@@ -4,7 +4,7 @@ import api from "../api/client.js";
 export default function CategorySidebar({ selected, onSelect }) {
   const [cats, setCats] = useState([]);
   useEffect(() => {
-    api.get("/categories").then((res) => setCats(res.data));
+    api.get("/categories?q=&page=1&limit=100").then((res) => setCats(res.data.items || res.data));
   }, []);
   return (
     <aside style={{ width: 240, padding: 12 }}>

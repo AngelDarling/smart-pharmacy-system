@@ -1,5 +1,7 @@
 import { z } from "zod";
 import Product from "../models/Product.js";
+import Category from "../models/Category.js";
+import xlsx from "xlsx";
 
 const upsertSchema = z.object({
   name: z.string().min(2),
@@ -40,7 +42,13 @@ export async function list(req, res) {
     Product.countDocuments(filter)
   ]);
 
-  res.json({ items, page, limit, total });
+  // Default image/icon fallback
+  const withImage = items.map((p) => ({
+    ...p.toObject(),
+    imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"]
+  }));
+
+  res.json({ items: withImage, page, limit, total });
 }
 
 export async function getBySlug(req, res) {
@@ -74,6 +82,54 @@ export async function remove(req, res) {
   const doc = await Product.findByIdAndDelete(req.params.id);
   if (!doc) return res.status(404).json({ message: "Không tìm thấy" });
   res.json({ success: true });
+}
+
+export async function bulkImport(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ message: "Thiếu file" });
+    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+
+    const created = [];
+    for (const r of rows) {
+      const name = String(r.name || r.tên || r.Ten || "").trim();
+      if (!name) continue;
+      const slug = String(r.slug || name).toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+      const catName = String(r.category || r.danh_muc || "").trim();
+      let categoryId = null;
+      if (catName) {
+        const cat = await Category.findOne({ name: new RegExp(`^${catName}$`, "i") });
+        categoryId = cat?._id;
+      }
+      const price = Number(r.price || r.gia || 0) || 0;
+      const sku = String(r.sku || r.SKU || "").trim() || undefined;
+      const barcode = String(r.barcode || r.mabarcode || "").trim() || undefined;
+      const unit = String(r.unit || r.don_vi || "hộp");
+      const image = String(r.image || r.imageUrl || r.anh || "").trim();
+
+      const doc = await Product.create({ name, slug, categoryId, price, sku, barcode, unit, imageUrls: image ? [image] : [] });
+      created.push(doc);
+    }
+    res.json({ success: true, created: created.length });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function exportTemplate(req, res) {
+  const data = [
+    { name: "Paracetamol 500mg", category: "Thuốc giảm đau", price: 15000, unit: "vỉ", sku: "PCM500", barcode: "8935000000001" },
+    { name: "Siro ho trẻ em", category: "Thuốc ho", price: 35000, unit: "chai", sku: "SIROHO", barcode: "8935000000002" },
+    { name: "Sữa rửa mặt dịu nhẹ", category: "Mỹ phẩm", price: 89000, unit: "tuýp", sku: "SRM-DN", barcode: "8935000000003" }
+  ];
+  const ws = xlsx.utils.json_to_sheet(data);
+  const wb = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(wb, ws, "Products");
+  const buf = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", 'attachment; filename="product_template.xlsx"');
+  res.send(buf);
 }
 
 

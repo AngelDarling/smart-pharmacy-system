@@ -17,8 +17,9 @@ export default function useAuth() {
   }, []);
 
   function logout() {
+    localStorage.setItem("flash", "logout_success");
     localStorage.removeItem("token");
-    window.location.href = "/";
+    window.location.href = "/admin/login";
   }
 
   return { user, loading, logout };

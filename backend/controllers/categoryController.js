@@ -22,7 +22,12 @@ export async function list(req, res) {
     Category.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
     Category.countDocuments(filter)
   ]);
-  res.json({ items, total, page, limit });
+  // Ensure default icon if missing
+  const withIcon = items.map((c) => ({
+    ...c.toObject(),
+    iconUrl: c.iconUrl || "/uploads/default.png"
+  }));
+  res.json({ items: withIcon, total, page, limit });
 }
 
 export async function tree(req, res) {

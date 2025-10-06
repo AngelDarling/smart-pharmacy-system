@@ -1,5 +1,7 @@
 import axios from "axios";
 
+// Lightweight axios client; interceptors can be added later if needed
+
 const api = axios.create({ baseURL: "/api" });
 
 api.interceptors.request.use((config) => {

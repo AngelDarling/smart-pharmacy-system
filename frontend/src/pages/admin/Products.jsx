@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api, { uploadFile } from "../../api/client.js";
+import { showSuccess, showError, confirm } from "../../api/alert.js";
 
 export default function AdminProducts() {
   const [items, setItems] = useState([]);
@@ -18,31 +19,90 @@ export default function AdminProducts() {
 
   function load() {
     api.get("/products").then((res) => setItems(res.data.items));
-    api.get("/categories").then((res) => setCats(res.data));
+    api.get("/categories?q=&page=1&limit=100").then((res) => setCats(res.data.items || res.data));
   }
   useEffect(load, []);
 
   async function create(e) {
     e.preventDefault();
-    if (editId) {
-      await api.put(`/products/${editId}`, form);
-    } else {
-      await api.post("/products", form);
+    try {
+      if (editId) {
+        await api.put(`/products/${editId}`, form);
+        await showSuccess("Đã lưu sản phẩm");
+      } else {
+        await api.post("/products", form);
+        await showSuccess("Đã thêm sản phẩm");
+      }
+      setForm({ name: "", slug: "", categoryId: "", price: 0, attributes: {} });
+      setEditId("");
+      setOpen(false);
+      load();
+    } catch (err) {
+      showError(err?.response?.data?.message || "Không thể lưu sản phẩm");
     }
-    setForm({ name: "", slug: "", categoryId: "", price: 0, attributes: {} });
-    setEditId("");
-    load();
   }
   async function remove(id) {
-    await api.delete(`/products/${id}`);
-    load();
+    const r = await confirm({ title: "Xóa sản phẩm?", text: "Hành động này không thể hoàn tác", confirmText: "Xóa", cancelText: "Hủy" });
+    if (!r.isConfirmed) return;
+    try {
+      await api.delete(`/products/${id}`);
+      await showSuccess("Đã xóa sản phẩm");
+      load();
+    } catch (err) {
+      showError("Xóa thất bại");
+    }
   }
 
   return (
     <div>
       <h2>Sản phẩm</h2>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
         <button className="btn-primary" onClick={() => { setOpen(true); setEditId(""); setForm({ name: "", slug: "", categoryId: "", price: 0, attributes: {} }); }}>Thêm sản phẩm</button>
+        <button className="btn-primary" onClick={async () => {
+          try {
+            const res = await api.get("/products/template", { responseType: "blob" });
+            const blob = new Blob([res.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "product_template.xlsx";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          } catch (err) {
+            showError("Không thể tải mẫu. Hãy đảm bảo backend đang chạy và bạn đã đăng nhập.");
+          }
+        }}>Xuất mẫu Excel</button>
+        <label className="btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          Nhập CSV/Excel
+          <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style={{ display: "none" }} onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append("file", file);
+            try {
+              const res = await api.post("/products/bulk-import", formData, { headers: { "Content-Type": "multipart/form-data" } });
+              await showSuccess(`Đã nhập ${res.data.created} sản phẩm`);
+              load();
+            } catch (err) {
+              showError(err?.response?.data?.message || "Nhập khẩu thất bại");
+            } finally {
+              e.target.value = "";
+            }
+          }} />
+        </label>
+        <select onChange={(e) => {
+          const val = e.target.value;
+          api.get(`/products?categoryId=${val || ""}`).then((res) => setItems(res.data.items));
+        }}>
+          <option value="">Lọc theo danh mục</option>
+          {cats.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+        </select>
+        <input placeholder="Tìm kiếm" onChange={(e) => {
+          const q = e.target.value.trim();
+          api.get(`/products?q=${encodeURIComponent(q)}`).then((res) => setItems(res.data.items));
+        }} />
       </div>
 
       {open && (
@@ -58,7 +118,6 @@ export default function AdminProducts() {
                   {cats.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
                 <input type="number" placeholder="Giá" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} required />
-                <input placeholder="Ảnh (URL)" value={form.imageUrls?.[0] || ""} onChange={(e) => setForm({ ...form, imageUrls: [e.target.value] })} />
                 <div>
                   <label>Tải ảnh lên</label>
                   <input type="file" accept="image/*" onChange={async (e) => {
@@ -68,6 +127,9 @@ export default function AdminProducts() {
                     setForm({ ...form, imageUrls: [url] });
                   }} />
                 </div>
+                <input placeholder="SKU" value={form.sku || ""} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+                <input placeholder="Barcode" value={form.barcode || ""} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
+                <input placeholder="Đơn vị" value={form.unit || "hộp"} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
               </div>
 
               {/* Thuộc tính động theo danh mục */}
@@ -157,7 +219,7 @@ export default function AdminProducts() {
         </div>
       )}
       <table width="100%" border="1" cellPadding="6">
-        <thead><tr><th>Ảnh</th><th>Tên</th><th>Danh mục</th><th>Giá</th><th>Tồn</th><th></th></tr></thead>
+        <thead><tr><th>Ảnh</th><th>Tên</th><th>Danh mục</th><th>Giá</th><th>Tồn</th><th>SKU</th><th>Barcode</th><th></th></tr></thead>
         <tbody>
           {items.map(p => (
             <tr key={p._id}>
@@ -166,8 +228,10 @@ export default function AdminProducts() {
               <td>{cats.find(c => c._id === p.categoryId)?.name || p.categoryId}</td>
               <td>{p.price?.toLocaleString()}</td>
               <td>{p.stockOnHand}</td>
+              <td>{p.sku || "-"}</td>
+              <td>{p.barcode || "-"}</td>
               <td>
-                <button onClick={() => { setEditId(p._id); setForm({ name: p.name, slug: p.slug, categoryId: p.categoryId?.toString?.() || p.categoryId, price: p.price, imageUrls: p.imageUrls || [], attributes: p.attributes || {} }); }}>Sửa</button>
+                <button onClick={() => { setEditId(p._id); setForm({ name: p.name, slug: p.slug, categoryId: p.categoryId?.toString?.() || p.categoryId, price: p.price, imageUrls: p.imageUrls || [], attributes: p.attributes || {}, sku: p.sku || "", barcode: p.barcode || "", unit: p.unit || "hộp" }); setOpen(true); }}>Sửa</button>
                 <button onClick={() => remove(p._id)} style={{ marginLeft: 6 }}>Xóa</button>
               </td>
             </tr>

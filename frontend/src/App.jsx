@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import Home from "./pages/Home.jsx";
+import Landing from "./pages/Landing.jsx";
 import ProductDetail from "./pages/ProductDetail.jsx";
 import AdminLayout from "./pages/admin/Layout.jsx";
 import AdminCategories from "./pages/admin/Categories.jsx";
@@ -11,24 +12,9 @@ import AdminLogin from "./pages/admin/Login.jsx";
 import AdminDashboard from "./pages/admin/Dashboard.jsx";
 import AdminSuppliers from "./pages/admin/Suppliers.jsx";
 import AdminGoodsReceipts from "./pages/admin/GoodsReceipts.jsx";
+import Cart from "./pages/Cart.jsx";
 
-function Landing() {
-  const [message, setMessage] = useState("Loading...");
-
-  useEffect(() => {
-  axios.get("/api/hello")
-    .then((res) => setMessage(res.data.message))
-    .catch(() => setMessage("⚠️ Lỗi kết nối API"));
-}, []);
-
-  return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>💊 Smart Pharmacy System (Frontend)</h1>
-      <p>API Response từ Backend:</p>
-      <h2 style={{ color: "green" }}>{message}</h2>
-    </div>
-  );
-}
+// Landing move to its own file with full storefront sections
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -119,11 +105,16 @@ function App() {
   return (
     <>
       {!isAdminRoute && (
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <nav style={{ display: "flex", gap: 12, padding: 12 }}>
-            <Link to="/">Trang chủ</Link>
-            <Link to="/login">Đăng nhập</Link>
-            <Link to="/register">Đăng ký</Link>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12 }}>
+            <Link to="/" style={{ fontWeight: 700, color: "#065f46" }}>Smart Pharmacy</Link>
+            <div style={{ display: "flex", gap: 12 }}>
+              <Link to="/">Trang chủ</Link>
+              <Link to="/catalog">Sản phẩm</Link>
+              <Link to="/cart">Giỏ hàng</Link>
+              <Link to="/login">Đăng nhập</Link>
+              <Link to="/register">Đăng ký</Link>
+            </div>
           </nav>
         </div>
       )}
@@ -131,6 +122,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/catalog" element={<Home />} />
         <Route path="/p/:slug" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/admin/login" element={<AdminLogin />} />

@@ -3,9 +3,12 @@ import api, { uploadFile } from "../../api/client.js";
 
 export default function AdminCategories() {
   const [items, setItems] = useState([]);
+  const [allCats, setAllCats] = useState([]);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [parentId, setParentId] = useState("");
   const [iconUrl, setIconUrl] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [editId, setEditId] = useState("");
   const [open, setOpen] = useState(false);
   async function onIconChange(e) {
@@ -32,6 +35,8 @@ export default function AdminCategories() {
       setItems(res.data.items || []);
       setTotal(res.data.total || 0);
     });
+    // load all for parent select
+    api.get(`/categories?q=&page=1&limit=100`).then((res) => setAllCats(res.data.items || []));
   }
   useEffect(load, [q, page]);
 
@@ -41,11 +46,11 @@ export default function AdminCategories() {
     try {
       setSaving(true);
       if (editId) {
-        await api.put(`/categories/${editId}`, { name, slug, iconUrl });
+        await api.put(`/categories/${editId}`, { name, slug, iconUrl, parentId: parentId || null, isActive });
       } else {
-        await api.post("/categories", { name, slug, parentId: null, iconUrl });
+        await api.post("/categories", { name, slug, parentId: parentId || null, iconUrl, isActive });
       }
-      setName(""); setSlug(""); setIconUrl("");
+      setName(""); setSlug(""); setIconUrl(""); setParentId(""); setIsActive(true);
       setEditId("");
       setOpen(false);
       load();
@@ -66,16 +71,23 @@ export default function AdminCategories() {
       <h2>Danh mục</h2>
       <div style={{ marginBottom: 12, display: "flex", gap: 12, alignItems: "center" }}>
         <input placeholder="Tìm theo tên..." value={q} onChange={(e) => { setPage(1); setQ(e.target.value); }} style={{ flex: 1 }} />
-        <button className="btn-primary" onClick={() => { setOpen(true); setEditId(""); setName(""); setSlug(""); setIconUrl(""); }}>Thêm danh mục</button>
+        <button className="btn-primary" onClick={() => { setOpen(true); setEditId(""); setName(""); setSlug(""); setIconUrl(""); setParentId(""); setIsActive(true); }}>Thêm danh mục</button>
       </div>
 
       {open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div className="card" style={{ width: 600, padding: 16, background: "#fff" }}>
+          <div className="card" style={{ width: 700, padding: 16, background: "#fff" }}>
             <h3>{editId ? "Sửa danh mục" : "Thêm danh mục"}</h3>
             <form onSubmit={create} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <input placeholder="Tên" value={name} onChange={(e) => { const v = e.target.value; setName(v); setSlug(slugify(v)); }} required />
               <input placeholder="Slug" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} required />
+              <select value={parentId} onChange={(e) => setParentId(e.target.value)}>
+                <option value="">--Thuộc danh mục lớn--</option>
+                {allCats.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Hiển thị
+              </label>
               <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 12 }}>
                 <input type="file" accept="image/*" onChange={onIconChange} />
                 {iconUrl && <img src={iconUrl} alt="preview" style={{ width: 56, height: 56, objectFit: "contain" }} />}
@@ -89,15 +101,17 @@ export default function AdminCategories() {
         </div>
       )}
       <table width="100%" border="1" cellPadding="6">
-        <thead><tr><th>Icon</th><th>Tên</th><th>Slug</th><th style={{ textAlign: "center" }}>Thao tác</th></tr></thead>
+        <thead><tr><th>Icon</th><th>Tên</th><th>Slug</th><th>Thuộc danh mục</th><th>Hiển thị</th><th style={{ textAlign: "center" }}>Thao tác</th></tr></thead>
         <tbody>
           {items.map(c => (
             <tr key={c._id}>
               <td style={{ textAlign: "center" }}>{c.iconUrl ? <img src={c.iconUrl} alt="" style={{ width: 36, height: 36, objectFit: "contain" }} /> : null}</td>
               <td>{c.name}</td>
               <td>{c.slug}</td>
+              <td>{allCats.find(x => x._id === (c.parentId || "").toString())?.name || (c.parentId ? c.parentId : "-")}</td>
+              <td>{c.isActive ? "Có" : "Không"}</td>
               <td style={{ textAlign: "center" }}>
-                <button onClick={() => { setEditId(c._id); setName(c.name); setSlug(c.slug); setIconUrl(c.iconUrl || ""); setOpen(true); }}>Sửa</button>
+                <button onClick={() => { setEditId(c._id); setName(c.name); setSlug(c.slug); setIconUrl(c.iconUrl || ""); setParentId(c.parentId || ""); setIsActive(!!c.isActive); setOpen(true); }}>Sửa</button>
                 <button onClick={() => remove(c._id)} style={{ marginLeft: 6 }}>Xóa</button>
               </td>
             </tr>

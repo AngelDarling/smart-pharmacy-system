@@ -7,6 +7,7 @@ import productRoutes from "./routes/products.js";
 import inventoryRoutes from "./routes/inventory.js";
 import supplierRoutes from "./routes/suppliers.js";
 import goodsReceiptRoutes from "./routes/goodsReceipts.js";
+import adminRoutes from "./routes/admin.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -25,6 +26,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/goods-receipts", goodsReceiptRoutes);
+app.use("/api/admin", adminRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });
@@ -33,6 +35,13 @@ app.get("/api/hello", (req, res) => {
 // ensure upload directory exists
 try {
   fs.mkdirSync("uploads", { recursive: true });
+} catch {}
+// write default images if not exists
+try {
+  const defCat = "uploads/default.png";
+  if (!fs.existsSync(defCat)) fs.writeFileSync(defCat, Buffer.from([]));
+  const defProd = "uploads/default.png";
+  if (!fs.existsSync(defProd)) fs.writeFileSync(defProd, Buffer.from([]));
 } catch {}
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
