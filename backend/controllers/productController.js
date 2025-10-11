@@ -38,15 +38,28 @@ export async function list(req, res) {
   const filter = text ? { $and: [q, { $text: { $search: text } }] } : q;
 
   const [items, total] = await Promise.all([
-    Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Product.find(filter).populate('categoryId', 'name slug').sort({ createdAt: -1 }).skip(skip).limit(limit),
     Product.countDocuments(filter)
   ]);
 
-  // Default image/icon fallback
-  const withImage = items.map((p) => ({
-    ...p.toObject(),
-    imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"]
-  }));
+  // Default image/icon fallback and add productType
+  const withImage = items.map((p) => {
+    const product = p.toObject();
+    
+    // Map category name to productType
+    const typeMap = {
+      'Thuốc': 'Drug',
+      'Dược mỹ phẩm': 'Cosmeceutical',
+      'Thiết bị y tế': 'MedicalDevice', 
+      'Thực phẩm chức năng': 'FunctionalFood'
+    };
+    
+    return {
+      ...product,
+      imageUrls: (product.imageUrls && product.imageUrls.length > 0) ? product.imageUrls : ["/uploads/default.png"],
+      productType: typeMap[product.categoryId?.name] || product.categoryId?.name || 'Unknown'
+    };
+  });
 
   res.json({ items: withImage, page, limit, total });
 }

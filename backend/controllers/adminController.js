@@ -1,10 +1,6 @@
 import Order from "../models/Order.js";
-import AuditLog from "../models/AuditLog.js";
 import Category from "../models/Category.js";
 import Product from "../models/Product.js";
-import InventoryTransaction from "../models/InventoryTransaction.js";
-import Inventory from "../models/Inventory.js";
-import GoodsReceipt from "../models/GoodsReceipt.js";
 
 function startOfDay(d) {
   const x = new Date(d);
@@ -34,7 +30,14 @@ export async function getAdminStats(req, res, next) {
     const sMonth = startOfMonth(now);
     const eMonth = endOfMonth(now);
 
-    const [todayOrders, monthOrders, recentActivities, lowStockCountAgg, todayGoodsReceipts, monthGoodsReceipts, dailySales, nearExpiry] = await Promise.all([
+    const [
+      todayOrders, 
+      monthOrders, 
+      dailySales,
+      totalProducts,
+      totalCategories,
+      lowStockProducts
+    ] = await Promise.all([
       Order.aggregate([
         { $match: { status: "completed", createdAt: { $gte: sToday, $lte: eToday } } },
         { $group: { _id: null, revenue: { $sum: "$totals.grand" }, count: { $sum: 1 } } }
@@ -43,17 +46,15 @@ export async function getAdminStats(req, res, next) {
         { $match: { status: "completed", createdAt: { $gte: sMonth, $lte: eMonth } } },
         { $group: { _id: null, revenue: { $sum: "$totals.grand" }, count: { $sum: 1 } } }
       ]),
-      AuditLog.find({}).sort({ createdAt: -1 }).limit(10).lean(),
-      Inventory.aggregate([{ $match: { quantity: { $lte: 5 } } }, { $count: "count" }]),
-      GoodsReceipt.countDocuments({ createdAt: { $gte: sToday, $lte: eToday } }),
-      GoodsReceipt.countDocuments({ createdAt: { $gte: sMonth, $lte: eMonth } }),
       Order.aggregate([
         { $match: { status: "completed", createdAt: { $gte: sMonth, $lte: eMonth } } },
         { $group: { _id: { $dayOfMonth: "$createdAt" }, total: { $sum: "$totals.grand" } } },
         { $project: { day: "$_id", total: 1, _id: 0 } },
         { $sort: { day: 1 } }
       ]),
-      Inventory.find({ expiryDate: { $exists: true, $ne: null, $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } }).sort({ expiryDate: 1 }).limit(10).lean()
+      Product.countDocuments({ isActive: true }),
+      Category.countDocuments({ isActive: true }),
+      Product.countDocuments({ isActive: true, stock: { $lte: 10 } }) // Low stock threshold
     ]);
 
     // Build an array for all days in month
@@ -64,28 +65,25 @@ export async function getAdminStats(req, res, next) {
     res.json({
       today: {
         revenue: Number(todayOrders[0]?.revenue || 0),
-        invoices: Number(todayOrders[0]?.count || 0),
-        goodsReceipts: Number(todayGoodsReceipts || 0)
+        invoices: Number(todayOrders[0]?.count || 0)
       },
       month: {
         revenue: Number(monthOrders[0]?.revenue || 0),
-        invoices: Number(monthOrders[0]?.count || 0),
-        goodsReceipts: Number(monthGoodsReceipts || 0)
-      },
-      inventory: {
-        lowStockCount: Number(lowStockCountAgg[0]?.count || 0)
+        invoices: Number(monthOrders[0]?.count || 0)
       },
       chart: {
         daily
       },
-      nearExpiry,
-      activities: recentActivities.map((a) => ({
-        id: String(a._id),
-        action: a.action,
-        entityType: a.entityType,
-        entityId: a.entityId,
-        createdAt: a.createdAt
-      }))
+      products: {
+        total: totalProducts
+      },
+      categories: {
+        total: totalCategories
+      },
+      inventory: {
+        lowStockCount: lowStockProducts
+      },
+      activities: [] // Placeholder for future activities
     });
   } catch (err) {
     next(err);
@@ -112,8 +110,8 @@ export async function seedSample(req, res, next) {
     const products = [
       { name: "Paracetamol 500mg", slug: "paracetamol-500mg", category: "Thuốc giảm đau", price: 15000, unit: "vỉ", sku: "PCM500", barcode: "8935000000001" },
       { name: "Siro ho trẻ em", slug: "siro-ho-tre-em", category: "Thuốc ho", price: 35000, unit: "chai", sku: "SIROHO", barcode: "8935000000002" },
-      { name: "Sữa rửa mặt dịu nhẹ", slug: "sua-rua-mat-diu-nhe", category: "Mỹ phẩm", price: 89000, unit: "tuýp", sku: "SRM-DN", barcode: "8935000000003" },
-      { name: "Sữa bột trẻ em 900g", slug: "sua-bot-tre-em-900g", category: "Sữa dinh dưỡng", price: 520000, unit: "hộp", sku: "SUA900", barcode: "8935000000004" }
+      { name: "Sua rua mat diu nhe", slug: "sua-rua-mat-diu-nhe", category: "Mỹ phẩm", price: 89000, unit: "tuýp", sku: "SRM-DN", barcode: "8935000000003" },
+      { name: "Sua bot tre em 900g", slug: "sua-bot-tre-em-900g", category: "Sữa dinh dưỡng", price: 520000, unit: "hộp", sku: "SUA900", barcode: "8935000000004" }
     ];
     const createdProducts = [];
     for (const p of products) {

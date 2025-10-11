@@ -19,10 +19,13 @@ export default function useCart() {
 
   function remove(id) { setItems((prev) => prev.filter((i) => i.id !== id)); }
   function clear() { setItems([]); }
+  function updateQty(id, newQty) {
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, qty: newQty } : i));
+  }
 
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
 
-  return { items, add, remove, clear, total };
+  return { items, add, remove, clear, updateQty, total };
 }
 
 

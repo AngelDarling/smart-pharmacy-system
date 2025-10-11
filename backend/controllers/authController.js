@@ -73,7 +73,18 @@ export async function login(req, res, next) {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        phone: user.phone,
+        address: user.address,
+        role: user.role,
+        permissions: user.permissions,
+        isActive: user.isActive,
+        employeeId: user.employeeId,
+        department: user.department,
+        position: user.position,
+        salary: user.salary,
+        hireDate: user.hireDate,
+        lastLogin: user.lastLogin,
+        loginCount: user.loginCount
       }
     });
   } catch (err) {
@@ -87,7 +98,18 @@ export async function me(req, res) {
     id: user._id,
     name: user.name,
     email: user.email,
-    role: user.role
+    phone: user.phone,
+    address: user.address,
+    role: user.role,
+    permissions: user.permissions,
+    isActive: user.isActive,
+    employeeId: user.employeeId,
+    department: user.department,
+    position: user.position,
+    salary: user.salary,
+    hireDate: user.hireDate,
+    lastLogin: user.lastLogin,
+    loginCount: user.loginCount
   });
 }
 

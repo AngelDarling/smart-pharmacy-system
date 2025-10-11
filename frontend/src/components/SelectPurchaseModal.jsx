@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart.js";
-import { showSuccess } from "../api/alert.js";
 
 export default function SelectPurchaseModal({ product, open, onClose }) {
   const { add } = useCart();
@@ -11,8 +10,10 @@ export default function SelectPurchaseModal({ product, open, onClose }) {
 
   function addToCart() {
     add(product, qty);
-    showSuccess("Đã thêm vào giỏ hàng");
-    onClose?.();
+    // Auto close after 2 seconds without showing SweetAlert2
+    setTimeout(() => {
+      onClose?.();
+    }, 2000);
   }
 
   function buyNow() {
@@ -24,7 +25,7 @@ export default function SelectPurchaseModal({ product, open, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
       <div className="card" style={{ width: 900, background: "#fff", padding: 20, position: "relative", borderRadius: 14 }}>
-        <button onClick={onClose} aria-label="Đóng" title="Đóng" style={{ position: "absolute", right: 10, top: 10, border: "none", background: "transparent", fontSize: 20, cursor: "pointer" }}>×</button>
+        <button onClick={onClose} aria-label="Đóng" title="Đóng" style={{ position: "absolute", right: 10, top: 10, border: "none", background: "transparent", fontSize: 20, cursor: "pointer", color: "#666" }}>×</button>
         <div style={{ display: "flex", gap: 20 }}>
           <img src={product.imageUrls?.[0] || "/vite.svg"} alt={product.name} style={{ width: 260, height: 260, objectFit: "cover", borderRadius: 12 }} />
           <div style={{ flex: 1 }}>

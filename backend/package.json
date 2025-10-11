@@ -5,7 +5,11 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "export": "node export-all.js",
+    "export-essential": "node export-essential-data.js",
+    "export-complete": "node export-database.js",
+    "export-sql": "node export-to-sql.js"
   },
   "keywords": [],
   "author": "",
@@ -18,9 +22,11 @@
     "express": "^5.1.0",
     "express-rate-limit": "^7.4.0",
     "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1",
     "mongoose": "^8.18.1",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },

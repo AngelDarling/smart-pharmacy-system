@@ -5,15 +5,23 @@ export default function useAuth() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setLoading(false);
-      return;
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setUser(null);
+        return;
+      }
+      const res = await api.get("/auth/me");
+      setUser(res.data);
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+      setUser(null);
     }
-    api.get("/auth/me")
-      .then((res) => setUser(res.data))
-      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchUser().finally(() => setLoading(false));
   }, []);
 
   function logout() {
@@ -22,7 +30,7 @@ export default function useAuth() {
     window.location.href = "/admin/login";
   }
 
-  return { user, loading, logout };
+  return { user, loading, logout, refreshUser: fetchUser };
 }
 
 

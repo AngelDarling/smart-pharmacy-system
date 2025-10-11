@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Lightweight axios client; interceptors can be added later if needed
 
-const api = axios.create({ baseURL: "/api" });
+const api = axios.create({ baseURL: "http://localhost:5000/api" });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");

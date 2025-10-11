@@ -25,4 +25,81 @@ export function requireRole(...roles) {
   };
 }
 
+// New granular permission middleware
+export function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Admin has all permissions
+    if (req.user.role === 'admin') {
+      return next();
+    }
+    
+    // Check if user has the specific permission
+    if (!req.user.permissions || !req.user.permissions.includes(permission)) {
+      return res.status(403).json({ 
+        message: `Không có quyền truy cập: ${permission}` 
+      });
+    }
+    
+    next();
+  };
+}
+
+// Multiple permissions (user needs ANY of the permissions)
+export function requireAnyPermission(...permissions) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Admin has all permissions
+    if (req.user.role === 'admin') {
+      return next();
+    }
+    
+    // Check if user has ANY of the permissions
+    const hasPermission = permissions.some(permission => 
+      req.user.permissions && req.user.permissions.includes(permission)
+    );
+    
+    if (!hasPermission) {
+      return res.status(403).json({ 
+        message: `Không có quyền truy cập. Cần một trong các quyền: ${permissions.join(', ')}` 
+      });
+    }
+    
+    next();
+  };
+}
+
+// All permissions (user needs ALL of the permissions)
+export function requireAllPermissions(...permissions) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Admin has all permissions
+    if (req.user.role === 'admin') {
+      return next();
+    }
+    
+    // Check if user has ALL of the permissions
+    const hasAllPermissions = permissions.every(permission => 
+      req.user.permissions && req.user.permissions.includes(permission)
+    );
+    
+    if (!hasAllPermissions) {
+      return res.status(403).json({ 
+        message: `Không có đủ quyền truy cập. Cần tất cả các quyền: ${permissions.join(', ')}` 
+      });
+    }
+    
+    next();
+  };
+}
+
 
