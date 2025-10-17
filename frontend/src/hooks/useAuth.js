@@ -27,7 +27,13 @@ export default function useAuth() {
   function logout() {
     localStorage.setItem("flash", "logout_success");
     localStorage.removeItem("token");
-    window.location.href = "/admin/login";
+    setUser(null);
+    // Redirect based on current location
+    if (window.location.pathname.startsWith("/admin")) {
+      window.location.href = "/admin/login";
+    } else {
+      window.location.href = "/";
+    }
   }
 
   return { user, loading, logout, refreshUser: fetchUser };

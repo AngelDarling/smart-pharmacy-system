@@ -23,8 +23,13 @@ import Profile from "./pages/admin/Profile.jsx";
 import Settings from "./pages/admin/Settings.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Cart from "./pages/Cart.jsx";
+import Checkout from "./pages/Checkout.jsx";
+import OrderDetail from "./pages/OrderDetail.jsx";
+import OrderHistory from "./pages/OrderHistory.jsx";
+import TestCheckout from "./pages/TestCheckout.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
 import Products from "./pages/Products.jsx";
+import AddressLookup from "./pages/AddressLookup.jsx";
 
 // Landing move to its own file with full storefront sections
 
@@ -682,6 +687,21 @@ function App() {
                 </div>
                 
                 <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 180, flexShrink: 0 }}>
+                  <Link to="/orders" style={{ 
+                    color: "white", 
+                    textDecoration: "none", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 6,
+                    padding: "8px 16px",
+                    borderRadius: 20,
+                    background: "rgba(255,255,255,0.1)",
+                    transition: "background 0.2s",
+                    fontSize: 14
+                  }}>
+                    <span style={{ fontSize: 16 }}>📋</span>
+                    <span>Đơn hàng</span>
+                  </Link>
                   <Link to="/login" style={{ 
                     color: "white", 
                     textDecoration: "none", 
@@ -928,8 +948,13 @@ function App() {
         <Route path="/catalog" element={<Products />} />
         <Route path="/products" element={<Products />} />
         <Route path="/p/:slug" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/search" element={<Products />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orders" element={<OrderHistory />} />
+        <Route path="/orders/:orderId" element={<OrderDetail />} />
+        <Route path="/test-checkout" element={<TestCheckout />} />
+        <Route path="/search" element={<Products />} />
+        <Route path="/tra-cuu/dia-chinh-moi" element={<AddressLookup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/admin/login" element={<AdminLogin />} />

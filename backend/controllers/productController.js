@@ -12,10 +12,11 @@ const upsertSchema = z.object({
   usage: z.string().optional(),
   imageUrls: z.array(z.string()).optional(),
   price: z.number().nonnegative(),
-  compareAtPrice: z.number().nonnegative().optional(),
+  costPrice: z.number().nonnegative().optional(),
   unit: z.string().optional(),
   sku: z.string().optional(),
   barcode: z.string().optional(),
+  totalStock: z.number().nonnegative().optional(),
   contraindications: z.string().optional(),
   dosage: z.string().optional(),
   ingredients: z.string().optional(),
@@ -32,13 +33,18 @@ export async function list(req, res) {
   if (req.query.categoryId) q.categoryId = req.query.categoryId;
   if (req.query.minPrice) q.price = { ...(q.price || {}), $gte: Number(req.query.minPrice) };
   if (req.query.maxPrice) q.price = { ...(q.price || {}), $lte: Number(req.query.maxPrice) };
-  if (req.query.active) q.isActive = req.query.active === "true";
+  if (req.query.isActive !== undefined) q.isActive = req.query.isActive === "true";
 
   const text = req.query.q?.trim();
   const filter = text ? { $and: [q, { $text: { $search: text } }] } : q;
 
   const [items, total] = await Promise.all([
-    Product.find(filter).populate('categoryId', 'name slug').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Product.find(filter)
+      .populate('categoryId', 'name slug')
+      .populate('brandId', 'name slug')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
     Product.countDocuments(filter)
   ]);
 
@@ -143,6 +149,81 @@ export async function exportTemplate(req, res) {
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", 'attachment; filename="product_template.xlsx"');
   res.send(buf);
+}
+
+// Update product stock
+export async function updateStock(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { totalStock, variantId, stockOnHand } = req.body;
+    
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    if (variantId) {
+      // Update specific variant stock
+      const variant = product.variants.id(variantId);
+      if (!variant) {
+        return res.status(404).json({ message: "Không tìm thấy biến thể sản phẩm" });
+      }
+      variant.stockOnHand = stockOnHand || 0;
+    } else {
+      // Update total stock
+      product.totalStock = totalStock || 0;
+    }
+
+    await product.save();
+    res.json(product);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Update product status
+export async function updateStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    
+    const product = await Product.findByIdAndUpdate(
+      id, 
+      { isActive }, 
+      { new: true }
+    );
+    
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+    
+    res.json(product);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Bulk update products
+export async function bulkUpdate(req, res, next) {
+  try {
+    const { productIds, updateData } = req.body;
+    
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ message: "Danh sách sản phẩm không hợp lệ" });
+    }
+
+    const result = await Product.updateMany(
+      { _id: { $in: productIds } },
+      { $set: updateData }
+    );
+
+    res.json({
+      message: `Đã cập nhật ${result.modifiedCount} sản phẩm`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 

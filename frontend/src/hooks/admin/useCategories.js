@@ -3,7 +3,7 @@
  * Handles CRUD operations for category management
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { message } from 'antd';
 import Swal from 'sweetalert2';
 import api from '../../api/client.js';
@@ -16,7 +16,7 @@ export const useCategories = () => {
   const [error, setError] = useState(null);
 
   // Fetch all categories
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -41,7 +41,7 @@ export const useCategories = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Create new category
   const createCategory = async (categoryData) => {
@@ -217,6 +217,9 @@ export const useCategories = () => {
 
   // Get tree data for TreeSelect
   const getTreeSelectData = (categories) => {
+    if (!categories || !Array.isArray(categories)) {
+      return [];
+    }
     return categories.map(category => ({
       value: category._id,
       title: category.name,

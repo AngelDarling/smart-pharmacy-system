@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authRequired, requireRole } from "../middlewares/auth.js";
-import { create, getBySlug, list, remove, update, bulkImport, exportTemplate } from "../controllers/productController.js";
+import { create, getBySlug, list, remove, update, bulkImport, exportTemplate, updateStock, updateStatus, bulkUpdate } from "../controllers/productController.js";
 import multer from "multer";
 
 const router = Router();
@@ -11,6 +11,9 @@ router.get("/slug/:slug", getBySlug);
 router.post("/", authRequired, requireRole("admin"), create);
 router.put("/:id", authRequired, requireRole("admin"), update);
 router.delete("/:id", authRequired, requireRole("admin"), remove);
+router.patch("/:id/stock", authRequired, requireRole("admin"), updateStock);
+router.patch("/:id/status", authRequired, requireRole("admin"), updateStatus);
+router.put("/bulk-update", authRequired, requireRole("admin"), bulkUpdate);
 router.post("/bulk-import", authRequired, requireRole("admin"), upload.single("file"), bulkImport);
 router.get("/template", authRequired, requireRole("admin"), exportTemplate);
 

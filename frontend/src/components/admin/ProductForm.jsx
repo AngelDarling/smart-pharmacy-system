@@ -1,6 +1,6 @@
 /**
- * Dynamic Product Form Component
- * Handles creation and editing of products with variants
+ * Simplified Product Form Component
+ * Focuses on essential product management features
  */
 
 import React, { useState, useEffect } from 'react';
@@ -9,384 +9,129 @@ import {
   Form,
   Input,
   Select,
+  TreeSelect,
   Button,
   Row,
   Col,
-  Upload,
   InputNumber,
   Switch,
-  Divider,
-  Card,
-  Space,
-  Tag,
   message,
-  Tabs,
-  Collapse,
-  Table,
-  Popconfirm
+  Upload,
+  Card,
+  Divider
 } from 'antd';
 import {
   PlusOutlined,
-  DeleteOutlined,
-  UploadOutlined,
-  MinusCircleOutlined
+  UploadOutlined
 } from '@ant-design/icons';
 import { useCategories } from '../../hooks/admin/useCategories';
 import { useProducts } from '../../hooks/admin/useProducts';
 
 const { TextArea } = Input;
 const { Option } = Select;
-const { Panel } = Collapse;
 
 const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) => {
   const [form] = Form.useForm();
-  const [productType, setProductType] = useState('');
-  const [variants, setVariants] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const { categories, getTreeSelectData, fetchCategories } = useCategories();
+  const { fetchBrands } = useProducts();
   const [brands, setBrands] = useState([]);
-  const [attributes, setAttributes] = useState([]);
-  const [activeSubstances, setActiveSubstances] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const { categories: categoriesData, getTreeSelectData } = useCategories();
-  const { fetchBrands, fetchAttributes, fetchActiveSubstances } = useProducts();
-
-  // Product type specific fields
-  const productTypeFields = {
-    Drug: [
-      { name: 'pharmacologicalClass', label: 'Nhóm dược lý', type: 'input', required: true },
-      { name: 'dosageForm', label: 'Dạng bào chế', type: 'select', required: true },
-      { name: 'administration.route', label: 'Đường dùng', type: 'input', required: true },
-      { name: 'administration.method', label: 'Cách dùng', type: 'textarea' },
-      { name: 'administration.frequency', label: 'Tần suất', type: 'input' },
-      { name: 'administration.duration', label: 'Thời gian', type: 'input' },
-      { name: 'activeSubstances', label: 'Hoạt chất', type: 'select', multiple: true },
-      { name: 'ingredients', label: 'Thành phần', type: 'textarea' },
-      { name: 'usage', label: 'Chỉ định', type: 'textarea' },
-      { name: 'contraindications', label: 'Chống chỉ định', type: 'textarea' },
-      { name: 'sideEffects', label: 'Tác dụng phụ', type: 'textarea' },
-      { name: 'drugInteractions', label: 'Tương tác thuốc', type: 'textarea' },
-      { name: 'warnings', label: 'Cảnh báo', type: 'textarea' },
-      { name: 'storage', label: 'Bảo quản', type: 'textarea' },
-      { name: 'registrationNumber', label: 'Số đăng ký', type: 'input' },
-      { name: 'manufacturer', label: 'Nhà sản xuất', type: 'input' },
-      { name: 'countryOfOrigin', label: 'Nước sản xuất', type: 'input' },
-      { name: 'isPrescriptionRequired', label: 'Cần kê đơn', type: 'switch' },
-      { name: 'atcCode', label: 'Mã ATC', type: 'input' }
-    ],
-    Cosmeceutical: [
-      { name: 'skinType', label: 'Loại da phù hợp', type: 'select', multiple: true },
-      { name: 'mainIngredients', label: 'Thành phần chính', type: 'select', multiple: true },
-      { name: 'benefits', label: 'Công dụng', type: 'select', multiple: true },
-      { name: 'usageInstructions', label: 'Hướng dẫn sử dụng', type: 'textarea' },
-      { name: 'applicationArea', label: 'Vùng áp dụng', type: 'input' },
-      { name: 'volume', label: 'Thể tích', type: 'inputNumber' },
-      { name: 'volumeUnit', label: 'Đơn vị thể tích', type: 'input' },
-      { name: 'formulationType', label: 'Loại công thức', type: 'input' },
-      { name: 'isHypoallergenic', label: 'Không gây dị ứng', type: 'switch' },
-      { name: 'isNonComedogenic', label: 'Không gây bít tắc', type: 'switch' },
-      { name: 'spfValue', label: 'Chỉ số SPF', type: 'inputNumber' },
-      { name: 'paRating', label: 'Chỉ số PA', type: 'select' }
-    ],
-    MedicalDevice: [
-      { name: 'deviceType', label: 'Loại thiết bị', type: 'input', required: true },
-      { name: 'intendedUse', label: 'Mục đích sử dụng', type: 'textarea' },
-      { name: 'riskClass', label: 'Phân loại rủi ro', type: 'select', required: true },
-      { name: 'manufacturer', label: 'Nhà sản xuất', type: 'input' },
-      { name: 'countryOfOrigin', label: 'Nước sản xuất', type: 'input' },
-      { name: 'warrantyPeriod', label: 'Thời gian bảo hành (tháng)', type: 'inputNumber' },
-      { name: 'technicalSpecifications', label: 'Thông số kỹ thuật', type: 'textarea' },
-      { name: 'certifications', label: 'Chứng nhận', type: 'select', multiple: true },
-      { name: 'isSterile', label: 'Vô trùng', type: 'switch' },
-      { name: 'isSingleUse', label: 'Dùng một lần', type: 'switch' },
-      { name: 'powerSource', label: 'Nguồn điện', type: 'input' }
-    ],
-    FunctionalFood: [
-      { name: 'targetAudience', label: 'Đối tượng sử dụng', type: 'select', multiple: true },
-      { name: 'nutritionalInfo', label: 'Thông tin dinh dưỡng', type: 'textarea' },
-      { name: 'healthBenefits', label: 'Lợi ích sức khỏe', type: 'select', multiple: true },
-      { name: 'ingredients', label: 'Thành phần', type: 'textarea' },
-      { name: 'usageInstructions', label: 'Hướng dẫn sử dụng', type: 'textarea' },
-      { name: 'warnings', label: 'Cảnh báo', type: 'textarea' },
-      { name: 'storage', label: 'Bảo quản', type: 'textarea' },
-      { name: 'manufacturer', label: 'Nhà sản xuất', type: 'input' },
-      { name: 'countryOfOrigin', label: 'Nước sản xuất', type: 'input' },
-      { name: 'form', label: 'Dạng', type: 'input' },
-      { name: 'netWeight', label: 'Khối lượng tịnh', type: 'inputNumber' },
-      { name: 'netWeightUnit', label: 'Đơn vị khối lượng', type: 'input' }
-    ]
-  };
-
-  // Load initial data
+  // Debug categories (temporary)
   useEffect(() => {
-    const loadData = async () => {
+    if (visible) {
+      console.log('ProductForm - Categories:', categories);
+      console.log('ProductForm - Categories length:', categories?.length);
+      console.log('ProductForm - TreeSelectData:', getTreeSelectData(categories));
+      console.log('ProductForm - TreeSelectData length:', getTreeSelectData(categories)?.length);
+    }
+  }, [visible, categories, getTreeSelectData]);
+
+  // Force fetch categories if not loaded
+  useEffect(() => {
+    if (visible && (!categories || categories.length === 0)) {
+      console.log('ProductForm - Forcing category fetch');
+      fetchCategories();
+    }
+  }, [visible, categories, fetchCategories]);
+
+  // Load brands
+  useEffect(() => {
+    const loadBrands = async () => {
       try {
-        const [brandsData, attributesData, activeSubstancesData] = await Promise.all([
-          fetchBrands(),
-          fetchAttributes(),
-          fetchActiveSubstances()
-        ]);
-        setBrands(brandsData);
-        setAttributes(attributesData);
-        setActiveSubstances(activeSubstancesData);
-        setCategories(categoriesData || []);
+        const brandsData = await fetchBrands();
+        setBrands(brandsData || []);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error loading brands:', error);
       }
     };
-    loadData();
-  }, [categoriesData]);
+    loadBrands();
+  }, [fetchBrands]);
 
   // Set initial values
   useEffect(() => {
     if (initialValues) {
-      form.setFieldsValue(initialValues);
-      setProductType(initialValues.productType || '');
-      setVariants(initialValues.variants || []);
+      form.setFieldsValue({
+        ...initialValues,
+        // Ensure categoryId and brandId are strings
+        categoryId: initialValues.categoryId?._id || initialValues.categoryId,
+        brandId: initialValues.brandId?._id || initialValues.brandId,
+        // Convert imageUrls array to textarea string
+        imageUrls: initialValues.imageUrls 
+          ? Array.isArray(initialValues.imageUrls) 
+            ? initialValues.imageUrls.join('\n')
+            : initialValues.imageUrls
+          : ''
+      });
     } else {
       form.resetFields();
-      setProductType('');
-      setVariants([]);
     }
   }, [initialValues, form]);
-
-  // Handle product type change
-  const handleProductTypeChange = (categoryId) => {
-    // Find category name from categoryId
-    const category = categories.find(cat => cat._id === categoryId);
-    const categoryName = category?.name;
-    
-    // Map category name to product type for field logic
-    const typeMap = {
-      'Thuốc': 'Drug',
-      'Dược mỹ phẩm': 'Cosmeceutical', 
-      'Thiết bị y tế': 'MedicalDevice',
-      'Thực phẩm chức năng': 'FunctionalFood'
-    };
-    
-    const mappedType = typeMap[categoryName] || categoryName;
-    setProductType(mappedType);
-    
-    // Clear product type specific fields
-    const fieldsToClear = productTypeFields[mappedType]?.map(field => field.name) || [];
-    fieldsToClear.forEach(field => {
-      form.setFieldValue(field, undefined);
-    });
-  };
-
-  // Handle variant operations
-  const addVariant = () => {
-    const newVariant = {
-      name: '',
-      sku: '',
-      barcode: '',
-      price: 0,
-      compareAtPrice: 0,
-      unit: 'sản phẩm',
-      quantity: 1,
-      stockOnHand: 0,
-      imageUrls: [],
-      attributes: [],
-      isActive: true
-    };
-    setVariants([...variants, newVariant]);
-  };
-
-  const removeVariant = (index) => {
-    const newVariants = variants.filter((_, i) => i !== index);
-    setVariants(newVariants);
-  };
-
-  const updateVariant = (index, field, value) => {
-    const newVariants = [...variants];
-    newVariants[index] = { ...newVariants[index], [field]: value };
-    setVariants(newVariants);
-  };
 
   // Handle form submit
   const handleSubmit = async () => {
     try {
+      setLoading(true);
       const values = await form.validateFields();
+      
+      // Convert string IDs to ObjectIds if needed
       const productData = {
         ...values,
-        productType,
-        variants
+        categoryId: values.categoryId,
+        brandId: values.brandId || null,
+        price: Number(values.price) || 0,
+        costPrice: Number(values.costPrice) || 0,
+        totalStock: Number(values.totalStock) || 0,
+        isActive: values.isActive !== false,
+        // Convert imageUrls from textarea to array
+        imageUrls: values.imageUrls 
+          ? values.imageUrls.split('\n').filter(url => url.trim() !== '')
+          : []
       };
+
       await onSubmit(productData);
     } catch (error) {
       console.error('Form validation failed:', error);
+      message.error('Vui lòng kiểm tra lại thông tin');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Render product type specific fields
-  const renderProductTypeFields = () => {
-    if (!productType || !productTypeFields[productType]) return null;
-
-    return productTypeFields[productType].map(field => {
-      const { name, label, type, required, multiple } = field;
-      
-      switch (type) {
-        case 'input':
-          return (
-            <Col span={12} key={name}>
-              <Form.Item
-                name={name}
-                label={label}
-                rules={required ? [{ required: true, message: `Vui lòng nhập ${label}` }] : []}
-              >
-                <Input placeholder={`Nhập ${label.toLowerCase()}`} />
-              </Form.Item>
-            </Col>
-          );
-        
-        case 'textarea':
-          return (
-            <Col span={24} key={name}>
-              <Form.Item
-                name={name}
-                label={label}
-                rules={required ? [{ required: true, message: `Vui lòng nhập ${label}` }] : []}
-              >
-                <TextArea rows={3} placeholder={`Nhập ${label.toLowerCase()}`} />
-              </Form.Item>
-            </Col>
-          );
-        
-        case 'select':
-          return (
-            <Col span={12} key={name}>
-              <Form.Item
-                name={name}
-                label={label}
-                rules={required ? [{ required: true, message: `Vui lòng chọn ${label}` }] : []}
-              >
-                <Select
-                  placeholder={`Chọn ${label.toLowerCase()}`}
-                  mode={multiple ? 'multiple' : undefined}
-                  allowClear
-                >
-                  {/* Options would be populated based on field name */}
-                  <Option value="option1">Tùy chọn 1</Option>
-                  <Option value="option2">Tùy chọn 2</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          );
-        
-        case 'inputNumber':
-          return (
-            <Col span={12} key={name}>
-              <Form.Item
-                name={name}
-                label={label}
-                rules={required ? [{ required: true, message: `Vui lòng nhập ${label}` }] : []}
-              >
-                <InputNumber
-                  style={{ width: '100%' }}
-                  placeholder={`Nhập ${label.toLowerCase()}`}
-                />
-              </Form.Item>
-            </Col>
-          );
-        
-        case 'switch':
-          return (
-            <Col span={12} key={name}>
-              <Form.Item
-                name={name}
-                label={label}
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-          );
-        
-        default:
-          return null;
-      }
-    });
+  // Handle cancel
+  const handleCancel = () => {
+    form.resetFields();
+    onCancel();
   };
-
-  // Variant columns for table
-  const variantColumns = [
-    {
-      title: 'Tên biến thể',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text, record, index) => (
-        <Input
-          value={text}
-          onChange={(e) => updateVariant(index, 'name', e.target.value)}
-          placeholder="Tên biến thể"
-        />
-      )
-    },
-    {
-      title: 'SKU',
-      dataIndex: 'sku',
-      key: 'sku',
-      render: (text, record, index) => (
-        <Input
-          value={text}
-          onChange={(e) => updateVariant(index, 'sku', e.target.value)}
-          placeholder="SKU"
-        />
-      )
-    },
-    {
-      title: 'Giá',
-      dataIndex: 'price',
-      key: 'price',
-      render: (text, record, index) => (
-        <InputNumber
-          value={text}
-          onChange={(value) => updateVariant(index, 'price', value)}
-          placeholder="Giá"
-          style={{ width: '100%' }}
-        />
-      )
-    },
-    {
-      title: 'Tồn kho',
-      dataIndex: 'stockOnHand',
-      key: 'stockOnHand',
-      render: (text, record, index) => (
-        <InputNumber
-          value={text}
-          onChange={(value) => updateVariant(index, 'stockOnHand', value)}
-          placeholder="Tồn kho"
-          style={{ width: '100%' }}
-        />
-      )
-    },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      render: (text, record, index) => (
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa biến thể này?"
-          onConfirm={() => removeVariant(index)}
-          okText="Xóa"
-          cancelText="Hủy"
-        >
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            size="small"
-          />
-        </Popconfirm>
-      )
-    }
-  ];
 
   return (
     <Modal
       title={isEditing ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
       open={visible}
-      onCancel={onCancel}
+      onCancel={handleCancel}
       onOk={handleSubmit}
-      width={1000}
+      width={800}
+      confirmLoading={loading}
       destroyOnHidden
     >
       <Form
@@ -394,178 +139,233 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
         layout="vertical"
         initialValues={{
           isActive: true,
-          isFeatured: false,
-          isNewProduct: false,
-          isBestSeller: false
+          price: 0,
+          costPrice: 0,
+          totalStock: 0,
+          unit: 'hộp'
         }}
       >
-        <Tabs 
-          defaultActiveKey="basic"
-          items={[
-            {
-              key: 'basic',
-              label: 'Thông tin cơ bản',
-              children: (
-                <>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item
-                        name="name"
-                        label="Tên sản phẩm"
-                        rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
-                      >
-                        <Input placeholder="Nhập tên sản phẩm" />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item
-                        name="slug"
-                        label="Slug (URL)"
-                        rules={[{ required: true, message: 'Vui lòng nhập slug' }]}
-                      >
-                        <Input placeholder="slug-san-pham" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+        <Card title="Thông tin cơ bản" size="small" style={{ marginBottom: 16 }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="name"
+                label="Tên sản phẩm"
+                rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
+              >
+                <Input placeholder="Nhập tên sản phẩm" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="slug"
+                label="Slug (URL)"
+                rules={[{ required: true, message: 'Vui lòng nhập slug' }]}
+              >
+                <Input placeholder="slug-san-pham" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item
-                        name="categoryId"
-                        label="Danh mục sản phẩm"
-                        rules={[{ required: true, message: 'Vui lòng chọn danh mục sản phẩm' }]}
-                      >
-                        <Select
-                          placeholder="Chọn danh mục sản phẩm"
-                          onChange={handleProductTypeChange}
-                          treeData={getTreeSelectData(categories) || []}
-                          treeDefaultExpandAll
-                          showSearch
-                          filterOption={(input, option) =>
-                            option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                          }
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item
-                        name="brandId"
-                        label="Thương hiệu"
-                      >
-                        <Select
-                          placeholder="Chọn thương hiệu"
-                          allowClear
-                          showSearch
-                          filterOption={(input, option) =>
-                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                          }
-                        >
-                          {brands.map(brand => (
-                            <Option key={brand._id} value={brand._id}>
-                              {brand.name}
-                            </Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                  </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="categoryId"
+                label="Danh mục sản phẩm"
+                rules={[{ required: true, message: 'Vui lòng chọn danh mục sản phẩm' }]}
+              >
+                <TreeSelect
+                  placeholder="Chọn danh mục sản phẩm"
+                  treeData={getTreeSelectData(categories) || []}
+                  treeDefaultExpandAll
+                  showSearch
+                  loading={!categories || categories.length === 0}
+                  notFoundContent={!categories || categories.length === 0 ? "Đang tải..." : "Không có dữ liệu"}
+                  filterTreeNode={(input, node) =>
+                    node.title.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="brandId"
+                label="Thương hiệu"
+              >
+                <Select
+                  placeholder="Chọn thương hiệu"
+                  allowClear
+                  showSearch
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {brands.map(brand => (
+                    <Option key={brand._id} value={brand._id}>
+                      {brand.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
-            <Form.Item
-              name="shortDescription"
-              label="Mô tả ngắn"
-            >
-              <TextArea rows={2} placeholder="Mô tả ngắn về sản phẩm" />
-            </Form.Item>
+          <Form.Item
+            name="shortDescription"
+            label="Mô tả ngắn"
+          >
+            <TextArea rows={2} placeholder="Mô tả ngắn về sản phẩm" />
+          </Form.Item>
 
-            <Form.Item
-              name="description"
-              label="Mô tả chi tiết"
-            >
-              <TextArea rows={4} placeholder="Mô tả chi tiết về sản phẩm" />
-            </Form.Item>
+          <Form.Item
+            name="description"
+            label="Mô tả chi tiết"
+          >
+            <TextArea rows={4} placeholder="Mô tả chi tiết về sản phẩm" />
+          </Form.Item>
 
-            <Row gutter={16}>
-              <Col span={6}>
-                <Form.Item
-                  name="isActive"
-                  label="Hoạt động"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item
-                  name="isFeatured"
-                  label="Nổi bật"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item
-                  name="isNewProduct"
-                  label="Sản phẩm mới"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item
-                  name="isBestSeller"
-                  label="Bán chạy"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </Col>
-            </Row>
-                </>
-              )
-            },
-            ...(productType ? [{
-              key: 'specific',
-              label: 'Thông tin chuyên biệt',
-              children: (
-                <>
-                  <Row gutter={16}>
-                    {renderProductTypeFields()}
-                  </Row>
-                </>
-              )
-            }] : []),
-            {
-              key: 'variants',
-              label: 'Biến thể sản phẩm',
-              children: (
-                <>
-                  <Card
-                    title="Quản lý biến thể"
-                    extra={
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={addVariant}
-                      >
-                        Thêm biến thể
-                      </Button>
-                    }
-                  >
-                    <Table
-                      columns={variantColumns}
-                      dataSource={variants}
-                      rowKey={(record) => record.id || record._id || Math.random()}
-                      pagination={false}
-                      size="small"
-                    />
-                  </Card>
-                </>
-              )
-            }
-          ]}
-        />
+          <Form.Item
+            name="imageUrls"
+            label="URL ảnh sản phẩm"
+            help="Nhập URL ảnh sản phẩm (có thể nhập nhiều URL, mỗi URL một dòng)"
+          >
+            <TextArea 
+              rows={3} 
+              placeholder="Nhập URL ảnh sản phẩm&#10;Ví dụ:&#10;https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+            />
+          </Form.Item>
+        </Card>
+
+        <Card title="Thông tin giá và tồn kho" size="small" style={{ marginBottom: 16 }}>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="price"
+                label="Giá bán "
+                rules={[{ required: true, message: 'Vui lòng nhập Giá bán' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="Giá bán"
+                  min={0}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="costPrice"
+                label="Giá nhập"
+                rules={[{ required: true, message: 'Vui lòng nhập giá nhập' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="Giá nhập"
+                  min={0}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="unit"
+                label="Đơn vị"
+              >
+                <Select placeholder="Chọn đơn vị">
+                  <Option value="hộp">Hộp</Option>
+                  <Option value="vỉ">Vỉ</Option>
+                  <Option value="chai">Chai</Option>
+                  <Option value="tuýp">Tuýp</Option>
+                  <Option value="viên">Viên</Option>
+                  <Option value="gói">Gói</Option>
+                  <Option value="lọ">Lọ</Option>
+                  <Option value="túi">Túi</Option>
+                  <Option value="cái">Cái</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="totalStock"
+                label="Tồn kho"
+                rules={[{ required: true, message: 'Vui lòng nhập số lượng tồn kho' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="Số lượng tồn kho"
+                  min={0}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="sku"
+                label="SKU"
+              >
+                <Input placeholder="Mã SKU" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="barcode"
+                label="Barcode"
+              >
+                <Input placeholder="Mã vạch" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
+
+        <Card title="Thông tin bổ sung" size="small">
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="isActive"
+                label="Trạng thái"
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="isFeatured"
+                label="Sản phẩm nổi bật"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="isNewProduct"
+                label="Sản phẩm mới"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="usage"
+            label="Cách sử dụng"
+          >
+            <TextArea rows={3} placeholder="Hướng dẫn sử dụng sản phẩm" />
+          </Form.Item>
+
+          <Form.Item
+            name="storage"
+            label="Bảo quản"
+          >
+            <TextArea rows={2} placeholder="Hướng dẫn bảo quản sản phẩm" />
+          </Form.Item>
+        </Card>
       </Form>
     </Modal>
   );

@@ -1,6 +1,6 @@
 /**
- * Product Management Page
- * Advanced product management with filtering and modern UI
+ * Simplified Product Management Page
+ * Focuses on essential product management features
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,55 +11,42 @@ import {
   Space,
   Input,
   Select,
+  TreeSelect,
   Tag,
-  Image,
+  Avatar,
   Popconfirm,
   Tooltip,
   Row,
   Col,
   Typography,
-  Divider,
-  Collapse,
   Form,
-  DatePicker,
   InputNumber,
   Switch,
-  Avatar,
-  Dropdown,
-  Menu,
   Badge,
-  Tabs,
-  Statistic
+  Statistic,
+  Modal,
+  message
 } from 'antd';
+
+const { Search } = Input;
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
-  FilterOutlined,
   ReloadOutlined,
-  ExportOutlined,
-  ImportOutlined,
   EyeOutlined,
-  MoreOutlined,
-  SettingOutlined,
   ShoppingOutlined,
-  FileTextOutlined,
-  DownOutlined,
-  UpOutlined,
-  ClearOutlined,
   StarOutlined,
-  DollarOutlined,
-  TagsOutlined
+  TagsOutlined,
+  DollarOutlined
 } from '@ant-design/icons';
 import { useProducts } from '../../../hooks/admin/useProducts';
 import { useCategories } from '../../../hooks/admin/useCategories';
 import ProductForm from '../../../components/admin/ProductForm';
 
 const { Title } = Typography;
-const { Search } = Input;
 const { Option } = Select;
-const { Panel } = Collapse;
 
 const ProductManagement = () => {
   const {
@@ -70,44 +57,38 @@ const ProductManagement = () => {
     createProduct,
     updateProduct,
     deleteProduct,
-    updateProductStock,
     updateProductStatus,
     bulkUpdateProducts,
     handleTableChange
   } = useProducts();
-
-  // Debug log
-  useEffect(() => {
-    console.log('Products in ProductManagement:', products);
-    console.log('Pagination:', pagination);
-  }, [products, pagination]);
-
-  // Fetch products on mount
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
 
   const { categories, getTreeSelectData } = useCategories();
 
   const [filters, setFilters] = useState({
     search: '',
     categoryId: '',
-    brandId: '',
-    isActive: undefined,
-    minPrice: '',
-    maxPrice: ''
+    isActive: undefined
   });
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isProductFormVisible, setIsProductFormVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState(null);
+
+  // Fetch products on mount
+  useEffect(() => {
+    fetchProducts();
+  }, []); // Remove fetchProducts from dependencies to prevent infinite loop
 
   // Category options for filtering
   const categoryOptions = getTreeSelectData(categories);
 
   // Handle filter change
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+    // Auto apply filter when changed
+    fetchProducts(newFilters);
   };
 
   // Apply filters
@@ -120,18 +101,16 @@ const ProductManagement = () => {
     setFilters({
       search: '',
       categoryId: '',
-      brandId: '',
-      isActive: undefined,
-      minPrice: '',
-      maxPrice: ''
+      isActive: undefined
     });
     fetchProducts({});
   };
 
   // Handle search
   const handleSearch = (value) => {
-    handleFilterChange('search', value);
-    fetchProducts({ ...filters, search: value });
+    const newFilters = { ...filters, search: value };
+    setFilters(newFilters);
+    fetchProducts(newFilters);
   };
 
   // Handle delete product
@@ -150,25 +129,6 @@ const ProductManagement = () => {
       setSelectedRowKeys([]);
     } catch (error) {
       console.error('Bulk delete error:', error);
-    }
-  };
-
-  // Handle bulk status update
-  const handleBulkStatusUpdate = async (status) => {
-    try {
-      await bulkUpdateProducts(selectedRowKeys, { isActive: status });
-      setSelectedRowKeys([]);
-    } catch (error) {
-      console.error('Bulk status update error:', error);
-    }
-  };
-
-  // Handle stock update
-  const handleStockUpdate = async (productId, newStock) => {
-    try {
-      await updateProductStock(productId, { totalStock: newStock });
-    } catch (error) {
-      console.error('Stock update error:', error);
     }
   };
 
@@ -191,6 +151,18 @@ const ProductManagement = () => {
   const handleEditProduct = (product) => {
     setEditingProduct(product);
     setIsProductFormVisible(true);
+  };
+
+  // Handle view product details
+  const handleViewProduct = (product) => {
+    setViewingProduct(product);
+    setIsDetailModalVisible(true);
+  };
+
+  // Handle close detail modal
+  const handleCloseDetailModal = () => {
+    setIsDetailModalVisible(false);
+    setViewingProduct(null);
   };
 
   // Handle product form submit
@@ -241,7 +213,7 @@ const ProductManagement = () => {
       title: 'Thông tin sản phẩm',
       dataIndex: 'name',
       key: 'name',
-      width: 250,
+      width: 300,
       render: (text, record) => (
         <div style={{ padding: '8px 0' }}>
           <div style={{ 
@@ -259,7 +231,7 @@ const ProductManagement = () => {
             marginBottom: '6px',
             fontFamily: 'monospace'
           }}>
-            SKU: {record.variants?.[0]?.sku || '-'}
+            SKU: {record.sku || '-'}
           </div>
           {record.shortDescription && (
             <div style={{ 
@@ -268,8 +240,8 @@ const ProductManagement = () => {
               fontStyle: 'italic',
               lineHeight: '1.3'
             }}>
-              {record.shortDescription.length > 60 
-                ? `${record.shortDescription.substring(0, 60)}...` 
+              {record.shortDescription.length > 80 
+                ? `${record.shortDescription.substring(0, 80)}...` 
                 : record.shortDescription
               }
             </div>
@@ -285,21 +257,23 @@ const ProductManagement = () => {
         <div>
           <div style={{ marginBottom: '4px' }}>
             <Tag color="blue" style={{ marginBottom: '2px' }}>
-              {record.categoryId?.name || 'Chưa phân loại'}
+              {record.categoryId?.name || record.categoryId || 'Chưa phân loại'}
             </Tag>
           </div>
-          <div style={{ marginBottom: '4px' }}>
-            <Tag color="green" style={{ marginBottom: '2px' }}>
-              {record.brandId?.name || 'Không có thương hiệu'}
-            </Tag>
-          </div>
+          {record.brandId && (
+            <div style={{ marginBottom: '4px' }}>
+              <Tag color="green" style={{ marginBottom: '2px' }}>
+                {record.brandId.name || record.brandId}
+              </Tag>
+            </div>
+          )}
         </div>
       )
     },
     {
       title: 'Giá & Tồn kho',
       key: 'priceStock',
-      width: 180,
+      width: 200,
       render: (_, record) => (
         <div>
           <div style={{ 
@@ -308,33 +282,26 @@ const ProductManagement = () => {
             color: '#52c41a',
             marginBottom: '4px'
           }}>
-            {(() => {
-              const minPrice = record.minPrice;
-              const maxPrice = record.maxPrice;
-              if (minPrice === maxPrice) {
-                return `${minPrice?.toLocaleString() || 0}đ`;
-              }
-              return `Từ ${minPrice?.toLocaleString() || 0}đ`;
-            })()}
+            Giá bán: {record.price?.toLocaleString() || 0}đ
           </div>
           <div style={{ 
             fontSize: '12px', 
             color: '#8c8c8c',
             marginBottom: '8px'
           }}>
-            {record.maxPrice && record.minPrice !== record.maxPrice && (
-              <span>Đến {record.maxPrice?.toLocaleString()}đ</span>
-            )}
+            Giá nhập: {record.costPrice?.toLocaleString() || 0}đ
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <InputNumber
-              size="small"
-              value={record.totalStock || 0}
-              min={0}
-              style={{ width: '80px' }}
-              onChange={(value) => handleStockUpdate(record._id, value)}
-            />
-            <span style={{ fontSize: '12px', color: '#8c8c8c' }}>sản phẩm</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ 
+              fontSize: '14px', 
+              fontWeight: 500,
+              color: record.totalStock > 0 ? '#52c41a' : '#ff4d4f'
+            }}>
+              {record.totalStock || 0}
+            </span>
+            <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+              {record.unit || 'sản phẩm'}
+            </span>
           </div>
         </div>
       )
@@ -343,7 +310,7 @@ const ProductManagement = () => {
       title: 'Trạng thái',
       dataIndex: 'isActive',
       key: 'status',
-      width: 140,
+      width: 120,
       render: (isActive, record) => (
         <div style={{ textAlign: 'center' }}>
           <Switch
@@ -369,81 +336,55 @@ const ProductManagement = () => {
       title: 'Thao tác',
       key: 'actions',
       width: 120,
-      render: (_, record) => {
-        const actionMenu = [
-          {
-            key: 'view',
-            icon: <EyeOutlined />,
-            label: 'Xem chi tiết',
-            onClick: () => console.log('View:', record._id)
-          },
-          {
-            key: 'edit',
-            icon: <EditOutlined />,
-            label: 'Chỉnh sửa',
-            onClick: () => handleEditProduct(record)
-          },
-          {
-            key: 'duplicate',
-            icon: <FileTextOutlined />,
-            label: 'Nhân bản',
-            onClick: () => console.log('Duplicate:', record._id)
-          },
-          {
-            type: 'divider'
-          },
-          {
-            key: 'delete',
-            icon: <DeleteOutlined />,
-            label: 'Xóa sản phẩm',
-            danger: true,
-            onClick: () => handleDeleteProduct(record._id)
-          }
-        ];
-
-        return (
-          <Space size="small">
-            <Tooltip title="Xem chi tiết">
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              size="small"
+              shape="circle"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewProduct(record)}
+              style={{ 
+                color: '#1890ff',
+                border: '1px solid #91d5ff'
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              size="small"
+              shape="circle"
+              icon={<EditOutlined />}
+              onClick={() => handleEditProduct(record)}
+              style={{ 
+                color: '#52c41a',
+                border: '1px solid #b7eb8f'
+              }}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Bạn có chắc chắn muốn xóa sản phẩm này?"
+            onConfirm={() => handleDeleteProduct(record._id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Tooltip title="Xóa">
               <Button
                 type="text"
                 size="small"
                 shape="circle"
-                icon={<EyeOutlined />}
-                onClick={() => console.log('View product:', record._id, record.name)}
+                icon={<DeleteOutlined />}
                 style={{ 
-                  color: '#1890ff',
-                  border: '1px solid #91d5ff'
+                  color: '#ff4d4f',
+                  border: '1px solid #ffccc7'
                 }}
               />
             </Tooltip>
-            <Tooltip title="Chỉnh sửa">
-              <Button
-                type="text"
-                size="small"
-                shape="circle"
-                icon={<EditOutlined />}
-                onClick={() => handleEditProduct(record)}
-                style={{ 
-                  color: '#52c41a',
-                  border: '1px solid #b7eb8f'
-                }}
-              />
-            </Tooltip>
-            <Dropdown menu={{ items: actionMenu }} trigger={['click']}>
-              <Button
-                type="text"
-                size="small"
-                shape="circle"
-                icon={<MoreOutlined />}
-                style={{ 
-                  color: '#8c8c8c',
-                  border: '1px solid #d9d9d9'
-                }}
-              />
-            </Dropdown>
-          </Space>
-        );
-      }
+          </Popconfirm>
+        </Space>
+      )
     }
   ];
 
@@ -458,50 +399,8 @@ const ProductManagement = () => {
     ]
   };
 
-  // Utility menu for bulk actions
-  const utilityMenu = [
-    {
-      key: 'export',
-      icon: <ExportOutlined />,
-      label: 'Xuất Excel'
-    },
-    {
-      key: 'import',
-      icon: <ImportOutlined />,
-      label: 'Nhập Excel'
-    },
-    {
-      type: 'divider'
-    },
-    {
-      key: 'bulk-edit',
-      icon: <EditOutlined />,
-      label: 'Chỉnh sửa hàng loạt'
-    },
-    {
-      key: 'bulk-delete',
-      icon: <DeleteOutlined />,
-      label: 'Xóa hàng loạt',
-      danger: true
-    }
-  ];
-
   return (
     <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      <style>
-        {`
-          .table-row-light {
-            background-color: #fafafa;
-          }
-          .table-row-dark {
-            background-color: #fff;
-          }
-          .table-row-light:hover,
-          .table-row-dark:hover {
-            background-color: #e6f7ff !important;
-          }
-        `}
-      </style>
       <Card
         style={{
           borderRadius: '12px',
@@ -548,11 +447,6 @@ const ProductManagement = () => {
                     size="large"
                   />
                 </Tooltip>
-                <Dropdown menu={{ items: utilityMenu }} trigger={['click']}>
-                  <Button icon={<SettingOutlined />} size="large">
-                    Tiện ích <DownOutlined />
-                  </Button>
-                </Dropdown>
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
@@ -577,7 +471,7 @@ const ProductManagement = () => {
         <Row gutter={16} style={{ marginBottom: '24px' }}>
           <Col span={12}>
             <Search
-              placeholder="Tìm kiếm sản phẩm theo tên, SKU, thương hiệu..."
+              placeholder="Tìm kiếm sản phẩm theo tên, SKU..."
               allowClear
               onSearch={handleSearch}
               size="large"
@@ -621,7 +515,7 @@ const ProductManagement = () => {
           </Col>
         </Row>
 
-        {/* Advanced Filters - Always Visible */}
+        {/* Filters */}
         <Card 
           size="small" 
           style={{ 
@@ -630,57 +524,22 @@ const ProductManagement = () => {
             border: '1px solid #f0f0f0'
           }}
         >
-          <div style={{ marginBottom: '16px' }}>
-            <Space>
-              <FilterOutlined style={{ color: '#1890ff' }} />
-              <Title level={5} style={{ margin: 0, color: '#262626' }}>
-                Bộ lọc nâng cao
-              </Title>
-              <Button 
-                type="link" 
-                size="small"
-                onClick={() => setShowFilters(!showFilters)}
-                icon={showFilters ? <UpOutlined /> : <DownOutlined />}
-              >
-                {showFilters ? 'Thu gọn' : 'Mở rộng'}
-              </Button>
-            </Space>
-          </div>
-          
-          <Row gutter={16}>
+          <Row gutter={16} align="middle">
             <Col span={6}>
               <Form.Item label="Danh mục" style={{ marginBottom: '8px' }}>
-                <Select
+                <TreeSelect
                   placeholder="Chọn danh mục"
                   allowClear
                   value={filters.categoryId}
                   onChange={(value) => handleFilterChange('categoryId', value)}
-                  options={categoryOptions || []}
+                  treeData={categoryOptions || []}
+                  treeDefaultExpandAll
                   size="large"
                   showSearch
-                  filterOption={(input, option) =>
-                    option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  filterTreeNode={(input, node) =>
+                    node.title.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
                 />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Thương hiệu" style={{ marginBottom: '8px' }}>
-                <Select
-                  placeholder="Chọn thương hiệu"
-                  allowClear
-                  showSearch
-                  value={filters.brandId}
-                  onChange={(value) => handleFilterChange('brandId', value)}
-                  size="large"
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
-                >
-                  {/* This would be populated from brands API */}
-                  <Option value="brand1">Thương hiệu 1</Option>
-                  <Option value="brand2">Thương hiệu 2</Option>
-                </Select>
               </Form.Item>
             </Col>
             <Col span={6}>
@@ -697,113 +556,30 @@ const ProductManagement = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Form.Item label="Tồn kho" style={{ marginBottom: '8px' }}>
-                <Select
-                  placeholder="Chọn trạng thái tồn kho"
-                  allowClear
+            <Col span={12}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'end', 
+                height: '100%',
+                gap: '8px'
+              }}>
+                <Button 
+                  type="primary" 
+                  onClick={applyFilters}
                   size="large"
                 >
-                  <Option value="inStock">Còn hàng</Option>
-                  <Option value="outOfStock">Hết hàng</Option>
-                  <Option value="lowStock">Sắp hết hàng</Option>
-                </Select>
-              </Form.Item>
+                  Áp dụng bộ lọc
+                </Button>
+                <Button 
+                  onClick={resetFilters}
+                  size="large"
+                >
+                  Đặt lại
+                </Button>
+              </div>
             </Col>
           </Row>
-
-          {showFilters && (
-            <>
-              <Divider style={{ margin: '16px 0' }} />
-              <Row gutter={16}>
-                <Col span={6}>
-                  <Form.Item label="Giá từ" style={{ marginBottom: '8px' }}>
-                    <InputNumber
-                      placeholder="0"
-                      value={filters.minPrice}
-                      onChange={(value) => handleFilterChange('minPrice', value)}
-                      style={{ width: '100%' }}
-                      size="large"
-                      formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={6}>
-                  <Form.Item label="Giá đến" style={{ marginBottom: '8px' }}>
-                    <InputNumber
-                      placeholder="999999999"
-                      value={filters.maxPrice}
-                      onChange={(value) => handleFilterChange('maxPrice', value)}
-                      style={{ width: '100%' }}
-                      size="large"
-                      formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'end', 
-                    height: '100%',
-                    gap: '8px'
-                  }}>
-                    <Button 
-                      type="primary" 
-                      onClick={applyFilters}
-                      size="large"
-                      icon={<FilterOutlined />}
-                    >
-                      Áp dụng bộ lọc
-                    </Button>
-                    <Button 
-                      onClick={resetFilters}
-                      size="large"
-                      icon={<ClearOutlined />}
-                    >
-                      Đặt lại
-                    </Button>
-                  </div>
-                </Col>
-              </Row>
-            </>
-          )}
         </Card>
-
-        {/* Advanced Filters */}
-        {showFilters && (
-          <Card size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Form.Item label="Giá từ">
-                  <InputNumber
-                    placeholder="0"
-                    style={{ width: '100%' }}
-                    value={filters.minPrice}
-                    onChange={(value) => handleFilterChange('minPrice', value)}
-                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item label="Giá đến">
-                  <InputNumber
-                    placeholder="1000000"
-                    style={{ width: '100%' }}
-                    value={filters.maxPrice}
-                    onChange={(value) => handleFilterChange('maxPrice', value)}
-                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Card>
-        )}
-
-        <Divider />
 
         {/* Products Table */}
         <Card
@@ -832,7 +608,6 @@ const ProductManagement = () => {
                   gap: '8px',
                   color: '#8c8c8c'
                 }}>
-                  <FileTextOutlined />
                   <span>
                     Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
                     {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> sản phẩm
@@ -844,13 +619,10 @@ const ProductManagement = () => {
             }}
             rowSelection={rowSelection}
             onChange={handleTableChange}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1000 }}
             style={{
               background: '#fff'
             }}
-            rowClassName={(record, index) => 
-              index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
-            }
           />
         </Card>
 
@@ -882,13 +654,13 @@ const ProductManagement = () => {
                   <Button
                     type="primary"
                     icon={<EditOutlined />}
-                    onClick={() => handleBulkStatusUpdate(true)}
+                    onClick={() => bulkUpdateProducts(selectedRowKeys, { isActive: true })}
                   >
                     Kích hoạt đã chọn
                   </Button>
                   <Button
-                    icon={<SettingOutlined />}
-                    onClick={() => handleBulkStatusUpdate(false)}
+                    icon={<EditOutlined />}
+                    onClick={() => bulkUpdateProducts(selectedRowKeys, { isActive: false })}
                   >
                     Tạm dừng đã chọn
                   </Button>
@@ -901,7 +673,6 @@ const ProductManagement = () => {
                   </Button>
                   <Button 
                     onClick={() => setSelectedRowKeys([])}
-                    icon={<ClearOutlined />}
                   >
                     Bỏ chọn
                   </Button>
@@ -919,6 +690,223 @@ const ProductManagement = () => {
           initialValues={editingProduct}
           isEditing={!!editingProduct}
         />
+
+        {/* Product Detail Modal */}
+        <Modal
+          title="Chi tiết sản phẩm"
+          open={isDetailModalVisible}
+          onCancel={handleCloseDetailModal}
+          footer={[
+            <Button key="close" onClick={handleCloseDetailModal}>
+              Đóng
+            </Button>
+          ]}
+          width={800}
+        >
+          {viewingProduct && (
+            <div>
+              <Row gutter={[16, 16]}>
+                <Col span={24}>
+                  <Card title="Thông tin cơ bản" size="small">
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Tên sản phẩm:</strong>
+                          <div style={{ marginTop: '4px' }}>{viewingProduct.name}</div>
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Slug:</strong>
+                          <div style={{ marginTop: '4px' }}>{viewingProduct.slug}</div>
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Danh mục:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            <Tag color="blue">
+                              {viewingProduct.categoryId?.name || viewingProduct.categoryId || 'Chưa phân loại'}
+                            </Tag>
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Thương hiệu:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            {viewingProduct.brandId ? (
+                              <Tag color="green">{viewingProduct.brandId.name || viewingProduct.brandId}</Tag>
+                            ) : (
+                              <span style={{ color: '#8c8c8c' }}>Chưa có thương hiệu</span>
+                            )}
+                          </div>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>SKU:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            {viewingProduct.sku || <span style={{ color: '#8c8c8c' }}>Chưa có SKU</span>}
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Barcode:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            {viewingProduct.barcode || <span style={{ color: '#8c8c8c' }}>Chưa có barcode</span>}
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Đơn vị:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            {viewingProduct.unit || <span style={{ color: '#8c8c8c' }}>Chưa có đơn vị</span>}
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Trạng thái:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            <Tag color={viewingProduct.isActive ? 'green' : 'red'}>
+                              {viewingProduct.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                            </Tag>
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                  </Card>
+                </Col>
+
+                <Col span={24}>
+                  <Card title="Thông tin giá và tồn kho" size="small">
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Statistic
+                          title="Giá thu (Giá bán)"
+                          value={viewingProduct.price || 0}
+                          formatter={(value) => `${value?.toLocaleString() || 0}đ`}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic
+                          title="Giá nhập"
+                          value={viewingProduct.costPrice || 0}
+                          formatter={(value) => `${value?.toLocaleString() || 0}đ`}
+                          valueStyle={{ color: '#1890ff' }}
+                        />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic
+                          title="Tồn kho"
+                          value={viewingProduct.totalStock || 0}
+                          valueStyle={{ 
+                            color: viewingProduct.totalStock > 0 ? '#52c41a' : '#ff4d4f' 
+                          }}
+                        />
+                      </Col>
+                    </Row>
+                  </Card>
+                </Col>
+
+                {(viewingProduct.shortDescription || viewingProduct.description) && (
+                  <Col span={24}>
+                    <Card title="Mô tả sản phẩm" size="small">
+                      {viewingProduct.shortDescription && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <strong>Mô tả ngắn:</strong>
+                          <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                            {viewingProduct.shortDescription}
+                          </div>
+                        </div>
+                      )}
+                      {viewingProduct.description && (
+                        <div>
+                          <strong>Mô tả chi tiết:</strong>
+                          <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                            {viewingProduct.description}
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  </Col>
+                )}
+
+                {viewingProduct.imageUrls && viewingProduct.imageUrls.length > 0 && (
+                  <Col span={24}>
+                    <Card title="Hình ảnh sản phẩm" size="small">
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {viewingProduct.imageUrls.map((url, index) => (
+                          <div key={index} style={{ width: '120px', height: '120px' }}>
+                            <img
+                              src={url}
+                              alt={`Product ${index + 1}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                borderRadius: '4px',
+                                border: '1px solid #d9d9d9'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'none',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: '#f5f5f5',
+                                borderRadius: '4px',
+                                border: '1px solid #d9d9d9',
+                                fontSize: '12px',
+                                color: '#8c8c8c'
+                              }}
+                            >
+                              Lỗi tải ảnh
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  </Col>
+                )}
+
+                <Col span={24}>
+                  <Card title="Thông tin bổ sung" size="small">
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Ngày tạo:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            {viewingProduct.createdAt ? new Date(viewingProduct.createdAt).toLocaleString('vi-VN') : 'N/A'}
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Ngày cập nhật:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            {viewingProduct.updatedAt ? new Date(viewingProduct.updatedAt).toLocaleString('vi-VN') : 'N/A'}
+                          </div>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong>Tính năng đặc biệt:</strong>
+                          <div style={{ marginTop: '4px' }}>
+                            <Space wrap>
+                              {viewingProduct.isFeatured && <Tag color="gold">Nổi bật</Tag>}
+                              {viewingProduct.isNewProduct && <Tag color="blue">Sản phẩm mới</Tag>}
+                              {viewingProduct.isBestSeller && <Tag color="red">Bán chạy</Tag>}
+                              {!viewingProduct.isFeatured && !viewingProduct.isNewProduct && !viewingProduct.isBestSeller && (
+                                <span style={{ color: '#8c8c8c' }}>Không có</span>
+                              )}
+                            </Space>
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                  </Card>
+                </Col>
+              </Row>
+            </div>
+          )}
+        </Modal>
       </Card>
     </div>
   );

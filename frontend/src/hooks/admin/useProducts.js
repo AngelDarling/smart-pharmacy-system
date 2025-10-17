@@ -33,7 +33,7 @@ export const useProducts = () => {
       queryParams.append('limit', filters.limit || pagination.pageSize);
       
       // Add filters
-      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.search) queryParams.append('q', filters.search);
       if (filters.productType) queryParams.append('productType', filters.productType);
       if (filters.categoryId) queryParams.append('categoryId', filters.categoryId);
       if (filters.brandId) queryParams.append('brandId', filters.brandId);
@@ -62,7 +62,7 @@ export const useProducts = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize]);
+  }, []); // Remove pagination dependencies to prevent infinite loop
 
   // Create new product
   const createProduct = async (productData) => {
@@ -191,7 +191,7 @@ export const useProducts = () => {
   };
 
   // Get brands for select options
-  const fetchBrands = async () => {
+  const fetchBrands = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/brands`);
       if (!response.ok) {
@@ -202,10 +202,10 @@ export const useProducts = () => {
       message.error('Lỗi khi tải danh sách thương hiệu');
       return [];
     }
-  };
+  }, []);
 
   // Get attributes for select options
-  const fetchAttributes = async () => {
+  const fetchAttributes = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/attributes`);
       if (!response.ok) {
@@ -216,10 +216,10 @@ export const useProducts = () => {
       message.error('Lỗi khi tải danh sách thuộc tính');
       return [];
     }
-  };
+  }, []);
 
   // Get active substances for drug products
-  const fetchActiveSubstances = async () => {
+  const fetchActiveSubstances = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/active-substances`);
       if (!response.ok) {
@@ -230,7 +230,7 @@ export const useProducts = () => {
       message.error('Lỗi khi tải danh sách hoạt chất');
       return [];
     }
-  };
+  }, []);
 
   // Handle pagination change
   const handlePaginationChange = (page, pageSize) => {
@@ -259,7 +259,7 @@ export const useProducts = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.put(`/products/${id}/stock`, stockData);
+      const response = await api.patch(`/products/${id}/stock`, stockData);
       const updatedProduct = response.data;
       setProducts(prev => 
         prev.map(product => product._id === id ? updatedProduct : product)
@@ -296,7 +296,7 @@ export const useProducts = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.put(`/products/${id}/status`, { isActive: status });
+      const response = await api.patch(`/products/${id}/status`, { isActive: status });
       const updatedProduct = response.data;
       setProducts(prev => 
         prev.map(product => product._id === id ? updatedProduct : product)

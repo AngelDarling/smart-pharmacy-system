@@ -16,6 +16,27 @@ export async function authRequired(req, res, next) {
   }
 }
 
+// Optional auth - sets user if token is valid, but doesn't require it
+export async function optionalAuth(req, res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    
+    if (token) {
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(payload.sub);
+      if (user && user.isActive) {
+        req.user = user;
+      }
+    }
+    
+    next();
+  } catch (err) {
+    // Continue without user if token is invalid
+    next();
+  }
+}
+
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
