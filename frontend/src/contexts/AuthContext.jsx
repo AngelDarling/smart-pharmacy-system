@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "../api/client.js";
+import { clearGlobalCart } from "../hooks/useCart.js";
 
 const AuthContext = createContext();
 
@@ -64,6 +65,11 @@ export function AuthProvider({ children }) {
   function logout() {
     localStorage.setItem("flash", "logout_success");
     localStorage.removeItem("token");
+    try {
+      clearGlobalCart();
+    } catch (e) {
+      console.warn("Failed to clear cart on logout", e);
+    }
     setUser(null);
     setRefreshTrigger(prev => prev + 1);
     // Redirect based on current location

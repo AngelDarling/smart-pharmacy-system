@@ -102,11 +102,11 @@ const CategoryManagement = () => {
       let keys = [];
       if (data && Array.isArray(data)) {
         data.forEach(item => {
-          if (item && item.key) {
-            keys.push(item.key);
-            if (item.children && item.children.length > 0) {
-              keys = keys.concat(getAllKeys(item.children));
-            }
+          if (!item) return;
+          const k = item.key || item._id || item.id;
+          if (k) keys.push(k);
+          if (item.children && item.children.length > 0) {
+            keys = keys.concat(getAllKeys(item.children));
           }
         });
       }
@@ -164,12 +164,30 @@ const CategoryManagement = () => {
   const filterTreeDataByLevel = (data, level) => {
     try {
       if (level === 'all' || !data || !Array.isArray(data)) return data || [];
-      
-      const targetLevel = parseInt(level);
-      return data.filter(item => {
-        if (!item) return false;
-        return (item.level || 0) === targetLevel;
-      });
+
+      const targetLevel = parseInt(level, 10);
+      const includeChildren = false; // Luôn chỉ hiển thị đúng level được chọn
+      const result = [];
+
+      const traverse = (nodes) => {
+        if (!nodes) return;
+        nodes.forEach((node) => {
+          if (!node) return;
+          if ((node.level || 0) === targetLevel) {
+            result.push({
+              ...node,
+              // nếu level 0 thì ẩn children; level > 0 có thể giữ subtree để có ngữ cảnh
+              children: includeChildren ? (node.children || []) : []
+            });
+          }
+          if (node.children && node.children.length > 0) {
+            traverse(node.children);
+          }
+        });
+      };
+
+      traverse(data);
+      return result;
     } catch (error) {
       console.error('Error filtering tree data by level:', error);
       return data || [];
@@ -421,12 +439,15 @@ const CategoryManagement = () => {
       if (!item) return null;
       return {
         ...item,
+        key: item.key || item._id || item.id,
         title: renderTreeTitle(item),
         children: item.children ? item.children.map(child => ({
           ...child,
+          key: child.key || child._id || child.id,
           title: renderTreeTitle(child),
           children: child.children ? child.children.map(grandChild => ({
             ...grandChild,
+            key: grandChild.key || grandChild._id || grandChild.id,
             title: renderTreeTitle(grandChild)
           })) : []
         })) : []
@@ -440,6 +461,18 @@ const CategoryManagement = () => {
       };
     }
   }).filter(Boolean);
+
+  // Auto expand all nodes when showing all levels
+  useEffect(() => {
+    try {
+      if (levelFilter === 'all') {
+        const all = getAllKeys(treeData);
+        setExpandedKeys(all);
+      }
+    } catch (e) {
+      // noop
+    }
+  }, [levelFilter, treeData]);
 
   // Apply filters in order: level -> status -> search
   let filteredTreeData = processedTreeData;

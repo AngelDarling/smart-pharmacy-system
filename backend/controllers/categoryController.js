@@ -56,6 +56,33 @@ async function countChildrenRecursively(parentId) {
   }
 }
 
+// Recompute level, ancestors, path for a node and all descendants
+async function recomputeNodeAndDescendants(categoryId) {
+  const node = await Category.findById(categoryId);
+  if (!node) return;
+
+  // compute for node
+  let ancestors = [];
+  let level = 0;
+  let path = node.slug;
+  if (node.parent) {
+    const parent = await Category.findById(node.parent);
+    if (parent) {
+      ancestors = [...(parent.ancestors || []), parent._id];
+      level = (parent.level || 0) + 1;
+      path = parent.path ? `${parent.path}/${node.slug}` : node.slug;
+    }
+  }
+  const updateSelf = { ancestors, level, path };
+  await Category.updateOne({ _id: node._id }, { $set: updateSelf });
+
+  // children
+  const children = await Category.find({ parent: node._id });
+  for (const child of children) {
+    await recomputeNodeAndDescendants(child._id);
+  }
+}
+
 const upsertSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
@@ -78,7 +105,7 @@ export async function list(req, res) {
   const filter = q ? { name: { $regex: q, $options: "i" } } : {};
 
   const [items, total] = await Promise.all([
-    Category.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Category.find(filter).sort({ sortOrder: 1, createdAt: 1 }).skip(skip).limit(limit),
     Category.countDocuments(filter)
   ]);
   // Ensure default icon if missing
@@ -117,6 +144,20 @@ export async function tree(req, res) {
   };
   
   const sortedRoots = sortByOrder(roots);
+
+  // Annotate level, ancestors and path on-the-fly to ensure correctness
+  const annotate = (nodes, level = 0, ancestors = [], ancestorPath = "") => {
+    for (const node of nodes) {
+      node.level = level;
+      node.ancestors = ancestors.map(id => id);
+      node.path = ancestorPath ? `${ancestorPath}/${node.slug}` : node.slug;
+      if (node.children && node.children.length > 0) {
+        annotate(node.children, level + 1, [...ancestors, node._id], node.path);
+      }
+    }
+  };
+
+  annotate(sortedRoots, 0, [], "");
   res.json(sortedRoots);
 }
 
@@ -135,6 +176,8 @@ export async function create(req, res, next) {
       seoTitle: parsed.metaTitle || "",
       seoDescription: parsed.metaDescription || ""
     });
+    // Ensure level/ancestors/path are correct, and recompute for descendants if needed
+    await recomputeNodeAndDescendants(doc._id);
     res.status(201).json(doc);
   } catch (err) {
     next(err);
@@ -168,7 +211,10 @@ export async function update(req, res, next) {
       return res.json(updatedDoc);
     }
     
-    res.json(doc);
+    // Always recompute current node and descendants after updates that may affect hierarchy
+    await recomputeNodeAndDescendants(doc._id);
+    const refreshed = await Category.findById(doc._id);
+    res.json(refreshed);
   } catch (err) {
     next(err);
   }

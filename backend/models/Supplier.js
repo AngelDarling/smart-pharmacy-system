@@ -98,11 +98,11 @@ const supplierSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
-    // Phân loại nhà cung cấp
+    // Phân loại nhà cung cấp - tham chiếu danh mục cấp 0
     category: {
-      type: String,
-      enum: ['pharmaceutical', 'cosmetic', 'medical_device', 'supplement', 'other'],
-      default: 'pharmaceutical'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      default: null
     },
     rating: {
       type: Number,

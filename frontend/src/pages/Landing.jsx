@@ -2,26 +2,52 @@ import { useEffect, useState } from "react";
 import api from "../api/client.js";
 import { getImageUrl, handleImageError } from "../utils/imageUtils";
 import ProductCard from "../components/ProductCard.jsx";
+import SelectPurchaseModal from "../components/SelectPurchaseModal.jsx";
 
 export default function Landing() {
-  const [message, setMessage] = useState("Đang kết nối...");
-  const [featured, setFeatured] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [page, setPage] = useState(0); // 0 or 1
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    api.get("/hello").then((res) => setMessage(res.data.message)).catch(() => setMessage("⚠️ Lỗi kết nối API"));
-    api.get("/products?limit=8").then((res) => setFeatured(res.data.items || []));
+    api.get("/products/best-sellers?limit=12").then((res) => setBestSellers(res.data.items || [])).catch(() => setBestSellers([]));
   }, []);
+
+  const handleSelectProduct = (product) => {
+    setSelectedProduct(product);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedProduct(null);
+  };
 
   return (
     <div>
       <Hero />
       <DealSection />
-      <BestSellingSection products={featured} />
+      <BestSellingSection 
+        products={bestSellers}
+        page={page}
+        onPrev={() => setPage((p) => Math.max(0, p - 1))}
+        onNext={() => {
+          const totalPages = Math.max(1, Math.ceil((bestSellers?.length || 0) / 6));
+          setPage((p) => Math.min(totalPages - 1, p + 1));
+        }}
+        onSelectProduct={handleSelectProduct}
+      />
       <HealthCheckSection />
       <DiseaseLookupSection />
       <HealthNewsSection />
       <BrandSection />
       <Footer />
+      <SelectPurchaseModal 
+        product={selectedProduct} 
+        open={showModal} 
+        onClose={closeModal} 
+      />
     </div>
   );
 }
@@ -109,24 +135,141 @@ function DealSection() {
   );
 }
 
-function BestSellingSection({ products }) {
+function BestSellingSection({ products, page = 0, onPrev, onNext, onSelectProduct }) {
+  const pageSize = 6;
+  const totalPages = Math.ceil((products?.length || 0) / pageSize) || 1;
+  const pages = Array.from({ length: totalPages }, (_, i) =>
+    (products || []).slice(i * pageSize, i * pageSize + pageSize)
+  );
+
   return (
-    <div style={{ padding: "40px 0" }}>
+    <div style={{ padding: "40px 0", background: "#f8f9fa" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 700, margin: "0 0 30px", color: "#2c3e50" }}>Sản phẩm bán chạy</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
-          {products.map((p) => (
-            <div key={p._id} style={{ background: "white", borderRadius: 12, padding: 15, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-              <img 
-                src={getImageUrl(p.imageUrls?.[0], "https://picsum.photos/250/200")} 
-                alt={p.name} 
-                style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 8, marginBottom: 12 }}
-                onError={(e) => handleImageError(e, "https://picsum.photos/250/200")}
-              />
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{p.name}</div>
-              <div style={{ color: "#2e7d32", fontWeight: 700, fontSize: 18 }}>{p.price?.toLocaleString()}₫</div>
+        <div style={{ position: "relative", background: "linear-gradient(180deg, #2ca4ff 0%, #1f88ff 100%)", borderRadius: 16, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <div style={{ background: "#e11d48", color: "white", padding: "10px 20px", borderRadius: 999, fontSize: 18, fontWeight: 700 }}>
+              Sản phẩm bán chạy nhất
             </div>
-          ))}
+          </div>
+          <button 
+            onClick={onPrev} 
+            disabled={page === 0} 
+            style={{ 
+              position: "absolute", 
+              left: 8, 
+              top: "50%", 
+              transform: "translateY(-50%)", 
+              background: "white", 
+              border: "none", 
+              boxShadow: "0 6px 16px rgba(0,0,0,0.2)", 
+              borderRadius: "50%", 
+              width: 52, 
+              height: 52, 
+              padding: 0,
+              lineHeight: "52px",
+              cursor: page === 0 ? "not-allowed" : "pointer", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              zIndex: 2,
+              fontSize: 22,
+              fontWeight: 700,
+              color: "#333",
+              opacity: page === 0 ? 0.5 : 1
+            }}
+          >
+            ‹
+          </button>
+          <button 
+            onClick={onNext} 
+            disabled={page >= totalPages - 1} 
+            style={{ 
+              position: "absolute", 
+              right: 8, 
+              top: "50%", 
+              transform: "translateY(-50%)", 
+              background: "white", 
+              border: "none", 
+              boxShadow: "0 6px 16px rgba(0,0,0,0.2)", 
+              borderRadius: "50%", 
+              width: 52, 
+              height: 52, 
+              padding: 0,
+              lineHeight: "52px",
+              cursor: page >= totalPages - 1 ? "not-allowed" : "pointer", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              zIndex: 2,
+              fontSize: 22,
+              fontWeight: 700,
+              color: "#333",
+              opacity: page >= totalPages - 1 ? 0.5 : 1
+            }}
+          >
+            ›
+          </button>
+
+        {/* Slider viewport */}
+        <div style={{ overflow: "hidden" }}>
+          {/* Slider track */}
+          <div 
+            style={{ 
+              display: "flex", 
+              width: `${totalPages * 100}%`, 
+              transform: `translateX(-${page * (100 / totalPages)}%)`, 
+              transition: "transform 400ms ease",
+              gap: 0
+            }}
+          >
+            {pages.map((items, idx) => (
+              <div key={idx} style={{ flex: `0 0 ${100/totalPages}%`, padding: "0 2px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 20 }}>
+                  {items.map((p) => (
+                    <div key={p._id} style={{ background: "white", borderRadius: 16, padding: 16, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", position: "relative" }}>
+                      {p.monthQuantity > 0 && (
+                        <div style={{ position: "absolute", top: 8, left: 8, background: "#ef4444", color: "white", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
+                          -{Math.min(35, Math.round((p.compareAtPrice && p.compareAtPrice > p.price) ? (1 - p.price / p.compareAtPrice) * 100 : 0))}%
+                        </div>
+                      )}
+                      <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                        <img 
+                          src={getImageUrl(p.imageUrls?.[0], "/default-product.png")} 
+                          alt={p.name} 
+                          style={{ maxWidth: "100%", maxHeight: 180, objectFit: "contain" }}
+                          onError={(e) => handleImageError(e, "/default-product.png")}
+                        />
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 600, minHeight: 44, color: "#0f172a" }}>{p.name}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                        <span style={{ color: "#0ea5e9", fontWeight: 800, fontSize: 16 }}>{p.price?.toLocaleString()}₫</span>
+                        {p.compareAtPrice && p.compareAtPrice > p.price && (
+                          <span style={{ color: "#9ca3af", textDecoration: "line-through", fontSize: 13 }}>{p.compareAtPrice.toLocaleString()}₫</span>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => onSelectProduct(p)}
+                        style={{ 
+                          marginTop: 10, 
+                          width: "100%", 
+                          background: "#2563eb", 
+                          color: "white", 
+                          border: "none", 
+                          padding: "10px 12px", 
+                          borderRadius: 8, 
+                          cursor: "pointer", 
+                          fontWeight: 600 
+                        }}
+                      >
+                        Chọn mua
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         </div>
       </div>
     </div>

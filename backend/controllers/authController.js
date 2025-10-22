@@ -12,8 +12,12 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  phone: z.string().min(9, "Số điện thoại phải có ít nhất 9 ký tự"),
+  phone: z.string().min(9, "Số điện thoại phải có ít nhất 9 ký tự").optional(),
+  email: z.string().email("Email không hợp lệ").optional(),
   password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự")
+}).refine((data) => !!(data.phone || data.email), {
+  message: "Cần nhập email hoặc số điện thoại",
+  path: ["phone"]
 });
 
 function signToken(user) {
@@ -83,13 +87,14 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
   try {
     const parsed = loginSchema.parse(req.body);
-    const user = await User.findOne({ phone: parsed.phone });
+    const query = parsed.phone ? { phone: parsed.phone } : { email: parsed.email };
+    const user = await User.findOne(query);
     if (!user) {
-      return res.status(401).json({ message: "Số điện thoại hoặc mật khẩu không đúng" });
+      return res.status(401).json({ message: "Tài khoản hoặc mật khẩu không đúng" });
     }
     const ok = await user.comparePassword(parsed.password);
     if (!ok) {
-      return res.status(401).json({ message: "Số điện thoại hoặc mật khẩu không đúng" });
+      return res.status(401).json({ message: "Tài khoản hoặc mật khẩu không đúng" });
     }
     const token = signToken(user);
     res.json({

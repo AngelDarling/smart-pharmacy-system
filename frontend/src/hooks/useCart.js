@@ -45,7 +45,7 @@ const removeFromGlobalCart = (id) => {
   globalCartState.listeners.forEach(callback => callback(globalCartState.items));
 };
 
-const clearGlobalCart = () => {
+export const clearGlobalCart = () => {
   globalCartState.items = [];
   localStorage.setItem("cart", JSON.stringify(globalCartState.items));
   globalCartState.listeners.forEach(callback => callback(globalCartState.items));

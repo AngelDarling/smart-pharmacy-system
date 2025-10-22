@@ -84,6 +84,10 @@ const AdminLayout = () => {
           key: '/admin/products',
           label: 'Sản phẩm',
         }] : []),
+        {
+          key: '/admin/brands',
+          label: 'Thương hiệu',
+        },
         ...(permissions.canReadCategories() ? [{
           key: '/admin/categories',
           label: 'Danh mục',
@@ -111,6 +115,10 @@ const AdminLayout = () => {
         {
           key: '/admin/suppliers',
           label: 'Nhà cung cấp',
+        },
+        {
+          key: '/admin/sales-report',
+          label: 'Báo cáo bán hàng',
         },
       ],
     }] : []),
@@ -182,7 +190,7 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/products') || path.startsWith('/admin/categories')) {
       return ['products'];
     }
-    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/goods-receipts') || path.startsWith('/admin/inventory-alerts')) {
+    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/goods-receipts') || path.startsWith('/admin/inventory-alerts') || path.startsWith('/admin/sales-report')) {
       return ['inventory'];
     }
     if (path.startsWith('/admin/users') || path.startsWith('/admin/staff')) {

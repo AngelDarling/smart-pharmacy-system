@@ -60,7 +60,8 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
     const loadBrands = async () => {
       try {
         const brandsData = await fetchBrands();
-        setBrands(brandsData || []);
+        const arr = Array.isArray(brandsData) ? brandsData : (Array.isArray(brandsData?.items) ? brandsData.items : []);
+        setBrands(arr);
       } catch (error) {
         console.error('Error loading brands:', error);
       }

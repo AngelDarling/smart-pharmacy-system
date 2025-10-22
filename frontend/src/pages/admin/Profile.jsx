@@ -115,9 +115,9 @@ const Profile = () => {
       };
       
       console.log('Sending data to API:', dataToSend);
-      console.log('User ID:', user.id);
+      console.log('User ID:', user._id);
       
-      const response = await api.put(`/users/${user.id}/profile`, dataToSend);
+      const response = await api.put(`/users/${user._id}/profile`, dataToSend);
       console.log('Profile update response:', response.data);
       
       // Refresh user data to show updated information
@@ -163,8 +163,8 @@ const Profile = () => {
     console.log('🔑 Password change called with values:', values);
     setLoading(true);
     try {
-      console.log('Changing password for user:', user.id);
-      await api.put(`/users/${user.id}/password`, {
+      console.log('Changing password for user:', user._id);
+      await api.put(`/users/${user._id}/password`, {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword
       });

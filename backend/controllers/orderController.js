@@ -1,6 +1,7 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import InventoryTransaction from "../models/InventoryTransaction.js";
+import ProductSalesDaily from "../models/ProductSalesDaily.js";
 import mongoose from "mongoose";
 
 // Generate unique order code
@@ -57,7 +58,7 @@ export async function create(req, res) {
 
     await order.save();
 
-    // Update product stock and create inventory transactions
+    // Update product stock, create inventory transactions and record daily sales
     for (const item of items) {
       const product = await Product.findById(item.productId);
       
@@ -76,6 +77,15 @@ export async function create(req, res) {
       });
 
       await transaction.save();
+
+      // Upsert daily sales counter for current day (based on order creation date)
+      const day = new Date();
+      day.setHours(0, 0, 0, 0);
+      await ProductSalesDaily.updateOne(
+        { productId: item.productId, date: day },
+        { $inc: { quantity: item.quantity, revenue: item.quantity * (item.priceSnapshot || item.price || product.price || 0) } },
+        { upsert: true }
+      );
     }
 
     res.status(201).json(order);

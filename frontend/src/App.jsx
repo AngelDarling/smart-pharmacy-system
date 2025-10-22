@@ -13,6 +13,7 @@ import ProductDetail from "./pages/ProductDetail.jsx";
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import CategoryManagement from "./pages/admin/categories/CategoryManagement.jsx";
 import ProductManagement from "./pages/admin/products/ProductManagement.jsx";
+import BrandManagement from "./pages/admin/products/BrandManagement.jsx";
 import UserManagement from "./pages/admin/users/UserManagement.jsx";
 import StaffManagement from "./pages/admin/staff/StaffManagement.jsx";
 import { 
@@ -23,6 +24,7 @@ import {
 import AdminLogin from "./pages/admin/Login.jsx";
 import AdminDashboard from "./pages/admin/Dashboard.jsx";
 import AdminSuppliers from "./pages/admin/Suppliers.jsx";
+import SalesReport from "./pages/admin/SalesReport.jsx";
 import Profile from "./pages/admin/Profile.jsx";
 import Settings from "./pages/admin/Settings.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -154,6 +156,12 @@ function App() {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userDropdownTimeout, setUserDropdownTimeout] = useState(null);
   const searchDropdownRef = useRef(null);
+  const [rootCategories, setRootCategories] = useState([]);
+  // Category mega menu state
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [activeRootCategory, setActiveRootCategory] = useState(null);
+  const [activeLevel1Id, setActiveLevel1Id] = useState(null);
+  const [categoryDropdownTimeout, setCategoryDropdownTimeout] = useState(null);
   
   // Search functionality
   const {
@@ -258,6 +266,59 @@ function App() {
       }
     };
   }, [cartDropdownTimeout]);
+
+  // Load level 0 categories for navigation
+  useEffect(() => {
+    async function loadRootCategories() {
+      try {
+        const res = await axios.get("/api/categories/tree");
+        const data = Array.isArray(res.data) ? res.data : [];
+        const roots = data.filter(c => (c.level ?? 0) === 0);
+        setRootCategories(roots);
+      } catch (e) {
+        console.error("Failed to load navigation categories", e);
+        setRootCategories([]);
+      }
+    }
+    loadRootCategories();
+  }, []);
+
+  // Handlers for category mega menu
+  const handleRootCategoryEnter = (cat) => {
+    if (categoryDropdownTimeout) {
+      clearTimeout(categoryDropdownTimeout);
+      setCategoryDropdownTimeout(null);
+    }
+    setActiveRootCategory(cat);
+    const firstL1 = cat?.children && cat.children.length > 0 ? cat.children[0] : null;
+    setActiveLevel1Id(firstL1?._id || null);
+    setShowCategoryDropdown(true);
+  };
+
+  const handleRootCategoryLeave = () => {
+    const t = setTimeout(() => {
+      setShowCategoryDropdown(false);
+      setActiveRootCategory(null);
+      setActiveLevel1Id(null);
+    }, 150);
+    setCategoryDropdownTimeout(t);
+  };
+
+  const handleDropdownEnter = () => {
+    if (categoryDropdownTimeout) {
+      clearTimeout(categoryDropdownTimeout);
+      setCategoryDropdownTimeout(null);
+    }
+  };
+
+  const handleDropdownLeave = () => {
+    const t = setTimeout(() => {
+      setShowCategoryDropdown(false);
+      setActiveRootCategory(null);
+      setActiveLevel1Id(null);
+    }, 150);
+    setCategoryDropdownTimeout(t);
+  };
 
   return (
     <>
@@ -997,7 +1058,7 @@ function App() {
                       >
                         <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 18 }}>🛒</span>
-                          <span style={{ fontWeight: 600 }}>Giỏ hàng</span>
+                          <span style={{ fontWeight: 600, color: "#374151" }}>Giỏ hàng</span>
                         </div>
                         
                         {cartItems.length === 0 ? (
@@ -1139,19 +1200,10 @@ function App() {
 
           {/* Navigation categories */}
           <div style={{ background: "white", borderBottom: "1px solid #e5e7eb" }}>
-            <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
-              <nav style={{ display: "flex", gap: 0, padding: "0", justifyContent: "center" }}>
-                {[
-                  { name: "Thực phẩm chức năng", hasDropdown: true },
-                  { name: "Dược mỹ phẩm", hasDropdown: true },
-                  { name: "Thuốc", hasDropdown: true },
-                  { name: "Chăm sóc cá nhân", hasDropdown: true },
-                  { name: "Thiết bị y tế", hasDropdown: true },
-                  { name: "Tiêm chủng", hasDropdown: false },
-                  { name: "Bệnh & Góc sức khỏe", hasDropdown: true },
-                  { name: "Hệ thống nhà thuốc", hasDropdown: false }
-                ].map((category) => (
-                  <Link key={category.name} to="/products" style={{ 
+            <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", position: "relative" }}>
+              <nav onMouseEnter={handleDropdownEnter} onMouseLeave={handleRootCategoryLeave} style={{ display: "flex", gap: 0, padding: "0", justifyContent: "center" }}>
+                {(rootCategories && rootCategories.length > 0 ? rootCategories : []).map((category) => (
+                  <Link key={category._id} to={`/catalog?category=${category.slug}`} onMouseEnter={() => handleRootCategoryEnter(category)} style={{ 
                     color: "#374151", 
                     textDecoration: "none", 
                     fontWeight: 500, 
@@ -1166,12 +1218,42 @@ function App() {
                     borderBottom: "3px solid transparent"
                   }}>
                     <span>{category.name}</span>
-                    {category.hasDropdown && (
+                    {(category.children && category.children.length > 0) && (
                       <span style={{ fontSize: 12, marginLeft: 4 }}>▼</span>
                     )}
                   </Link>
                 ))}
           </nav>
+              {/* Category Mega Dropdown */}
+              {showCategoryDropdown && activeRootCategory && (
+                <div onMouseEnter={handleDropdownEnter} onMouseLeave={handleDropdownLeave} style={{ position: "absolute", top: "100%", left: 20, right: 20, background: "white", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 20px 25px rgba(0,0,0,0.1)", zIndex: 1000, marginTop: 8 }}>
+                  <div style={{ display: "flex", minHeight: 260 }}>
+                    {/* Level 1 column */}
+                    <div style={{ width: 280, borderRight: "1px solid #f0f0f0", padding: 14 }}>
+                      {(activeRootCategory.children || []).map((c) => (
+                        <div key={c._id} onMouseEnter={() => setActiveLevel1Id(c._id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 8, cursor: "pointer", background: activeLevel1Id === c._id ? "#f3f4f6" : "transparent", color: "#374151", fontSize: 16, fontWeight: 500 }}>
+                          <Link to={`/catalog?category=${c.slug}`} style={{ color: "inherit", textDecoration: "none", flex: 1 }}>{c.name}</Link>
+                          <span style={{ fontSize: 12, color: "#9ca3af" }}>›</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Level 2 grid */}
+                    <div style={{ flex: 1, padding: 16 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
+                        {(activeRootCategory.children || [])
+                          .find((c) => c._id === activeLevel1Id)?.children?.map((c2) => (
+                            <Link key={c2._id} to={`/catalog?category=${c2.slug}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, border: "1px solid #e5e7eb", borderRadius: 10, color: "#374151", textDecoration: "none", background: "#fafafa" }}>
+                              <span style={{ width: 36, height: 36, borderRadius: 8, background: "#e5e7eb", display: "inline-block" }} />
+                              <span style={{ fontSize: 16, fontWeight: 500 }}>{c2.name}</span>
+                            </Link>
+                          )) || (
+                            <div style={{ color: "#9ca3af" }}>Chọn danh mục cấp 1 để xem danh mục con</div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1205,6 +1287,11 @@ function App() {
               <ProductManagement />
             </ProtectedRoute>
           } />
+          <Route path="brands" element={
+            <ProtectedRoute requiredPermission="read_products">
+              <BrandManagement />
+            </ProtectedRoute>
+          } />
           <Route path="users" element={
             <ProtectedRoute requiredPermission="read_users">
               <UserManagement />
@@ -1233,6 +1320,11 @@ function App() {
           <Route path="suppliers" element={
             <ProtectedRoute requiredPermission="read_inventory">
               <AdminSuppliers />
+            </ProtectedRoute>
+          } />
+          <Route path="sales-report" element={
+            <ProtectedRoute requiredPermission="read_inventory">
+              <SalesReport />
             </ProtectedRoute>
           } />
           <Route path="profile" element={<Profile />} />

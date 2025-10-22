@@ -60,7 +60,8 @@ const ProductManagement = () => {
     deleteProduct,
     updateProductStatus,
     bulkUpdateProducts,
-    handleTableChange
+    handleTableChange,
+    fetchBrands
   } = useProducts();
 
   const { categories, getTreeSelectData } = useCategories();
@@ -68,17 +69,43 @@ const ProductManagement = () => {
   const [filters, setFilters] = useState({
     search: '',
     categoryId: '',
+    brandId: '',
     isActive: undefined
   });
+  const [brandOptions, setBrandOptions] = useState([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isProductFormVisible, setIsProductFormVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [viewingProduct, setViewingProduct] = useState(null);
 
-  // Fetch products on mount
+  // Fetch brands for filter
   useEffect(() => {
-    fetchProducts();
+    (async () => {
+      try {
+        const list = await fetchBrands();
+        setBrandOptions(Array.isArray(list) ? list : []);
+      } catch {}
+    })();
+  }, [fetchBrands]);
+
+  // Fetch products on mount, support prefilled brandSlug (preferred) or brandId from query
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const brandSlug = params.get('brandSlug');
+    const brandId = params.get('brandId');
+    if (brandSlug) {
+      const newFilters = { ...filters, brandSlug };
+      setFilters(newFilters);
+      fetchProducts(newFilters);
+    } else if (brandId) {
+      const newFilters = { ...filters, brandId };
+      setFilters(newFilters);
+      fetchProducts(newFilters);
+    } else {
+      fetchProducts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Remove fetchProducts from dependencies to prevent infinite loop
 
   // Category options for filtering
@@ -102,6 +129,7 @@ const ProductManagement = () => {
     setFilters({
       search: '',
       categoryId: '',
+      brandId: '',
       isActive: undefined
     });
     fetchProducts({});
@@ -545,6 +573,29 @@ const ProductManagement = () => {
               </Form.Item>
             </Col>
             <Col span={6}>
+              <Form.Item label="Thương hiệu" style={{ marginBottom: '8px' }}>
+                <Select
+                  placeholder="Chọn thương hiệu"
+                  allowClear
+                  size="large"
+                  value={filters.brandId || undefined}
+                  onChange={(value, option) => {
+                    // Khi chọn thương hiệu, dùng brandSlug để filter đẹp URL, nhưng API hiện nhận brandId/brandSlug đều được
+                    const selected = brandOptions.find(b => b._id === value);
+                    const nf = { ...filters, brandId: value || '', brandSlug: selected?.slug || undefined };
+                    setFilters(nf);
+                    fetchProducts(nf);
+                  }}
+                  showSearch
+                  optionFilterProp="children"
+                >
+                  {brandOptions.map((b) => (
+                    <Option key={b._id} value={b._id}>{b.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={6}>
               <Form.Item label="Trạng thái" style={{ marginBottom: '8px' }}>
                 <Select
                   placeholder="Chọn trạng thái"
@@ -558,7 +609,7 @@ const ProductManagement = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={6}>
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'end', 
@@ -620,7 +671,13 @@ const ProductManagement = () => {
               size: 'default'
             }}
             rowSelection={rowSelection}
-            onChange={handleTableChange}
+            onChange={(p, f, s) => {
+              const payload = { ...filters, page: p.current, limit: p.pageSize };
+              if (s && s.field) {
+                payload.sortBy = s.order === 'ascend' ? s.field : `-${s.field}`;
+              }
+              fetchProducts(payload);
+            }}
             scroll={{ x: 1000 }}
             style={{
               background: '#fff'

@@ -100,7 +100,7 @@ export default function GoodsReceiptManagement() {
 
       setGoodsReceipts(receiptsRes.data.goodsReceipts || []);
       setProducts(productsRes.data.items || []);
-      setSuppliers(suppliersRes.data || []);
+      setSuppliers(suppliersRes.data.items || []);
       setStats(statsRes.data);
       
       setPagination(prev => ({

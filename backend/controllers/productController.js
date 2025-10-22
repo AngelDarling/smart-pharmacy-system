@@ -1,6 +1,8 @@
 import { z } from "zod";
 import Product from "../models/Product.js";
+import Brand from "../models/Brand.js";
 import Category from "../models/Category.js";
+import ProductSalesDaily from "../models/ProductSalesDaily.js";
 import xlsx from "xlsx";
 
 const upsertSchema = z.object({
@@ -31,6 +33,13 @@ export async function list(req, res) {
 
   const q = {};
   if (req.query.categoryId) q.categoryId = req.query.categoryId;
+  // Filter by brand using either brandId or brandSlug
+  if (req.query.brandId) q.brandId = req.query.brandId;
+  if (req.query.brandSlug) {
+    const b = await Brand.findOne({ slug: req.query.brandSlug }).select('_id');
+    if (b) q.brandId = b._id;
+    else q.brandId = '__no_match__'; // force no results
+  }
   if (req.query.minPrice) q.price = { ...(q.price || {}), $gte: Number(req.query.minPrice) };
   if (req.query.maxPrice) q.price = { ...(q.price || {}), $lte: Number(req.query.maxPrice) };
   if (req.query.isActive !== undefined) q.isActive = req.query.isActive === "true";
@@ -101,6 +110,44 @@ export async function remove(req, res) {
   const doc = await Product.findByIdAndDelete(req.params.id);
   if (!doc) return res.status(404).json({ message: "Không tìm thấy" });
   res.json({ success: true });
+}
+
+// Best sellers in current month
+export async function bestSellers(req, res, next) {
+  try {
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit || "12", 10)));
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const agg = await ProductSalesDaily.aggregate([
+      { $match: { date: { $gte: startOfMonth, $lt: endOfMonth } } },
+      { $group: { _id: "$productId", qty: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } },
+      { $sort: { qty: -1, revenue: -1 } },
+      { $limit: limit },
+    ]);
+
+    const productIds = agg.map(a => a._id);
+    const products = await Product.find({ _id: { $in: productIds }, isActive: true })
+      .populate('brandId', 'name slug')
+      .populate('categoryId', 'name slug');
+
+    // Keep order same as ranking
+    const orderMap = new Map(productIds.map((id, idx) => [String(id), idx]));
+    const items = products
+      .map(p => p.toObject())
+      .map(p => ({
+        ...p,
+        imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"],
+        monthQuantity: agg.find(a => String(a._id) === String(p._id))?.qty || 0,
+        monthRevenue: agg.find(a => String(a._id) === String(p._id))?.revenue || 0
+      }))
+      .sort((a, b) => (orderMap.get(String(a._id)) ?? 0) - (orderMap.get(String(b._id)) ?? 0));
+
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
 }
 
 export async function bulkImport(req, res, next) {

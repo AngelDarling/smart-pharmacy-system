@@ -96,7 +96,7 @@ export default function InventoryManagement() {
 
       setTransactions(transactionsRes.data.transactions || []);
       setProducts(productsRes.data.items || []);
-      setSuppliers(suppliersRes.data || []);
+      setSuppliers(suppliersRes.data.items || []);
       setStats(statsRes.data);
       
       setPagination(prev => ({

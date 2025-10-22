@@ -38,5 +38,10 @@ export function getImageUrl(imagePath, fallback = "/default-product.svg") {
  * @param {string} fallback - Fallback image path
  */
 export function handleImageError(event, fallback = "/default-product.svg") {
-  event.target.src = fallback;
+  try {
+    if (event && event.target) {
+      event.target.onerror = null;
+      event.target.src = fallback;
+    }
+  } catch {}
 }

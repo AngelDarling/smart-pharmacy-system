@@ -16,6 +16,7 @@ import inventoryRoutes from "./routes/inventory.js";
 import goodsReceiptRoutes from "./routes/goodsReceipts.js";
 import inventoryAlertRoutes from "./routes/inventoryAlerts.js";
 import orderRoutes from "./routes/orders.js";
+import salesRoutes from "./routes/sales.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -43,6 +44,7 @@ app.use("/api/inventory", inventoryRoutes);
 app.use("/api/goods-receipts", goodsReceiptRoutes);
 app.use("/api/inventory-alerts", inventoryAlertRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/sales", salesRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });

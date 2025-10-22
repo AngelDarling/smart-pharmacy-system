@@ -4,12 +4,16 @@
   "description": "Smart Pharmacy System Backend",
   "main": "server.js",
   "scripts": {
+    "seed:categories": "node --loader ts-node/esm ./scripts/seed-categories.js || node ./scripts/seed-categories.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
+    "reset-password": "node scripts/reset-password.js",
     "export": "node export-all.js",
     "export-essential": "node export-essential-data.js",
     "export-complete": "node export-database.js",
-    "export-sql": "node export-to-sql.js"
+    "export-sql": "node export-to-sql.js",
+    "backfill:sales-daily": "node scripts/backfill-sales-daily.js",
+    "seed:sales-daily": "node scripts/seed-sales-daily.js"
   },
   "keywords": [],
   "author": "",

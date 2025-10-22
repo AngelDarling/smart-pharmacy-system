@@ -37,6 +37,7 @@ export const useProducts = () => {
       if (filters.productType) queryParams.append('productType', filters.productType);
       if (filters.categoryId) queryParams.append('categoryId', filters.categoryId);
       if (filters.brandId) queryParams.append('brandId', filters.brandId);
+      if (filters.brandSlug) queryParams.append('brandSlug', filters.brandSlug);
       if (filters.isActive !== undefined) queryParams.append('isActive', filters.isActive);
       if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
       if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
@@ -193,11 +194,13 @@ export const useProducts = () => {
   // Get brands for select options
   const fetchBrands = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/brands`);
+      const response = await fetch(`${API_BASE_URL}/brands?simple=true&isActive=true`);
       if (!response.ok) {
         throw new Error('Failed to fetch brands');
       }
-      return await response.json();
+      const data = await response.json();
+      // Ensure array
+      return Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       message.error('Lỗi khi tải danh sách thương hiệu');
       return [];
@@ -366,9 +369,7 @@ export const useProducts = () => {
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  // Caller pages tự quyết định thời điểm fetchProducts
 
   return {
     products,
