@@ -1,7 +1,7 @@
 import { useState } from "react";
 import api from "../../api/client.js";
 import { showError, showSuccess } from "../../api/alert.js";
-import useAuth from "../../hooks/useAuth.js";
+import { useAuth } from "../../contexts/AuthContext.jsx";
 
 export default function AdminLogin() {
   const { user } = useAuth();

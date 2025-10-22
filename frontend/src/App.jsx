@@ -2,7 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import useCart from "./hooks/useCart.js";
+import { useAuth } from "./contexts/AuthContext.jsx";
+import AuthModal from "./components/AuthModal.jsx";
+import Swal from "sweetalert2";
 import useSearch from "./hooks/useSearch.js";
+import { getImageUrl, handleImageError } from "./utils/imageUtils";
 import Home from "./pages/Home.jsx";
 import Landing from "./pages/Landing.jsx";
 import ProductDetail from "./pages/ProductDetail.jsx";
@@ -30,6 +34,8 @@ import TestCheckout from "./pages/TestCheckout.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
 import Products from "./pages/Products.jsx";
 import AddressLookup from "./pages/AddressLookup.jsx";
+import UserProfile from "./pages/Profile.jsx";
+import UserOrders from "./pages/Orders.jsx";
 
 // Landing move to its own file with full storefront sections
 
@@ -45,7 +51,7 @@ function Login() {
       const res = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
       window.location.href = "/";
-    } catch (err) {
+    } catch {
       setError("Đăng nhập thất bại");
     }
   }
@@ -85,7 +91,7 @@ function Register() {
       const res = await axios.post("/api/auth/register", { name, email, password });
       localStorage.setItem("token", res.data.token);
       window.location.href = "/";
-    } catch (err) {
+    } catch {
       setError("Đăng ký thất bại");
     }
   }
@@ -119,9 +125,34 @@ function Register() {
 function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
-  const { items: cartItems } = useCart();
+  const { items: cartItems, remove: removeFromCart } = useCart();
+  const { user, logout, refreshTrigger } = useAuth();
+  
+  // Debug log để kiểm tra user state
+  useEffect(() => {
+    console.log('App.jsx user state changed:', user);
+  }, [user, refreshTrigger]);
+  
+  // Debug log để kiểm tra khi App component re-render
+  useEffect(() => {
+    console.log('App.jsx component rendered, user:', user, 'refreshTrigger:', refreshTrigger);
+  });
+  
+  // Debug log để kiểm tra cartItems (đã tắt)
+  // console.log('App.jsx cartItems updated:', cartItems.length, cartItems.map(i => ({ 
+  //   id: i.id, 
+  //   name: i.name, 
+  //   qty: i.qty,
+  //   price: i.price,
+  //   image: i.image,
+  //   fullItem: i
+  // })));
   const [showCartDropdown, setShowCartDropdown] = useState(false);
+  const [cartDropdownTimeout, setCartDropdownTimeout] = useState(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [userDropdownTimeout, setUserDropdownTimeout] = useState(null);
   const searchDropdownRef = useRef(null);
   
   // Search functionality
@@ -161,8 +192,87 @@ function App() {
     };
   }, [showSearchModal]);
 
+  // Functions để handle hover với delay
+  const handleCartMouseEnter = () => {
+    if (cartDropdownTimeout) {
+      clearTimeout(cartDropdownTimeout);
+      setCartDropdownTimeout(null);
+    }
+    setShowCartDropdown(true);
+  };
+
+  const handleCartMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setShowCartDropdown(false);
+    }, 200); // Delay 200ms để tránh đóng khi di chuyển chuột nhanh
+    setCartDropdownTimeout(timeout);
+  };
+
+  // Functions để handle user dropdown
+  const handleUserMouseEnter = () => {
+    if (userDropdownTimeout) {
+      clearTimeout(userDropdownTimeout);
+      setUserDropdownTimeout(null);
+    }
+    setShowUserDropdown(true);
+  };
+
+  const handleUserMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setShowUserDropdown(false);
+    }, 200);
+    setUserDropdownTimeout(timeout);
+  };
+
+  const handleLogout = () => {
+    Swal.fire({
+      title: 'Đăng xuất?',
+      text: 'Bạn có chắc chắn muốn đăng xuất?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Đăng xuất',
+      cancelButtonText: 'Hủy'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        logout();
+      }
+    });
+  };
+
+  // Đăng ký global function để hiển thị cart dropdown
+  useEffect(() => {
+    window.showCartDropdown = () => {
+      setShowCartDropdown(true);
+      // Tự động ẩn sau 3 giây
+      setTimeout(() => {
+        setShowCartDropdown(false);
+      }, 3000);
+    };
+
+    return () => {
+      window.showCartDropdown = null;
+      if (cartDropdownTimeout) {
+        clearTimeout(cartDropdownTimeout);
+      }
+    };
+  }, [cartDropdownTimeout]);
+
   return (
     <>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
       {!isAdminRoute && (
         <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
           {/* Main header */}
@@ -430,14 +540,15 @@ function App() {
                                       }}
                                     >
                                       <img 
-                                        src={product.image} 
+                                        src={getImageUrl(product.image, "/default-product.svg")} 
                                         alt={product.name} 
                                         style={{ 
                                           width: 60, 
                                           height: 60, 
                                           borderRadius: 8, 
                                           objectFit: "cover" 
-                                        }} 
+                                        }}
+                                        onError={(e) => handleImageError(e, "/default-product.svg")}
                                       />
                                       <div style={{ flex: 1 }}>
                                         <h4 style={{ 
@@ -598,14 +709,15 @@ function App() {
                                     >
                                       <div style={{ position: "relative" }}>
                                         <img 
-                                          src={product.image} 
+                                          src={getImageUrl(product.image, "/default-product.svg")} 
                                           alt={product.name} 
                                           style={{ 
                                             width: 90, 
                                             height: 90, 
                                             borderRadius: 8, 
                                             objectFit: "cover" 
-                                          }} 
+                                          }}
+                                          onError={(e) => handleImageError(e, "/default-product.svg")}
                                         />
                                         {product.discount > 0 && (
                                           <div style={{
@@ -687,41 +799,146 @@ function App() {
                 </div>
                 
                 <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 180, flexShrink: 0 }}>
-                  <Link to="/orders" style={{ 
-                    color: "white", 
-                    textDecoration: "none", 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: 6,
-                    padding: "8px 16px",
-                    borderRadius: 20,
-                    background: "rgba(255,255,255,0.1)",
-                    transition: "background 0.2s",
-                    fontSize: 14
-                  }}>
-                    <span style={{ fontSize: 16 }}>📋</span>
-                    <span>Đơn hàng</span>
-                  </Link>
-                  <Link to="/login" style={{ 
-                    color: "white", 
-                    textDecoration: "none", 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: 6,
-                    padding: "8px 16px",
-                    borderRadius: 20,
-                    background: "rgba(255,255,255,0.1)",
-                    transition: "background 0.2s",
-                    fontSize: 14
-                  }}>
-                    <span style={{ fontSize: 16 }}>👤</span>
-                    <span>Đăng nhập</span>
-                  </Link>
+                  {user ? (
+                    <div style={{ position: "relative" }}>
+                      <div
+                        key={`user-${user._id || 'unknown'}`}
+                        onMouseEnter={handleUserMouseEnter}
+                        onMouseLeave={handleUserMouseLeave}
+                        style={{
+                          color: "white",
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "8px 16px",
+                          borderRadius: 20,
+                          background: "rgba(255,255,255,0.1)",
+                          transition: "background 0.2s",
+                          fontSize: 14,
+                          cursor: "pointer"
+                        }}
+                      >
+                        <span style={{ fontSize: 16 }}>👤</span>
+                        <span>{user.fullName || user.phone}</span>
+                      </div>
+                      
+                      {/* User Dropdown */}
+                      {showUserDropdown && (
+                        <div 
+                          onMouseEnter={handleUserMouseEnter}
+                          onMouseLeave={handleUserMouseLeave}
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            right: 0,
+                            background: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: 8,
+                            boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                            width: 250,
+                            zIndex: 1000,
+                            marginTop: 16,
+                            animation: "fadeIn 0.2s ease-in-out"
+                          }}
+                        >
+                          <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 18 }}>👤</span>
+                            <span style={{ fontWeight: 600, color: "#374151" }}>Tài khoản</span>
+                          </div>
+                          
+                          <div style={{ padding: 8 }}>
+                            <Link 
+                              to="/profile" 
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "8px 12px",
+                                color: "#374151",
+                                textDecoration: "none",
+                                borderRadius: 6,
+                                transition: "background 0.2s"
+                              }}
+                              onMouseEnter={(e) => e.target.style.background = "#f3f4f6"}
+                              onMouseLeave={(e) => e.target.style.background = "transparent"}
+                            >
+                              <span>👤</span>
+                              <span>Thông tin cá nhân</span>
+                            </Link>
+                            
+                            <Link 
+                              to="/orders" 
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "8px 12px",
+                                color: "#374151",
+                                textDecoration: "none",
+                                borderRadius: 6,
+                                transition: "background 0.2s"
+                              }}
+                              onMouseEnter={(e) => e.target.style.background = "#f3f4f6"}
+                              onMouseLeave={(e) => e.target.style.background = "transparent"}
+                            >
+                              <span>📋</span>
+                              <span>Đơn hàng của tôi</span>
+                            </Link>
+                            
+                            <button
+                              onClick={handleLogout}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "8px 12px",
+                                color: "#ef4444",
+                                background: "none",
+                                border: "none",
+                                borderRadius: 6,
+                                cursor: "pointer",
+                                width: "100%",
+                                textAlign: "left",
+                                transition: "background 0.2s"
+                              }}
+                              onMouseEnter={(e) => e.target.style.background = "#fef2f2"}
+                              onMouseLeave={(e) => e.target.style.background = "transparent"}
+                            >
+                              <span>🚪</span>
+                              <span>Đăng xuất</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowAuthModal(true)}
+                      style={{ 
+                        color: "white", 
+                        textDecoration: "none", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 6,
+                        padding: "8px 16px",
+                        borderRadius: 20,
+                        background: "rgba(255,255,255,0.1)",
+                        transition: "background 0.2s",
+                        fontSize: 14,
+                        border: "none",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>👤</span>
+                      <span>Đăng nhập</span>
+                    </button>
+                  )}
                   <div style={{ position: "relative" }}>
-                    <Link 
+                    <Link
                       to="/cart"
-                      onMouseEnter={() => setShowCartDropdown(true)}
-                      onMouseLeave={() => setShowCartDropdown(false)}
+                      onMouseEnter={handleCartMouseEnter}
+                      onMouseLeave={handleCartMouseLeave}
                       style={{ 
                         color: "white", 
                         textDecoration: "none", 
@@ -738,17 +955,20 @@ function App() {
                       <span style={{ fontSize: 16 }}>🛒</span>
                       <span>Giỏ hàng</span>
                       {cartItems.length > 0 && (
-                        <span style={{ 
-                          background: "#ef4444", 
-                          color: "white", 
-                          borderRadius: "50%", 
-                          width: 20, 
-                          height: 20, 
-                          fontSize: 12, 
-                          display: "flex", 
-                          alignItems: "center", 
-                          justifyContent: "center" 
-                        }}>
+                        <span 
+                          key={`cart-badge-${cartItems.length}`}
+                          style={{ 
+                            background: "#ef4444", 
+                            color: "white", 
+                            borderRadius: "50%", 
+                            width: 20, 
+                            height: 20, 
+                            fontSize: 12, 
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "center" 
+                          }}
+                        >
                           {cartItems.length}
                         </span>
                       )}
@@ -757,8 +977,8 @@ function App() {
                     {/* Cart Dropdown */}
                     {showCartDropdown && (
                       <div 
-                        onMouseEnter={() => setShowCartDropdown(true)}
-                        onMouseLeave={() => setShowCartDropdown(false)}
+                        onMouseEnter={handleCartMouseEnter}
+                        onMouseLeave={handleCartMouseLeave}
                         style={{
                           position: "absolute",
                           top: "100%",
@@ -771,7 +991,8 @@ function App() {
                           maxHeight: 500,
                           overflowY: "auto",
                           zIndex: 1000,
-                          marginTop: 8
+                          marginTop: 8,
+                          animation: "fadeIn 0.2s ease-in-out"
                         }}
                       >
                         <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 8 }}>
@@ -786,15 +1007,25 @@ function App() {
                         ) : (
                           <>
                             <div style={{ maxHeight: 300, overflowY: "auto" }}>
-                              {cartItems.map((item) => (
+                              {cartItems.map((item) => {
+                                // console.log('Rendering cart item in dropdown:', { 
+                                //   id: item.id, 
+                                //   name: item.name, 
+                                //   qty: item.qty,
+                                //   price: item.price,
+                                //   image: item.image
+                                // });
+                                return (
                                 <div key={item.id} style={{ 
                                   display: "flex", 
                                   alignItems: "center", 
                                   padding: 12, 
-                                  borderBottom: "1px solid #f3f4f6" 
+                                  borderBottom: "1px solid #f3f4f6",
+                                  backgroundColor: "#ffffff",
+                                  minHeight: "60px"
                                 }}>
                                   <img 
-                                    src={item.image || "/vite.svg"} 
+                                    src={getImageUrl(item.image, "/vite.svg")} 
                                     alt={item.name} 
                                     style={{ 
                                       width: 50, 
@@ -802,18 +1033,21 @@ function App() {
                                       objectFit: "cover", 
                                       borderRadius: 6, 
                                       marginRight: 12 
-                                    }} 
+                                    }}
+                                    onError={(e) => handleImageError(e, "/vite.svg")}
                                   />
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ 
-                                      fontSize: 13, 
-                                      fontWeight: 500, 
+                                      fontSize: 14, 
+                                      fontWeight: 600, 
                                       marginBottom: 4,
+                                      color: "#1f2937",
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap"
+                                      whiteSpace: "nowrap",
+                                      lineHeight: "1.2"
                                     }}>
-                                      {item.name}
+                                      {item.name || "Tên sản phẩm không xác định"}
                                     </div>
                                     <div style={{ 
                                       color: "#2e7d32", 
@@ -831,8 +1065,7 @@ function App() {
                                   </div>
                                   <button 
                                     onClick={() => {
-                                      const { remove } = useCart();
-                                      remove(item.id);
+                                      removeFromCart(item.id);
                                       setShowCartDropdown(false);
                                     }}
                                     style={{ 
@@ -847,7 +1080,8 @@ function App() {
                                     🗑️
                                   </button>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                             
                             <div style={{ 
@@ -916,7 +1150,7 @@ function App() {
                   { name: "Tiêm chủng", hasDropdown: false },
                   { name: "Bệnh & Góc sức khỏe", hasDropdown: true },
                   { name: "Hệ thống nhà thuốc", hasDropdown: false }
-                ].map((category, index) => (
+                ].map((category) => (
                   <Link key={category.name} to="/products" style={{ 
                     color: "#374151", 
                     textDecoration: "none", 
@@ -950,8 +1184,9 @@ function App() {
         <Route path="/p/:slug" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
-        <Route path="/orders" element={<OrderHistory />} />
+        <Route path="/orders" element={<UserOrders />} />
         <Route path="/orders/:orderId" element={<OrderDetail />} />
+        <Route path="/profile" element={<UserProfile />} />
         <Route path="/test-checkout" element={<TestCheckout />} />
         <Route path="/search" element={<Products />} />
         <Route path="/tra-cuu/dia-chinh-moi" element={<AddressLookup />} />
@@ -1005,6 +1240,12 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </>
   );
 }

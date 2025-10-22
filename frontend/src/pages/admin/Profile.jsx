@@ -42,7 +42,7 @@ import {
   ClockCircleOutlined,
   SafetyOutlined
 } from '@ant-design/icons';
-import useAuth from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import api from '../../api/client';
 import Swal from 'sweetalert2';
 

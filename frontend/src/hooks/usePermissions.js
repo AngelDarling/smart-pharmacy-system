@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import useAuth from './useAuth';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 export const usePermissions = () => {
   const { user } = useAuth();

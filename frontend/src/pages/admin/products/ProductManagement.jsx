@@ -42,6 +42,7 @@ import {
   DollarOutlined
 } from '@ant-design/icons';
 import { useProducts } from '../../../hooks/admin/useProducts';
+import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import { useCategories } from '../../../hooks/admin/useCategories';
 import ProductForm from '../../../components/admin/ProductForm';
 
@@ -198,12 +199,13 @@ const ProductManagement = () => {
         <Avatar
           size={60}
           shape="square"
-          src={imageUrls?.[0] || '/default-product.png'}
+          src={getImageUrl(imageUrls?.[0], '/default-product.png')}
           style={{ 
             borderRadius: '8px',
             border: '2px solid #f0f0f0'
           }}
           alt={record.name}
+          onError={(e) => handleImageError(e, '/default-product.png')}
         >
           <ShoppingOutlined />
         </Avatar>
@@ -831,7 +833,7 @@ const ProductManagement = () => {
                         {viewingProduct.imageUrls.map((url, index) => (
                           <div key={index} style={{ width: '120px', height: '120px' }}>
                             <img
-                              src={url}
+                              src={getImageUrl(url)}
                               alt={`Product ${index + 1}`}
                               style={{
                                 width: '100%',
@@ -840,10 +842,7 @@ const ProductManagement = () => {
                                 borderRadius: '4px',
                                 border: '1px solid #d9d9d9'
                               }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
+                              onError={(e) => handleImageError(e, '/default-product.png')}
                             />
                             <div
                               style={{

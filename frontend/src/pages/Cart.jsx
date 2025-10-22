@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart";
+import { getImageUrl, handleImageError } from "../utils/imageUtils";
+import Swal from "sweetalert2";
 
 // Biểu tượng thùng rác (Trash Icon)
 const TrashIcon = () => (
@@ -10,11 +12,16 @@ const TrashIcon = () => (
 );
 
 export default function Cart() {
-  const { items, remove, updateQty } = useCart();
+  const { items, remove, updateQty, clear } = useCart();
   const navigate = useNavigate();
 
   // State để quản lý các sản phẩm được chọn
   const [selectedItems, setSelectedItems] = useState(() => items.map(item => item.id));
+
+  // Cập nhật selectedItems khi items thay đổi
+  useEffect(() => {
+    setSelectedItems(items.map(item => item.id));
+  }, [items]);
 
   // Tính toán tổng tiền chỉ dựa trên các sản phẩm đã được chọn
   const selectedTotal = useMemo(() => {
@@ -27,9 +34,36 @@ export default function Cart() {
   function handleQtyChange(id, newQty) {
     if (newQty <= 0) {
       remove(id);
-      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+      // selectedItems sẽ được cập nhật tự động qua useEffect
     } else {
       updateQty(id, newQty);
+    }
+  }
+
+  // Xử lý xóa sản phẩm
+  async function handleRemove(id) {
+    const item = items.find(i => i.id === id);
+    const result = await Swal.fire({
+      title: 'Xóa sản phẩm?',
+      text: `Bạn có chắc chắn muốn xóa "${item?.name || 'sản phẩm này'}" khỏi giỏ hàng?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Xóa',
+      cancelButtonText: 'Hủy',
+      reverseButtons: true
+    });
+    
+    if (result.isConfirmed) {
+      remove(id);
+      Swal.fire({
+        title: 'Đã xóa!',
+        text: 'Sản phẩm đã được xóa khỏi giỏ hàng.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
     }
   }
 
@@ -60,7 +94,7 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <div style={{ maxWidth: 1200, margin: "24px auto", padding: 16, textAlign: "center" }}>
-        <img src="/empty-cart.svg" alt="Giỏ hàng trống" style={{width: 200, height: 200, marginBottom: 24}} />
+        <img src="/empty-cart.png" alt="Giỏ hàng trống" style={{width: 150, height: 150, marginBottom: 5}} />
         <h3>Giỏ hàng của bạn còn trống</h3>
         <p style={{color: '#6b7280', marginBottom: 24}}>Hãy lựa chọn thêm sản phẩm để mua sắm nhé!</p>
         <button onClick={() => navigate('/')} style={styles.checkoutButton}>
@@ -93,6 +127,44 @@ export default function Cart() {
               />
               <span>Chọn tất cả ({items.length} sản phẩm)</span>
             </div>
+            <button 
+              onClick={async () => {
+                const result = await Swal.fire({
+                  title: 'Xóa tất cả sản phẩm?',
+                  text: 'Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?',
+                  icon: 'warning',
+                  showCancelButton: true,
+                  confirmButtonColor: '#ef4444',
+                  cancelButtonColor: '#6b7280',
+                  confirmButtonText: 'Xóa tất cả',
+                  cancelButtonText: 'Hủy',
+                  reverseButtons: true
+                });
+                
+                if (result.isConfirmed) {
+                  clear();
+                  Swal.fire({
+                    title: 'Đã xóa!',
+                    text: 'Tất cả sản phẩm đã được xóa khỏi giỏ hàng.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                  });
+                }
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              Xóa tất cả
+            </button>
           </div>
           
           <div style={{backgroundColor: 'white', borderRadius: '0 0 8px 8px'}}>
@@ -119,7 +191,12 @@ export default function Cart() {
                 </div>
                 {/* Thông tin sản phẩm */}
                 <div style={styles.productInfo}>
-                  <img src={item.image || "/default-product.svg"} alt={item.name} style={styles.productImage} />
+                  <img 
+                    src={getImageUrl(item.image, "/default-product.svg")} 
+                    alt={item.name} 
+                    style={styles.productImage}
+                    onError={(e) => handleImageError(e, "/default-product.svg")}
+                  />
                   <div>
                     <div style={styles.productName}>{item.name}</div>
                   </div>
@@ -142,7 +219,7 @@ export default function Cart() {
                 </div>
                 {/* Nút xóa */}
                 <div style={styles.cellCenter}>
-                  <button onClick={() => remove(item.id)} style={styles.deleteButton}>
+                  <button onClick={() => handleRemove(item.id)} style={styles.deleteButton}>
                     <TrashIcon />
                   </button>
                 </div>

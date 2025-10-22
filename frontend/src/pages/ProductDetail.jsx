@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/client.js";
 import useCart from "../hooks/useCart.js";
+import { getImageUrl, handleImageError } from "../utils/imageUtils";
 import SelectPurchaseModal from "../components/SelectPurchaseModal.jsx";
 
 export default function ProductDetail() {
@@ -18,7 +19,12 @@ export default function ProductDetail() {
   return (
     <div style={{ padding: 16 }}>
       <div style={{ display: "flex", gap: 24 }}>
-        <img src={p.imageUrls?.[0] || "/vite.svg"} alt={p.name} style={{ width: 360, height: 360, objectFit: "cover", borderRadius: 12 }} />
+        <img 
+          src={getImageUrl(p.imageUrls?.[0], "/vite.svg")} 
+          alt={p.name} 
+          style={{ width: 360, height: 360, objectFit: "cover", borderRadius: 12 }}
+          onError={(e) => handleImageError(e, "/vite.svg")}
+        />
         <div style={{ flex: 1 }}>
           <h2 style={{ margin: "0 0 8px" }}>{p.name}</h2>
           <div style={{ color: "#6b7280", marginBottom: 8 }}>Mã SKU: {p.sku || "—"}</div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import useAuth from "../../hooks/useAuth.js";
+import { useAuth } from "../../contexts/AuthContext.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { showSuccess } from "../../api/alert.js";
 import api from "../../api/client.js";

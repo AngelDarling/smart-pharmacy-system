@@ -42,7 +42,7 @@ import {
   ShopOutlined,
   FileTextOutlined
 } from '@ant-design/icons';
-import useAuth from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
 import api from '../../api/client';
 

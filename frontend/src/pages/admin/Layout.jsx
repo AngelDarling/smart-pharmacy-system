@@ -1,6 +1,6 @@
 import { NavLink, Outlet, Navigate } from "react-router-dom";
 import { useState } from "react";
-import useAuth from "../../hooks/useAuth.js";
+import { useAuth } from "../../contexts/AuthContext.jsx";
 import { confirm } from "../../api/alert.js";
 
 export default function AdminLayout() {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import SelectPurchaseModal from '../components/SelectPurchaseModal.jsx';
+import { getImageUrl, handleImageError } from '../utils/imageUtils';
 
 export default function Products() {
   const [searchParams] = useSearchParams();
@@ -37,7 +38,21 @@ export default function Products() {
         params.append('limit', '50');
         
         const response = await axios.get(`/api/search?${params}`);
-        setProducts(response.data.products || []);
+        // Chuẩn hóa dữ liệu từ search API để tương thích với products API
+        const normalizedProducts = (response.data.products || []).map(product => ({
+          _id: String(product.id), // Đảm bảo _id là string
+          name: product.name,
+          price: product.price,
+          discount: product.discount || 0,
+          imageUrls: product.image ? [product.image] : [],
+          categoryId: product.category,
+          categorySlug: product.categorySlug || '',
+          description: product.description || '',
+          tags: product.tags || [],
+          brand: product.brand || '',
+          slug: product.slug || product.name.toLowerCase().replace(/\s+/g, '-')
+        }));
+        setProducts(normalizedProducts);
       } else {
         // Nếu không có search term, sử dụng products API
         const params = new URLSearchParams();
@@ -79,6 +94,13 @@ export default function Products() {
   };
 
   const handleProductSelect = (product) => {
+    console.log('Product selected for modal:', {
+      _id: product._id,
+      name: product.name,
+      price: product.price,
+      imageUrls: product.imageUrls,
+      categoryId: product.categoryId
+    });
     setSelectedProduct(product);
     setShowModal(true);
   };
@@ -395,7 +417,7 @@ export default function Products() {
                 >
                   <div style={{ position: 'relative' }}>
                     <img
-                      src={product.imageUrls?.[0] || '/default-product.svg'}
+                      src={getImageUrl(product.imageUrls?.[0], '/default-product.svg')}
                       alt={product.name}
                       style={{
                         width: '100%',
@@ -403,9 +425,7 @@ export default function Products() {
                         objectFit: 'cover',
                         backgroundColor: '#f3f4f6'
                       }}
-                      onError={(e) => {
-                        e.target.src = '/default-product.svg';
-                      }}
+                      onError={(e) => handleImageError(e, '/default-product.svg')}
                     />
                     {product.discount > 0 && (
                       <div style={{

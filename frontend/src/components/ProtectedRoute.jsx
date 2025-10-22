@@ -6,7 +6,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Result, Button } from 'antd';
-import useAuth from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 const ProtectedRoute = ({ 
   children, 

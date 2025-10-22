@@ -1,5 +1,6 @@
 import { useState } from "react";
 import useCart from "../hooks/useCart.js";
+import { getImageUrl, handleImageError } from "../utils/imageUtils";
 
 export default function TestCheckout() {
   const { add, items, clear } = useCart();
@@ -34,7 +35,12 @@ export default function TestCheckout() {
               width: 200,
               textAlign: "center"
             }}>
-              <img src={product.image} alt={product.name} style={{ width: 100, height: 100, objectFit: "cover", marginBottom: 8 }} />
+              <img 
+                src={getImageUrl(product.image, "/default-product.png")} 
+                alt={product.name} 
+                style={{ width: 100, height: 100, objectFit: "cover", marginBottom: 8 }}
+                onError={(e) => handleImageError(e, "/default-product.png")}
+              />
               <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>{product.name}</h3>
               <div style={{ color: "#2e7d32", fontWeight: 600, marginBottom: 8 }}>
                 {product.price.toLocaleString()}₫

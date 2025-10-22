@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/client.js";
+import { getImageUrl, handleImageError } from "../utils/imageUtils";
 import ProductCard from "../components/ProductCard.jsx";
 
 export default function Landing() {
@@ -116,7 +117,12 @@ function BestSellingSection({ products }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
           {products.map((p) => (
             <div key={p._id} style={{ background: "white", borderRadius: 12, padding: 15, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-              <img src={p.imageUrls?.[0] || "https://picsum.photos/250/200"} alt={p.name} style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 8, marginBottom: 12 }} />
+              <img 
+                src={getImageUrl(p.imageUrls?.[0], "https://picsum.photos/250/200")} 
+                alt={p.name} 
+                style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 8, marginBottom: 12 }}
+                onError={(e) => handleImageError(e, "https://picsum.photos/250/200")}
+              />
               <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{p.name}</div>
               <div style={{ color: "#2e7d32", fontWeight: 700, fontSize: 18 }}>{p.price?.toLocaleString()}₫</div>
             </div>

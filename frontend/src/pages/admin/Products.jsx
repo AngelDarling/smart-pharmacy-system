@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api, { uploadFile } from "../../api/client.js";
 import { showSuccess, showError, confirm } from "../../api/alert.js";
+import { getImageUrl, handleImageError } from "../../utils/imageUtils";
 
 export default function AdminProducts() {
   const [items, setItems] = useState([]);
@@ -223,7 +224,7 @@ export default function AdminProducts() {
         <tbody>
           {items.map(p => (
             <tr key={p._id}>
-              <td style={{ textAlign: "center" }}>{p.imageUrls?.[0] ? <img src={p.imageUrls[0]} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8 }} /> : null}</td>
+              <td style={{ textAlign: "center" }}>{p.imageUrls?.[0] ? <img src={getImageUrl(p.imageUrls[0])} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8 }} onError={(e) => handleImageError(e, '/default-product.png')} /> : null}</td>
               <td>{p.name}</td>
               <td>{cats.find(c => c._id === p.categoryId)?.name || p.categoryId}</td>
               <td>{p.price?.toLocaleString()}</td>

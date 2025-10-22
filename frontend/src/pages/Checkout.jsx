@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart.js";
-import useAuth from "../hooks/useAuth.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import locationsBefore from "../locations_before.json"; // Dữ liệu "Trước sáp nhập"
 // *** THÊM IMPORT MỚI CHO DỮ LIỆU "SAU SÁP NHẬP" ***
 import locationsAfter from "../locations_after.json";
+import { getImageUrl, handleImageError } from "../utils/imageUtils";
 
 // Icons
 const ArrowLeftIcon = () => (
@@ -996,7 +997,12 @@ export default function Checkout() {
               {items.map((item) => (
                 <div key={item.id} style={styles.itemRow}>
                   <div style={styles.itemInfo}>
-                    <img src={item.image || "/default-product.png"} alt={item.name} style={styles.itemImage} />
+                    <img 
+                      src={getImageUrl(item.image, "/default-product.png")} 
+                      alt={item.name} 
+                      style={styles.itemImage}
+                      onError={(e) => handleImageError(e, "/default-product.png")}
+                    />
                     <div>
                       <div style={styles.itemName}>{item.name}</div>
                       <div style={styles.itemQty}>Số lượng: {item.qty}</div>

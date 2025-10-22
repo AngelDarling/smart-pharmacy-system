@@ -30,7 +30,7 @@ import {
   TeamOutlined,
   UsergroupAddOutlined
 } from '@ant-design/icons';
-import useAuth from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
 
 const { Header, Sider, Content } = Layout;

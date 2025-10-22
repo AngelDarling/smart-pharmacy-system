@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart.js";
+import { getImageUrl, handleImageError } from "../utils/imageUtils";
+
+// Global function để trigger cart dropdown
+window.showCartDropdown = null;
 
 export default function SelectPurchaseModal({ product, open, onClose }) {
   const { add } = useCart();
@@ -9,14 +13,23 @@ export default function SelectPurchaseModal({ product, open, onClose }) {
   if (!open || !product) return null;
 
   function addToCart() {
+    console.log('addToCart called:', { product: product._id, name: product.name, qty });
     add(product, qty);
-    // Auto close after 2 seconds without showing SweetAlert2
-    setTimeout(() => {
-      onClose?.();
-    }, 2000);
+    
+    // Scroll lên đầu trang
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Hiển thị dropdown giỏ hàng
+    if (window.showCartDropdown) {
+      window.showCartDropdown();
+    }
+    
+    // Đóng modal ngay lập tức sau khi thêm
+    onClose?.();
   }
 
   function buyNow() {
+    console.log('buyNow called:', { product: product._id, name: product.name, qty });
     add(product, qty);
     onClose?.();
     navigate("/cart");
@@ -27,7 +40,12 @@ export default function SelectPurchaseModal({ product, open, onClose }) {
       <div className="card" style={{ width: 900, background: "#fff", padding: 20, position: "relative", borderRadius: 14 }}>
         <button onClick={onClose} aria-label="Đóng" title="Đóng" style={{ position: "absolute", right: 10, top: 10, border: "none", background: "transparent", fontSize: 20, cursor: "pointer", color: "#666" }}>×</button>
         <div style={{ display: "flex", gap: 20 }}>
-          <img src={product.imageUrls?.[0] || "/vite.svg"} alt={product.name} style={{ width: 260, height: 260, objectFit: "cover", borderRadius: 12 }} />
+          <img 
+            src={getImageUrl(product.imageUrls?.[0], "/vite.svg")} 
+            alt={product.name} 
+            style={{ width: 260, height: 260, objectFit: "cover", borderRadius: 12 }}
+            onError={(e) => handleImageError(e, "/vite.svg")}
+          />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 18, fontWeight: 700 }}>{product.name}</div>
             <div style={{ color: "#2e7d32", fontWeight: 700, fontSize: 22, margin: "8px 0 18px" }}>{product.price?.toLocaleString()} đ</div>

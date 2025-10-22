@@ -1,4 +1,4 @@
-import useAuth from "../../hooks/useAuth.js";
+import { useAuth } from "../../contexts/AuthContext.jsx";
 
 export default function AdminHome() {
   const { user } = useAuth();
