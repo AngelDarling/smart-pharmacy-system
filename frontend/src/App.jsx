@@ -25,6 +25,10 @@ import AdminLogin from "./pages/admin/Login.jsx";
 import AdminDashboard from "./pages/admin/Dashboard.jsx";
 import AdminSuppliers from "./pages/admin/Suppliers.jsx";
 import SalesReport from "./pages/admin/SalesReport.jsx";
+import OrdersManagement from "./pages/admin/orders/OrdersManagement.jsx";
+import ShippingOrders from "./pages/admin/orders/ShippingOrders.jsx";
+import Tracking from "./pages/admin/orders/Tracking.jsx";
+import Invoices from "./pages/admin/orders/Invoices.jsx";
 import Profile from "./pages/admin/Profile.jsx";
 import Settings from "./pages/admin/Settings.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -32,6 +36,8 @@ import Cart from "./pages/Cart.jsx";
 import Checkout from "./pages/Checkout.jsx";
 import OrderDetail from "./pages/OrderDetail.jsx";
 import OrderHistory from "./pages/OrderHistory.jsx";
+import OrderSuccess from "./pages/OrderSuccess.jsx";
+import OrderTracking from "./pages/OrderTracking.jsx";
 import TestCheckout from "./pages/TestCheckout.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
 import Products from "./pages/Products.jsx";
@@ -1266,6 +1272,8 @@ function App() {
         <Route path="/p/:slug" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/track-order" element={<OrderTracking />} />
         <Route path="/orders" element={<UserOrders />} />
         <Route path="/orders/:orderId" element={<OrderDetail />} />
         <Route path="/profile" element={<UserProfile />} />
@@ -1325,6 +1333,31 @@ function App() {
           <Route path="sales-report" element={
             <ProtectedRoute requiredPermission="read_inventory">
               <SalesReport />
+            </ProtectedRoute>
+          } />
+          <Route path="orders" element={
+            <ProtectedRoute requiredPermission="read_inventory">
+              <OrdersManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="orders/shipping" element={
+            <ProtectedRoute requiredPermission="read_inventory">
+              <ShippingOrders />
+            </ProtectedRoute>
+          } />
+          <Route path="orders/tracking" element={
+            <ProtectedRoute requiredPermission="read_inventory">
+              <Tracking />
+            </ProtectedRoute>
+          } />
+          <Route path="orders/invoices" element={
+            <ProtectedRoute requiredPermission="read_inventory">
+              <Invoices />
+            </ProtectedRoute>
+          } />
+          <Route path="orders" element={
+            <ProtectedRoute requiredPermission="read_inventory">
+              <OrdersManagement />
             </ProtectedRoute>
           } />
           <Route path="profile" element={<Profile />} />

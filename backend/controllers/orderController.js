@@ -138,8 +138,10 @@ export async function getById(req, res) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Check if user can access this order
-    if (userId && order.userId && order.userId.toString() !== userId) {
+    // Check if user can access this order (admins/managers/pharmacists/staff can access any)
+    const privilegedRoles = ["admin", "manager", "pharmacist", "staff"];
+    const isPrivileged = req.user && privilegedRoles.includes(req.user.role);
+    if (!isPrivileged && userId && order.userId && order.userId.toString() !== userId) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -254,6 +256,68 @@ export async function getStats(req, res) {
     });
   } catch (error) {
     console.error("Error fetching order stats:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Admin list with filters and pagination
+export async function adminList(req, res) {
+  try {
+    const { q, status, paymentMethod, page = 1, limit = 10, from, to } = req.query;
+
+    const filters = {};
+    if (status) filters.status = status;
+    if (paymentMethod) filters.paymentMethod = paymentMethod;
+    if (from || to) {
+      filters.createdAt = {};
+      if (from) filters.createdAt.$gte = new Date(from);
+      if (to) filters.createdAt.$lte = new Date(to);
+    }
+    if (q) {
+      const regex = new RegExp(q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filters.$or = [
+        { code: regex },
+        { "shippingAddress.fullName": regex },
+        { "shippingAddress.phone": regex },
+      ];
+    }
+
+    const pageNum = parseInt(page, 10) || 1;
+    const pageSize = parseInt(limit, 10) || 10;
+    const skip = (pageNum - 1) * pageSize;
+
+    const [items, total] = await Promise.all([
+      Order.find(filters)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .populate("userId", "name phone role")
+        .populate("items.productId", "name imageUrls price slug")
+        .lean(),
+      Order.countDocuments(filters),
+    ]);
+
+    res.json({ items, total, page: pageNum, limit: pageSize });
+  } catch (error) {
+    console.error("Error listing orders (admin):", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Public lookup by order code (no auth)
+export async function getByCodePublic(req, res) {
+  try {
+    const { code } = req.params;
+    if (!code) return res.status(400).json({ message: "Missing code" });
+
+    const order = await Order.findOne({ code })
+      .select("code status createdAt totals shippingAddress items.nameSnapshot items.quantity items.priceSnapshot")
+      .lean();
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Error fetching order by code:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }

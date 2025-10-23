@@ -1,2 +1,0 @@
-Note: Admin routes are registered in App.jsx under the /admin route using <AdminLayout /> as shell. The new Sales Report page component is at src/pages/admin/SalesReport.jsx and menu entry added in AdminLayout.jsx. If needed, add a route in App.jsx: <Route path="sales-report" element={<SalesReport />} /> inside /admin.
-

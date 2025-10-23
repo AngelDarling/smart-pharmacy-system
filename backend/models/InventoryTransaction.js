@@ -16,7 +16,7 @@ const inventoryTransactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['import', 'export', 'adjust', 'transfer', 'return'],
+    enum: ['import', 'export', 'adjust', 'adjustment', 'transfer', 'return', 'sale'],
     required: true
   },
   quantity: {
@@ -61,7 +61,7 @@ const inventoryTransactionSchema = new mongoose.Schema({
   performedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   status: {
     type: String,

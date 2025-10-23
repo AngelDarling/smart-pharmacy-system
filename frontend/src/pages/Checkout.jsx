@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
@@ -6,6 +6,7 @@ import locationsBefore from "../locations_before.json"; // Dữ liệu "Trước
 // *** THÊM IMPORT MỚI CHO DỮ LIỆU "SAU SÁP NHẬP" ***
 import locationsAfter from "../locations_after.json";
 import { getImageUrl, handleImageError } from "../utils/imageUtils";
+import api from "../api/client.js";
 
 // Icons
 const ArrowLeftIcon = () => (
@@ -78,9 +79,10 @@ const ChevronDownIcon = () => (
 // const API_HOST = "https://provinces.open-api.vn/api/v2/";
 
 export default function Checkout() {
-  const { items, total } = useCart();
+  const { items, total, clear } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const skipEmptyCartRedirectRef = useRef(false);
   
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
@@ -184,7 +186,7 @@ export default function Checkout() {
   }, [formData.district, formData.addressType, formData.city]);
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (items.length === 0 && !skipEmptyCartRedirectRef.current) {
       navigate("/cart");
     }
   }, [items, navigate]);
@@ -373,11 +375,39 @@ export default function Checkout() {
     const wardName = wards.find(w => w.code === formData.ward)?.name || formData.ward;
 
     const finalAddress = [formData.address, wardName, districtName, cityName].filter(Boolean).join(", ");
-    
-    console.log("Final Address:", finalAddress);
-    alert(`Đơn hàng sẽ được giao tới: ${finalAddress}`);
-    
-    setIsSubmitting(false);
+    const payload = {
+      shippingAddress: {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        email: formData.email,
+        address: finalAddress,
+        note: formData.note
+      },
+      paymentMethod: formData.paymentMethod || 'cod',
+      items: items.map(i => ({
+        productId: i.id,
+        nameSnapshot: i.name,
+        priceSnapshot: i.price,
+        quantity: i.qty
+      })),
+      totals: {
+        items: total,
+        discount: 0,
+        shipping: (total >= 300000 ? 0 : 30000),
+        grand: (total + (total >= 300000 ? 0 : 30000))
+      }
+    };
+
+    try {
+      skipEmptyCartRedirectRef.current = true; // tránh redirect về giỏ khi xóa cart
+      const res = await api.post('/orders', payload);
+      const order = res.data;
+      clear();
+      navigate('/order-success', { state: { orderId: order._id, code: order.code } });
+    } finally {
+      setIsSubmitting(false);
+      // Không reset cờ tại đây để tránh navigate về giỏ; component sẽ unmount sau khi điều hướng
+    }
   }
 
   if (items.length === 0) {

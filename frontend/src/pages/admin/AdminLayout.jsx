@@ -94,6 +94,30 @@ const AdminLayout = () => {
         }] : []),
       ].filter(Boolean),
     }] : []),
+    // Orders section
+    ...[{
+      key: 'orders',
+      icon: <FolderOutlined />,
+      label: 'Quản lý đơn hàng',
+      children: [
+        {
+          key: '/admin/orders',
+          label: 'Đơn hàng',
+        },
+        {
+          key: '/admin/orders/shipping',
+          label: 'Đơn đang giao',
+        },
+        {
+          key: '/admin/orders/tracking',
+          label: 'Theo dõi đơn hàng',
+        },
+        {
+          key: '/admin/orders/invoices',
+          label: 'Hóa đơn',
+        },
+      ],
+    }],
     // Inventory section
     ...(permissions.canReadInventory() ? [{
       key: 'inventory',
@@ -190,6 +214,9 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/products') || path.startsWith('/admin/categories')) {
       return ['products'];
     }
+    if (path.startsWith('/admin/orders')) {
+      return ['orders'];
+    }
     if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/goods-receipts') || path.startsWith('/admin/inventory-alerts') || path.startsWith('/admin/sales-report')) {
       return ['inventory'];
     }
@@ -205,7 +232,10 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/products') || path.startsWith('/admin/categories')) {
       return ['products'];
     }
-    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/goods-receipts') || path.startsWith('/admin/inventory-alerts')) {
+    if (path.startsWith('/admin/orders')) {
+      return ['orders'];
+    }
+    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/goods-receipts') || path.startsWith('/admin/inventory-alerts') || path.startsWith('/admin/sales-report')) {
       return ['inventory'];
     }
     if (path.startsWith('/admin/users') || path.startsWith('/admin/staff')) {
