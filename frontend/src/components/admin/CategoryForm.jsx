@@ -20,7 +20,8 @@ import {
   Space,
   Divider,
   Typography,
-  Modal
+  Modal,
+  Badge
 } from 'antd';
 import {
   UploadOutlined,
@@ -66,16 +67,17 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
         parent: initialValues.parent || null,
         isActive: initialValues.isActive ?? true,
         iconUrl: initialValues.iconUrl || '',
-        imageUrl: initialValues.imageUrl || '',
         metaTitle: initialValues.seoTitle || '', // Map seoTitle to metaTitle
         metaDescription: initialValues.seoDescription || '' // Map seoDescription to metaDescription
       };
       
       form.setFieldsValue(mappedValues);
       setHasParent(!!initialValues.parent);
+      setImageUrl(initialValues.iconUrl || '');
     } else {
       // Reset form first
       form.resetFields();
+      setImageUrl('');
       
       // Set default values
       form.setFieldsValue({
@@ -141,7 +143,6 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
         parent: initialValues.parent || null,
         isActive: initialValues.isActive ?? true,
         iconUrl: initialValues.iconUrl || '',
-        imageUrl: initialValues.imageUrl || '',
         metaTitle: initialValues.seoTitle || '',
         metaDescription: initialValues.seoDescription || ''
       };
@@ -150,6 +151,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
       setTimeout(() => {
         form.setFieldsValue(mappedValues);
         setHasParent(!!initialValues.parent);
+        setImageUrl(initialValues.iconUrl || '');
       }, 50);
       
       setTimeout(() => {
@@ -225,33 +227,43 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
     form.setFieldValue('slug', slug);
   };
 
+  // State for image preview
+  const [imageUrl, setImageUrl] = useState('');
+
+  // Update image preview when form values change
+  useEffect(() => {
+    const currentUrl = form.getFieldValue('iconUrl');
+    if (currentUrl) {
+      setImageUrl(currentUrl);
+    }
+  }, [form, visible, initialValues]);
+
   // Upload props
   const uploadProps = {
     name: 'file',
     multiple: false,
-    action: 'http://localhost:5000/api/upload',
+    action: '/api/upload',
+    listType: 'picture-card',
+    showUploadList: false,
     onChange(info) {
-      if (info.file.status === 'done') {
+      const { status, response } = info.file;
+      if (status === 'uploading') {
+        // Show loading state
+      } else if (status === 'done') {
         message.success(`${info.file.name} tải lên thành công`);
-        form.setFieldValue('iconUrl', info.file.response.url);
-      } else if (info.file.status === 'error') {
+        if (response && response.url) {
+          form.setFieldValue('iconUrl', response.url);
+          setImageUrl(response.url);
+        }
+      } else if (status === 'error') {
         message.error(`${info.file.name} tải lên thất bại`);
+        console.error('Upload error:', info.file.error, info.file.response);
       }
     },
-  };
-
-  const imageUploadProps = {
-    name: 'file',
-    multiple: false,
-    action: 'http://localhost:5000/api/upload',
-    onChange(info) {
-      if (info.file.status === 'done') {
-        message.success(`${info.file.name} tải lên thành công`);
-        form.setFieldValue('imageUrl', info.file.response.url);
-      } else if (info.file.status === 'error') {
-        message.error(`${info.file.name} tải lên thất bại`);
-      }
-    },
+    onError(error) {
+      console.error('Upload error:', error);
+      message.error('Tải file lên thất bại');
+    }
   };
 
   return (
@@ -437,42 +449,130 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
         {/* Media Section */}
         <div style={{ marginBottom: '24px' }}>
           <Title level={5} style={{ marginBottom: '16px', color: '#262626' }}>
-            Hình ảnh & Media
+            Hình ảnh danh mục
           </Title>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="iconUrl"
-                label="Icon danh mục"
-              >
-                <Dragger {...uploadProps}>
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined />
-                  </p>
-                  <p className="ant-upload-text">Nhấp hoặc kéo thả file icon vào đây</p>
-                  <p className="ant-upload-hint">
-                    Hỗ trợ định dạng: PNG, JPG, SVG. Kích thước tối đa: 2MB
-                  </p>
-                </Dragger>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="imageUrl"
-                label="Hình ảnh danh mục"
-              >
-                <Dragger {...imageUploadProps}>
-                  <p className="ant-upload-drag-icon">
-                    <UploadOutlined />
-                  </p>
-                  <p className="ant-upload-text">Nhấp hoặc kéo thả hình ảnh vào đây</p>
-                  <p className="ant-upload-hint">
-                    Hỗ trợ định dạng: PNG, JPG, JPEG. Kích thước tối đa: 5MB
-                  </p>
-                </Dragger>
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item
+            name="iconUrl"
+            label="Icon/Hình ảnh"
+            extra="Tải lên icon hoặc hình ảnh cho danh mục. Hỗ trợ: PNG, JPG, SVG (tối đa 5MB)"
+          >
+            <div>
+              {imageUrl ? (
+                <div style={{ 
+                  display: 'inline-block',
+                  position: 'relative',
+                  border: '1px solid #d9d9d9', 
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  background: '#fff'
+                }}>
+                  {/* Preview Image */}
+                  <div style={{
+                    width: '200px',
+                    height: '200px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#fafafa',
+                    position: 'relative'
+                  }}>
+                    <img 
+                      src={imageUrl} 
+                      alt="Preview" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '100%', 
+                        objectFit: 'contain',
+                        display: 'block'
+                      }} 
+                    />
+                  </div>
+                  
+                  {/* Success Badge & Actions */}
+                  <div style={{ 
+                    padding: '12px',
+                    background: '#f6ffed',
+                    borderTop: '1px solid #b7eb8f',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <Space size={4} align="center">
+                      <Badge status="success" />
+                      <Text strong style={{ fontSize: '13px', color: '#52c41a' }}>
+                        Đã tải lên
+                      </Text>
+                    </Space>
+                    <Button 
+                      type="link" 
+                      size="small" 
+                      danger
+                      onClick={() => {
+                        setImageUrl('');
+                        form.setFieldValue('iconUrl', '');
+                      }}
+                      style={{ padding: '0 4px' }}
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                  
+                  {/* URL Display */}
+                  <div style={{ 
+                    padding: '8px 12px',
+                    background: '#fafafa',
+                    borderTop: '1px solid #f0f0f0'
+                  }}>
+                    <Text 
+                      ellipsis 
+                      copyable 
+                      style={{ 
+                        fontSize: '11px', 
+                        color: '#8c8c8c',
+                        display: 'block',
+                        maxWidth: '176px'
+                      }}
+                    >
+                      {imageUrl}
+                    </Text>
+                  </div>
+                </div>
+              ) : (
+                <Upload {...uploadProps}>
+                  <div style={{
+                    width: '200px',
+                    height: '200px',
+                    border: '2px dashed #d9d9d9',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    background: '#fafafa'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#1890ff';
+                    e.currentTarget.style.background = '#f0f5ff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#d9d9d9';
+                    e.currentTarget.style.background = '#fafafa';
+                  }}
+                  >
+                    <UploadOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
+                    <Text strong style={{ fontSize: '14px', color: '#262626', marginBottom: '8px' }}>
+                      Chọn file để tải lên
+                    </Text>
+                    <Text style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                      hoặc kéo thả vào đây
+                    </Text>
+                  </div>
+                </Upload>
+              )}
+            </div>
+          </Form.Item>
         </div>
 
         <Divider />

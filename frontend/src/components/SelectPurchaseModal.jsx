@@ -32,7 +32,13 @@ export default function SelectPurchaseModal({ product, open, onClose }) {
     console.log('buyNow called:', { product: product._id, name: product.name, qty });
     add(product, qty);
     onClose?.();
+    // Scroll to top before navigating
+    window.scrollTo({ top: 0, behavior: 'instant' });
     navigate("/cart");
+    // Ensure scroll at top after navigation
+    setTimeout(() => {
+      try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch {}
+    }, 0);
   }
 
   return (

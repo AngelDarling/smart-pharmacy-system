@@ -105,7 +105,7 @@ export default function Cart() {
   }
 
   return (
-    <div style={styles.pageContainer}>
+    <div style={{...styles.pageContainer, marginTop: 'auto'}}>
       <div style={{ marginBottom: 16 }}>
         <a href="/" style={styles.continueLink}>← Tiếp tục mua sắm</a>
       </div>

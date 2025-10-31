@@ -8,7 +8,8 @@ import {
   cancel, 
   getStats,
   adminList,
-  getByCodePublic
+  getByCodePublic,
+  shipOrder
 } from "../controllers/orderController.js";
 
 const router = Router();
@@ -23,6 +24,7 @@ router.get("/stats", authRequired, requireRole("admin"), getStats);
 router.get("/admin", authRequired, requireRole("admin"), adminList);
 router.get("/:orderId", authRequired, getById);
 router.patch("/:orderId/status", authRequired, requireRole("admin"), updateStatus);
+router.post("/:orderId/ship", authRequired, requireRole("admin"), shipOrder);
 router.patch("/:orderId/cancel", authRequired, cancel);
 
 export default router;

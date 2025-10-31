@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "seed:categories": "node --loader ts-node/esm ./scripts/seed-categories.js || node ./scripts/seed-categories.js",
+    "seed:products": "node scripts/seed-products.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
     "reset-password": "node scripts/reset-password.js",
@@ -20,6 +21,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@google-cloud/vision": "^5.3.4",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

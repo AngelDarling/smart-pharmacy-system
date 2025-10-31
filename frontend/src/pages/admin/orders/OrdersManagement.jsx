@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined, ClearOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import api from '../../../api/client';
@@ -103,10 +103,13 @@ export default function OrdersManagement() {
 
   const updateStatus = async (orderId, status) => {
     try {
-      await api.patch(`/orders/${orderId}/status`, { status });
+      const res = await api.patch(`/orders/${orderId}/status`, { status });
+      const updated = res.data;
       message.success('Cập nhật trạng thái thành công');
-      setDetail((d) => ({ ...d, open: false }));
-      load();
+      // Update modal state
+      setDetail((d) => ({ ...d, order: updated }));
+      // Update list in place
+      setOrders((prev) => prev.map((o) => (o._id === updated._id ? { ...o, ...updated } : o)));
     } catch (e) {
       message.error('Không cập nhật được trạng thái');
     }
@@ -153,9 +156,29 @@ export default function OrdersManagement() {
                 ]}
               />
               <RangePicker
+                value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
                 onChange={(vals)=> setFilters({ ...filters, from: vals?.[0] || null, to: vals?.[1] || null })}
               />
+              <Button 
+                onClick={()=> {
+                  const today = dayjs().startOf('day');
+                  const todayEnd = dayjs().endOf('day');
+                  setFilters({ ...filters, from: today, to: todayEnd });
+                  setPagination((p) => ({ ...p, current: 1 }));
+                }}
+              >
+                Hôm nay
+              </Button>
               <Button type="primary" onClick={()=> setPagination((p)=> ({ ...p }))} icon={<ReloadOutlined />}>Lọc</Button>
+              <Button 
+                onClick={()=> {
+                  setFilters({ q: '', status: '', paymentMethod: '', from: null, to: null });
+                  setPagination((p) => ({ ...p, current: 1 }));
+                }}
+                icon={<ClearOutlined />}
+              >
+                Reset
+              </Button>
             </Space>
           </Card>
           {/* Tổng quan */}
@@ -242,6 +265,18 @@ export default function OrdersManagement() {
                         />
                       </Space>
                     </Descriptions.Item>
+                    {detail.order.shipment?.shippingCode && (
+                      <Descriptions.Item label="Mã vận chuyển">
+                        <Space>
+                          <Text code>{detail.order.shipment.shippingCode}</Text>
+                          <Button
+                            size="small"
+                            type="primary"
+                            onClick={() => window.open(`/admin/orders/tracking?code=${detail.order.shipment.shippingCode}`, '_blank')}
+                          >Theo dõi vận chuyển</Button>
+                        </Space>
+                      </Descriptions.Item>
+                    )}
                     <Descriptions.Item label="Tổng thanh toán"><span style={{ color:'#16a34a', fontWeight:700 }}>{(detail.order.totals?.grand||0).toLocaleString('vi-VN')}₫</span></Descriptions.Item>
                   </Descriptions>
                 </Card>

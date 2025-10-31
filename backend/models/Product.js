@@ -229,6 +229,12 @@ const productBaseSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
+    // Inventory policy for alerts and replenishment
+    minStockLevel: { type: Number, default: 0, min: 0 },
+    maxStockLevel: { type: Number, default: 0, min: 0 },
+    safetyStock: { type: Number, default: 0, min: 0 },
+    leadTimeDays: { type: Number, default: 0, min: 0 },
+    expiryThresholdDays: { type: Number, default: 30, min: 0 },
     variants: [variantSchema],
     activeSubstances: [{
       type: mongoose.Schema.Types.ObjectId,
@@ -388,24 +394,28 @@ const productBaseSchema = new mongoose.Schema(
 
 // Virtual để lấy variant mặc định
 productBaseSchema.virtual('defaultVariant').get(function() {
-  return this.variants.find(v => v.isActive) || this.variants[0];
+  const arr = Array.isArray(this.variants) ? this.variants : [];
+  return arr.find(v => v.isActive) || arr[0];
 });
 
 // Virtual để lấy giá thấp nhất
 productBaseSchema.virtual('minPrice').get(function() {
-  if (this.variants.length === 0) return this.price;
-  return Math.min(...this.variants.filter(v => v.isActive).map(v => v.price));
+  const arr = Array.isArray(this.variants) ? this.variants : [];
+  if (arr.length === 0) return this.price;
+  return Math.min(...arr.filter(v => v.isActive).map(v => v.price));
 });
 
 // Virtual để lấy giá cao nhất
 productBaseSchema.virtual('maxPrice').get(function() {
-  if (this.variants.length === 0) return this.price;
-  return Math.max(...this.variants.filter(v => v.isActive).map(v => v.price));
+  const arr = Array.isArray(this.variants) ? this.variants : [];
+  if (arr.length === 0) return this.price;
+  return Math.max(...arr.filter(v => v.isActive).map(v => v.price));
 });
 
 // Virtual để kiểm tra còn hàng
 productBaseSchema.virtual('inStock').get(function() {
-  return this.totalStock > 0 || this.variants.some(v => v.stockOnHand > 0);
+  const arr = Array.isArray(this.variants) ? this.variants : [];
+  return this.totalStock > 0 || arr.some(v => v.stockOnHand > 0);
 });
 
 // Virtual để lấy productType từ categoryId

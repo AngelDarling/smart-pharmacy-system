@@ -24,7 +24,10 @@ const orderSchema = new mongoose.Schema(
       shipping: { type: Number, default: 0 },
       grand: { type: Number, default: 0 }
     },
-    voucherCode: { type: String }
+    voucherCode: { type: String },
+    couponCode: { type: String },
+    couponId: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
+    shipment: { type: mongoose.Schema.Types.ObjectId, ref: "Shipment" }
   },
   { timestamps: true }
 );

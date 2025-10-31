@@ -69,11 +69,17 @@ export default function InventoryAlertsManagement() {
     try {
       setLoading(true);
       
+      // Build params, excluding empty string values
       const params = {
         page: pagination.current,
-        limit: pagination.pageSize,
-        ...filters
+        limit: pagination.pageSize
       };
+      
+      // Only add non-empty filter values
+      if (filters.type) params.type = filters.type;
+      if (filters.severity) params.severity = filters.severity;
+      if (filters.isRead) params.isRead = filters.isRead;
+      if (filters.isResolved) params.isResolved = filters.isResolved;
       
       const [alertsRes, statsRes] = await Promise.all([
         api.get('/inventory-alerts', { params }),
@@ -223,15 +229,42 @@ export default function InventoryAlertsManagement() {
       
       Swal.fire({
         title: 'Thành công!',
-        text: `Đã tạo ${response.data.alertsCreated} cảnh báo mới`,
+        text: `Đã tạo ${response.data.alertsCreated} cảnh báo mới, giải quyết ${response.data.alertsResolved || 0} cảnh báo đã hết hiệu lực`,
         icon: 'success',
-        timer: 3000,
+        timer: 4000,
         showConfirmButton: false,
         toast: true,
         position: 'top-end'
       });
       
-      loadData();
+      // Reset pagination về trang 1 và reload data để hiển thị cảnh báo mới nhất
+      setPagination(prev => ({
+        ...prev,
+        current: 1
+      }));
+      
+      // Fetch lại data với page = 1, exclude empty filters
+      const params = {
+        page: 1,
+        limit: pagination.pageSize
+      };
+      
+      if (filters.type) params.type = filters.type;
+      if (filters.severity) params.severity = filters.severity;
+      if (filters.isRead) params.isRead = filters.isRead;
+      if (filters.isResolved) params.isResolved = filters.isResolved;
+      
+      const [alertsRes, statsRes] = await Promise.all([
+        api.get('/inventory-alerts', { params }),
+        api.get('/inventory-alerts/stats')
+      ]);
+
+      setAlerts(alertsRes.data.alerts || []);
+      setStats(statsRes.data);
+      setPagination(prev => ({
+        ...prev,
+        total: alertsRes.data.pagination?.total || 0
+      }));
       
     } catch (error) {
       console.error('Check alerts error:', error);
@@ -290,9 +323,9 @@ export default function InventoryAlertsManagement() {
   const getSeverityText = (severity) => {
     const texts = {
       low: 'Thấp',
-      medium: 'Trung bình',
+      medium: 'TB',
       high: 'Cao',
-      critical: 'Nghiêm trọng'
+      critical: 'Nguy hiểm'
     };
     return texts[severity] || severity;
   };
@@ -321,15 +354,8 @@ export default function InventoryAlertsManagement() {
           {getAlertTypeText(type)}
         </Tag>
       ),
-      filters: [
-        { text: 'Sắp hết hàng', value: 'low_stock' },
-        { text: 'Hết hàng', value: 'out_of_stock' },
-        { text: 'Sắp hết hạn', value: 'expiring_soon' },
-        { text: 'Hết hạn', value: 'expired' },
-        { text: 'Tồn kho cao', value: 'overstock' },
-        { text: 'Bán chậm', value: 'slow_moving' }
-      ],
-      width: 150
+      width: 120,
+      fixed: 'left'
     },
     {
       title: 'Mức độ',
@@ -340,80 +366,93 @@ export default function InventoryAlertsManagement() {
           {getSeverityText(severity)}
         </Tag>
       ),
-      filters: [
-        { text: 'Thấp', value: 'low' },
-        { text: 'Trung bình', value: 'medium' },
-        { text: 'Cao', value: 'high' },
-        { text: 'Nghiêm trọng', value: 'critical' }
-      ],
-      width: 120
+      width: 100
     },
     {
       title: 'Sản phẩm',
       dataIndex: 'productId',
       key: 'productId',
-      render: (product) => product?.name || 'N/A',
-      width: 200
+      render: (product) => (
+        <Tooltip title={product?.name}>
+          <Text ellipsis>{product?.name || 'N/A'}</Text>
+        </Tooltip>
+      ),
+      ellipsis: true,
+      width: 150
     },
     {
-      title: 'Tồn kho hiện tại',
+      title: 'Tồn kho',
       dataIndex: 'currentStock',
       key: 'currentStock',
       render: (stock) => (
-        <Text type={stock === 0 ? 'danger' : stock <= 10 ? 'warning' : 'default'}>
+        <Text strong type={stock === 0 ? 'danger' : stock <= 10 ? 'warning' : 'default'}>
           {stock}
         </Text>
       ),
-      sorter: true,
-      width: 120
+      align: 'center',
+      width: 80
     },
     {
       title: 'Ngưỡng',
       dataIndex: 'thresholdValue',
       key: 'thresholdValue',
       render: (threshold) => threshold || '-',
-      width: 100
+      align: 'center',
+      width: 70
+    },
+    {
+      title: 'SL đề xuất',
+      dataIndex: 'suggestedReorderQty',
+      key: 'suggestedReorderQty',
+      render: (qty, record) => {
+        if ((record.type === 'low_stock' || record.type === 'out_of_stock') && qty > 0) {
+          return <Text strong style={{ color: '#1890ff' }}>{qty}</Text>;
+        }
+        return '-';
+      },
+      align: 'center',
+      width: 90
     },
     {
       title: 'Nội dung',
       dataIndex: 'message',
       key: 'message',
+      render: (message) => (
+        <Tooltip title={message}>
+          <Text ellipsis style={{ maxWidth: 250 }}>{message}</Text>
+        </Tooltip>
+      ),
       ellipsis: true,
-      width: 300
+      width: 250
     },
     {
       title: 'Trạng thái',
       key: 'status',
       render: (_, record) => (
-        <Space direction="vertical" size="small">
-          <Badge
-            status={record.isRead ? 'success' : 'default'}
-            text={record.isRead ? 'Đã đọc' : 'Chưa đọc'}
-          />
-          <Badge
-            status={record.isResolved ? 'success' : 'default'}
-            text={record.isResolved ? 'Đã giải quyết' : 'Chưa giải quyết'}
-          />
+        <Space direction="vertical" size={0}>
+          <Text type={record.isResolved ? 'success' : 'danger'} style={{ fontSize: '12px' }}>
+            {record.isResolved ? '✓ Đã giải quyết' : '✗ Chưa giải quyết'}
+          </Text>
         </Space>
       ),
-      width: 150
+      width: 110
     },
     {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString('vi-VN'),
-      sorter: true,
-      width: 120
+      render: (date) => new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      width: 100
     },
     {
       title: 'Thao tác',
       key: 'actions',
       render: (_, record) => (
-        <Space>
-          <Tooltip title="Xem chi tiết">
+        <Space size="small">
+          <Tooltip title="Chi tiết">
             <Button
               type="text"
+              size="small"
               icon={<EyeOutlined />}
               onClick={() => setDetailModal({ visible: true, data: record })}
             />
@@ -422,6 +461,7 @@ export default function InventoryAlertsManagement() {
             <Tooltip title="Đánh dấu đã đọc">
               <Button
                 type="text"
+                size="small"
                 icon={<CheckOutlined />}
                 onClick={() => handleMarkAsRead(record)}
                 style={{ color: '#52c41a' }}
@@ -432,15 +472,33 @@ export default function InventoryAlertsManagement() {
             <Tooltip title="Giải quyết">
               <Button
                 type="text"
+                size="small"
                 icon={<CheckCircleOutlined />}
                 onClick={() => setResolveModal({ visible: true, data: record })}
                 style={{ color: '#1890ff' }}
               />
             </Tooltip>
           )}
+          {(record.type === 'low_stock' || record.type === 'out_of_stock') && record.suggestedReorderQty > 0 && (
+            <Tooltip title="Tạo phiếu nhập">
+              <Button
+                type="text"
+                size="small"
+                icon={<ShoppingOutlined />}
+                onClick={() => {
+                  const productId = record.productId?._id;
+                  const productName = record.productId?.name;
+                  const qty = record.suggestedReorderQty;
+                  window.location.href = `/admin/goods-receipts?prefill=true&productId=${productId}&productName=${encodeURIComponent(productName)}&quantity=${qty}`;
+                }}
+                style={{ color: '#52c41a' }}
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
-      width: 120
+      fixed: 'right',
+      width: 130
     }
   ];
 
@@ -493,7 +551,7 @@ export default function InventoryAlertsManagement() {
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
-                title="Nghiêm trọng"
+                title="Nguy hiểm"
                 value={stats.severityStats?.find(s => s._id === 'critical')?.count || 0}
                 prefix={<CloseCircleOutlined />}
                 valueStyle={{ color: '#f5222d' }}
@@ -505,48 +563,63 @@ export default function InventoryAlertsManagement() {
 
       {/* Filters */}
       <Card style={{ marginBottom: '24px' }}>
-        <Row gutter={[16, 16]} align="middle">
+        <Row gutter={[16, 16]} align="bottom">
           <Col xs={24} sm={12} lg={6}>
-            <Select
-              placeholder="Loại cảnh báo"
-              value={filters.type}
-              onChange={(value) => handleFilterChange('type', value)}
-              style={{ width: '100%' }}
-              allowClear
-            >
-              <Option value="low_stock">Sắp hết hàng</Option>
-              <Option value="out_of_stock">Hết hàng</Option>
-              <Option value="expiring_soon">Sắp hết hạn</Option>
-              <Option value="expired">Hết hạn</Option>
-              <Option value="overstock">Tồn kho cao</Option>
-              <Option value="slow_moving">Bán chậm</Option>
-            </Select>
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: '8px' }}>
+                Loại cảnh báo
+              </Text>
+              <Select
+                placeholder="Chọn loại cảnh báo"
+                value={filters.type || undefined}
+                onChange={(value) => handleFilterChange('type', value)}
+                style={{ width: '100%' }}
+                allowClear
+              >
+                <Option value="low_stock">Sắp hết hàng</Option>
+                <Option value="out_of_stock">Hết hàng</Option>
+                <Option value="expiring_soon">Sắp hết hạn</Option>
+                <Option value="expired">Hết hạn</Option>
+                <Option value="overstock">Tồn kho cao</Option>
+                <Option value="slow_moving">Bán chậm</Option>
+              </Select>
+            </div>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Select
-              placeholder="Mức độ"
-              value={filters.severity}
-              onChange={(value) => handleFilterChange('severity', value)}
-              style={{ width: '100%' }}
-              allowClear
-            >
-              <Option value="low">Thấp</Option>
-              <Option value="medium">Trung bình</Option>
-              <Option value="high">Cao</Option>
-              <Option value="critical">Nghiêm trọng</Option>
-            </Select>
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: '8px' }}>
+                Mức độ
+              </Text>
+              <Select
+                placeholder="Chọn mức độ"
+                value={filters.severity || undefined}
+                onChange={(value) => handleFilterChange('severity', value)}
+                style={{ width: '100%' }}
+                allowClear
+              >
+                <Option value="low">Thấp</Option>
+                <Option value="medium">Trung bình</Option>
+                <Option value="high">Cao</Option>
+                <Option value="critical">Nguy hiểm</Option>
+              </Select>
+            </div>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Select
-              placeholder="Trạng thái"
-              value={filters.isResolved}
-              onChange={(value) => handleFilterChange('isResolved', value)}
-              style={{ width: '100%' }}
-              allowClear
-            >
-              <Option value="false">Chưa giải quyết</Option>
-              <Option value="true">Đã giải quyết</Option>
-            </Select>
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: '8px' }}>
+                Trạng thái giải quyết
+              </Text>
+              <Select
+                placeholder="Chọn trạng thái"
+                value={filters.isResolved || undefined}
+                onChange={(value) => handleFilterChange('isResolved', value)}
+                style={{ width: '100%' }}
+                allowClear
+              >
+                <Option value="false">Chưa giải quyết</Option>
+                <Option value="true">Đã giải quyết</Option>
+              </Select>
+            </div>
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <Space>
@@ -605,6 +678,7 @@ export default function InventoryAlertsManagement() {
           }}
           onChange={handleTableChange}
           scroll={{ x: 1200 }}
+          size="small"
         />
       </Card>
 

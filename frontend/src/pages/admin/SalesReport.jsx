@@ -113,6 +113,15 @@ export default function SalesReport() {
       render: (v) => dayjs(v).format('DD/MM/YYYY')
     },
     {
+      title: 'Sản phẩm',
+      dataIndex: ['productId','name'],
+      render: (_, r) => {
+        const name = r.productId?.name || '—';
+        const slug = r.productId?.slug;
+        return slug ? <a href={`/p/${slug}`} target="_blank" rel="noreferrer">{name}</a> : name;
+      }
+    },
+    {
       title: 'SL bán',
       dataIndex: 'quantity',
       align: 'right'

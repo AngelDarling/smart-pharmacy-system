@@ -4,6 +4,9 @@ import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react
 import useCart from "./hooks/useCart.js";
 import { useAuth } from "./contexts/AuthContext.jsx";
 import AuthModal from "./components/AuthModal.jsx";
+import VoiceSearchModal from "./components/VoiceSearchModal.jsx";
+import ImageSearchModal from "./components/ImageSearchModal.jsx";
+import Footer from "./components/Footer.jsx";
 import Swal from "sweetalert2";
 import useSearch from "./hooks/useSearch.js";
 import { getImageUrl, handleImageError } from "./utils/imageUtils";
@@ -44,6 +47,7 @@ import Products from "./pages/Products.jsx";
 import AddressLookup from "./pages/AddressLookup.jsx";
 import UserProfile from "./pages/Profile.jsx";
 import UserOrders from "./pages/Orders.jsx";
+import Promotions from "./pages/admin/promotions/Promotions.jsx";
 
 // Landing move to its own file with full storefront sections
 
@@ -134,17 +138,9 @@ function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const { items: cartItems, remove: removeFromCart } = useCart();
-  const { user, logout, refreshTrigger } = useAuth();
+  const { user, logout } = useAuth();
   
-  // Debug log để kiểm tra user state
-  useEffect(() => {
-    console.log('App.jsx user state changed:', user);
-  }, [user, refreshTrigger]);
-  
-  // Debug log để kiểm tra khi App component re-render
-  useEffect(() => {
-    console.log('App.jsx component rendered, user:', user, 'refreshTrigger:', refreshTrigger);
-  });
+  // Production: remove noisy console logs
   
   // Debug log để kiểm tra cartItems (đã tắt)
   // console.log('App.jsx cartItems updated:', cartItems.length, cartItems.map(i => ({ 
@@ -159,6 +155,8 @@ function App() {
   const [cartDropdownTimeout, setCartDropdownTimeout] = useState(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showVoiceSearchModal, setShowVoiceSearchModal] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userDropdownTimeout, setUserDropdownTimeout] = useState(null);
   const searchDropdownRef = useRef(null);
@@ -181,6 +179,16 @@ function App() {
     clearHistory,
     removeFromHistory
   } = useSearch();
+
+  const [topSearches] = useState(["Omega 3", "Canxi", "Thuốc nhỏ mắt", "Sữa rửa mặt", "Dung dịch vệ sinh", "Men vi sinh", "Kẽm", "Kem chống nắng"]);
+
+  // Xử lý mỗi khi showSearchModal true và searchTerm trống
+  useEffect(() => {
+    // Giữ nguyên danh sách cố định, không cập nhật từ API
+    return;
+  }, [showSearchModal, searchTerm]);
+
+  // Không tải sản phẩm động cho dải gợi ý; giữ cố định theo topSearches
 
   // Close search dropdown when clicking outside and prevent body scroll
   useEffect(() => {
@@ -326,8 +334,26 @@ function App() {
     setCategoryDropdownTimeout(t);
   };
 
+  const handleVoiceSearchClick = () => {
+    setShowVoiceSearchModal(true);
+  };
+
+  const handleVoiceSearch = (transcript) => {
+    saveToHistory(transcript);
+    window.location.href = `/search?q=${encodeURIComponent(transcript)}`;
+  };
+
+  const handleImageSearchClick = () => {
+    setShowImageSearchModal(true);
+  };
+
+  const handleImageSearch = (searchQuery) => {
+    saveToHistory(searchQuery);
+    window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+  };
+
   return (
-    <>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         @keyframes fadeIn {
           from {
@@ -337,6 +363,16 @@ function App() {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.05);
           }
         }
       `}</style>
@@ -405,46 +441,67 @@ function App() {
                     }}>
                       <button 
                         type="button"
+                        onClick={handleVoiceSearchClick}
                         style={{ 
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
                           background: "transparent",
                           border: "none",
-                          borderRadius: 25,
+                          borderRadius: "50%",
                           padding: 8,
                           height: 40,
                           width: 40,
                           cursor: "pointer",
-                          transition: "background 0.2s",
-                          color: "#6b7280"
+                          transition: "all 0.2s",
+                          color: "#3b82f6"
                         }}
                         title="Tìm với giọng nói"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#eff6ff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                        }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" width="20" height="20">
-                          <path fill="currentColor" d="M15.25 10.27a.569.569 0 0 0-.58-.579c-.328 0-.578.251-.578.58A4.094 4.094 0 0 1 10 14.361a4.094 4.094 0 0 1-4.092-4.092.569.569 0 0 0-.579-.579.569.569 0 0 0-.579.58c0 2.682 2.007 4.94 4.67 5.23v1.544H7.318a.569.569 0 0 0-.579.579c0 .328.25.579.579.579h5.366a.569.569 0 0 0 .579-.58.569.569 0 0 0-.58-.578H10.58V15.5c2.663-.29 4.67-2.548 4.67-5.23Z"></path>
-                          <path fill="currentColor" d="M10 1.797a3.229 3.229 0 0 0-3.224 3.224v5.23A3.246 3.246 0 0 0 10 13.494a3.229 3.229 0 0 0 3.223-3.223V5.02A3.229 3.229 0 0 0 10 1.797Z"></path>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                          <path 
+                            d="M12 2C10.34 2 9 3.34 9 5V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V5C15 3.34 13.66 2 12 2Z" 
+                            fill="currentColor"
+                          />
+                          <path 
+                            d="M12 17C9.24 17 7 14.76 7 12H5C5 15.53 7.61 18.43 11 18.92V22H13V18.92C16.39 18.43 19 15.53 19 12H17C17 14.76 14.76 17 12 17Z" 
+                            fill="currentColor"
+                          />
                         </svg>
                       </button>
                       
                       <button 
+                        type="button"
+                        onClick={handleImageSearchClick}
                         style={{ 
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
                           background: "transparent",
                           border: "none",
-                          borderRadius: 25,
+                          borderRadius: "50%",
                           padding: 8,
                           height: 40,
                           width: 40,
                           cursor: "pointer",
-                          transition: "background 0.2s",
-                          color: "#6b7280"
+                          transition: "all 0.2s",
+                          color: "#3b82f6"
                         }}
                         title="Tìm với hình ảnh"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#eff6ff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                        }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" width="20" height="20">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" width="22" height="22">
                           <path fill="currentColor" d="M10 5.833A4.179 4.179 0 0 0 5.834 10 4.179 4.179 0 0 0 10 14.167 4.179 4.179 0 0 0 14.167 10 4.179 4.179 0 0 0 10 5.833ZM10 7.5c1.391 0 2.5 1.11 2.5 2.5s-1.109 2.5-2.5 2.5c-1.39 0-2.5-1.108-2.5-2.5S8.61 7.5 10 7.5ZM5 1.667A3.344 3.344 0 0 0 1.667 5v1.667a.833.833 0 0 0 1.667 0V5c0-.937.729-1.667 1.666-1.667h1.667a.833.833 0 1 0 0-1.666H5ZM2.5 12.5a.833.833 0 0 0-.833.833V15c0 1.833 1.5 3.333 3.333 3.333h1.667a.833.833 0 1 0 0-1.666H5c-.937 0-1.666-.73-1.666-1.667v-1.667A.833.833 0 0 0 2.5 12.5Zm15 0a.833.833 0 0 0-.833.833V15c0 .938-.73 1.667-1.667 1.667h-1.666a.833.833 0 1 0 0 1.666H15c1.833 0 3.334-1.5 3.334-3.333v-1.667a.833.833 0 0 0-.834-.833ZM13.334 1.667a.833.833 0 1 0 0 1.666H15c.938 0 1.667.73 1.667 1.667v1.667a.833.833 0 1 0 1.667 0V5c0-1.832-1.501-3.333-3.334-3.333h-1.666Z"></path>
                         </svg>
                       </button>
@@ -594,7 +651,7 @@ function App() {
                                       key={product.id}
                                       onClick={() => {
                                         setShowSearchModal(false);
-                                        window.location.href = `/p/${product.id}`;
+                                        window.location.href = `/p/${product.slug || product.id}`;
                                       }}
                                       style={{ 
                                         display: "flex", 
@@ -693,7 +750,7 @@ function App() {
                                 Tra cứu hàng đầu
                               </h3>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                {["Omega 3", "Canxi", "Thuốc nhỏ mắt", "Sữa rửa mặt", "Dung dịch vệ sinh", "Men vi sinh", "Kẽm", "Kem chống nắng"].map((term) => (
+                                {topSearches.map((term) => (
                                   <button 
                                     key={term}
                                     onClick={() => {
@@ -716,145 +773,6 @@ function App() {
                                     {term}
                                   </button>
                                 ))}
-                              </div>
-                            </div>
-
-                            {/* Hot Deals */}
-                            <div>
-                              <div style={{
-                                background: "linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%)",
-                                color: "white",
-                                padding: "14px 18px",
-                                borderRadius: 8,
-                                marginBottom: 16,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between"
-                              }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                  <span style={{ fontSize: 22 }}>🔥</span>
-                                  <span style={{ fontSize: 18, fontWeight: 600 }}>Ưu đãi hot hôm nay</span>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    setShowSearchModal(false);
-                                    window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
-                                  }}
-                                  style={{
-                                    background: "rgba(255,255,255,0.2)",
-                                    border: "none",
-                                    color: "white",
-                                    padding: "6px 12px",
-                                    borderRadius: 6,
-                                    fontSize: 14,
-                                    cursor: "pointer",
-                                    transition: "background 0.2s"
-                                  }}
-                                >
-                                  Xem tất cả
-                                </button>
-                              </div>
-
-                              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                {suggestions.hotDeals.length > 0 ? (
-                                  suggestions.hotDeals.slice(0, 3).map((product) => (
-                                    <div 
-                                      key={product.id}
-                                      onClick={() => {
-                                        setShowSearchModal(false);
-                                        window.location.href = `/p/${product.id}`;
-                                      }}
-                                      style={{ 
-                                        display: "flex", 
-                                        gap: 14, 
-                                        padding: 14, 
-                                        borderRadius: 8, 
-                                        background: "#f8f9fa", 
-                                        cursor: "pointer",
-                                        transition: "background 0.2s"
-                                      }}
-                                    >
-                                      <div style={{ position: "relative" }}>
-                                        <img 
-                                          src={getImageUrl(product.image, "/default-product.svg")} 
-                                          alt={product.name} 
-                                          style={{ 
-                                            width: 90, 
-                                            height: 90, 
-                                            borderRadius: 8, 
-                                            objectFit: "cover" 
-                                          }}
-                                          onError={(e) => handleImageError(e, "/default-product.svg")}
-                                        />
-                                        {product.discount > 0 && (
-                                          <div style={{
-                                            position: "absolute",
-                                            top: 4,
-                                            left: 4,
-                                            background: "#dc2626",
-                                            color: "white",
-                                            padding: "3px 8px",
-                                            borderRadius: 4,
-                                            fontSize: 12,
-                                            fontWeight: 600
-                                          }}>
-                                            -{product.discount}%
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div style={{ flex: 1 }}>
-                                        <h4 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 600, color: "#374151" }}>
-                                          {product.name}
-                                        </h4>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                          <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#dc2626" }}>
-                                            {product.price.toLocaleString()}₫ / Hộp
-                                          </p>
-                                          {product.discount > 0 && (
-                                            <p style={{ margin: 0, fontSize: 16, color: "#9ca3af", textDecoration: "line-through" }}>
-                                              {Math.round(product.price / (1 - product.discount / 100)).toLocaleString()}₫
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))
-                                ) : (
-                                  // Fallback static content
-                                  <>
-                                    <div style={{ display: "flex", gap: 14, padding: 14, borderRadius: 8, background: "#f8f9fa", position: "relative" }}>
-                                      <div style={{ position: "relative" }}>
-                                        <img src="https://picsum.photos/80/80?random=1" alt="Anica Ocavill" style={{ width: 90, height: 90, borderRadius: 8, objectFit: "cover" }} />
-                                        <div style={{
-                                          position: "absolute",
-                                          top: 4,
-                                          left: 4,
-                                          background: "#dc2626",
-                                          color: "white",
-                                          padding: "3px 8px",
-                                          borderRadius: 4,
-                                          fontSize: 12,
-                                          fontWeight: 600
-                                        }}>
-                                          -10%
-                                        </div>
-                                      </div>
-                                      <div style={{ flex: 1 }}>
-                                        <h4 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 600, color: "#374151" }}>
-                                          Viên uống Anica Ocavill bổ sung Canxi và Vitamin D3 (60 viên)
-                                        </h4>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                          <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#dc2626" }}>
-                                            504.000₫ / Hộp
-                                          </p>
-                                          <p style={{ margin: 0, fontSize: 16, color: "#9ca3af", textDecoration: "line-through" }}>
-                                            560.000₫
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
                               </div>
                             </div>
                           </>
@@ -1186,28 +1104,24 @@ function App() {
               </div>
               
               {/* Popular searches */}
-              <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 12 }}>
-                {["Omega 3", "Canxi", "Thuốc nhỏ mắt", "Sữa rửa mặt", "Dung dịch vệ sinh", "Men vi sinh", "Kẽm", "Kem chống nắng"].map((term) => (
-                  <span key={term} style={{ 
-                    fontSize: 14, 
-                    cursor: "pointer", 
-                    padding: "6px 12px", 
-                    borderRadius: 20, 
-                    background: "rgba(255,255,255,0.2)",
-                    color: "white",
-                    transition: "background 0.2s"
-                  }}>
-                    {term}
-                  </span>
-                ))}
+              <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+                <ul style={{ display: 'flex', gap: 0, listStyle: 'none', padding: 0, margin: 0, alignItems: 'center', justifyContent: 'center', maxWidth: 1200, width: '100%' }}>
+                  {(topSearches || []).slice(0,8).map(term => (
+                    <li key={term} style={{ margin: 0, padding: '0 8px' }}>
+                      <a href={`/search?q=${encodeURIComponent(term)}`} style={{ color: 'white', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'none' }}>
+                        {term}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </div>
 
           {/* Navigation categories */}
-          <div style={{ background: "white", borderBottom: "1px solid #e5e7eb" }}>
-            <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", position: "relative" }}>
-              <nav onMouseEnter={handleDropdownEnter} onMouseLeave={handleRootCategoryLeave} style={{ display: "flex", gap: 0, padding: "0", justifyContent: "center" }}>
+          <div style={{ background: "white" }}>
+            <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px", position: "relative" }}>
+              <nav onMouseEnter={handleDropdownEnter} onMouseLeave={handleRootCategoryLeave} style={{ display: "flex", gap: 0, padding: "6px 0 0 0", justifyContent: "center" }}>
                 {(rootCategories && rootCategories.length > 0 ? rootCategories : []).map((category) => (
                   <Link key={category._id} to={`/catalog?category=${category.slug}`} onMouseEnter={() => handleRootCategoryEnter(category)} style={{ 
                     color: "#374151", 
@@ -1217,7 +1131,7 @@ function App() {
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
-                    padding: "16px 20px",
+                    padding: "10px 14px",
                     transition: "all 0.2s",
                     fontSize: 14,
                     position: "relative",
@@ -1237,7 +1151,40 @@ function App() {
                     {/* Level 1 column */}
                     <div style={{ width: 280, borderRight: "1px solid #f0f0f0", padding: 14 }}>
                       {(activeRootCategory.children || []).map((c) => (
-                        <div key={c._id} onMouseEnter={() => setActiveLevel1Id(c._id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 8, cursor: "pointer", background: activeLevel1Id === c._id ? "#f3f4f6" : "transparent", color: "#374151", fontSize: 16, fontWeight: 500 }}>
+                        <div key={c._id} onMouseEnter={() => setActiveLevel1Id(c._id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 8, cursor: "pointer", background: activeLevel1Id === c._id ? "#f3f4f6" : "transparent", color: "#374151", fontSize: 16, fontWeight: 500 }}>
+                          {/* Category Icon/Image */}
+                          {c.iconUrl && c.iconUrl.trim() ? (
+                            <img 
+                              src={c.iconUrl.startsWith('http') ? c.iconUrl : `http://localhost:5000${c.iconUrl}`}
+                              alt={c.name}
+                              style={{
+                                width: 40,
+                                height: 40,
+                                objectFit: 'cover',
+                                borderRadius: 8,
+                                flexShrink: 0
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: 40,
+                              height: 40,
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              borderRadius: 8,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: 18,
+                              fontWeight: 'bold',
+                              flexShrink: 0
+                            }}>
+                              {c.name.charAt(0)}
+                            </div>
+                          )}
                           <Link to={`/catalog?category=${c.slug}`} style={{ color: "inherit", textDecoration: "none", flex: 1 }}>{c.name}</Link>
                           <span style={{ fontSize: 12, color: "#9ca3af" }}>›</span>
                         </div>
@@ -1249,7 +1196,39 @@ function App() {
                         {(activeRootCategory.children || [])
                           .find((c) => c._id === activeLevel1Id)?.children?.map((c2) => (
                             <Link key={c2._id} to={`/catalog?category=${c2.slug}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, border: "1px solid #e5e7eb", borderRadius: 10, color: "#374151", textDecoration: "none", background: "#fafafa" }}>
-                              <span style={{ width: 36, height: 36, borderRadius: 8, background: "#e5e7eb", display: "inline-block" }} />
+                              {/* Level 2 Category Icon/Image */}
+                              {c2.iconUrl && c2.iconUrl.trim() ? (
+                                <img 
+                                  src={c2.iconUrl.startsWith('http') ? c2.iconUrl : `http://localhost:5000${c2.iconUrl}`}
+                                  alt={c2.name}
+                                  style={{
+                                    width: 36,
+                                    height: 36,
+                                    objectFit: 'cover',
+                                    borderRadius: 8,
+                                    flexShrink: 0
+                                  }}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'inline-block';
+                                  }}
+                                />
+                              ) : null}
+                              <span style={{ 
+                                width: 36, 
+                                height: 36, 
+                                borderRadius: 8, 
+                                background: c2.iconUrl && c2.iconUrl.trim() ? "transparent" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+                                display: c2.iconUrl && c2.iconUrl.trim() ? "none" : "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "white",
+                                fontSize: 16,
+                                fontWeight: "bold",
+                                flexShrink: 0
+                              }}>
+                                {c2.name.charAt(0)}
+                              </span>
                               <span style={{ fontSize: 16, fontWeight: 500 }}>{c2.name}</span>
                             </Link>
                           )) || (
@@ -1355,9 +1334,9 @@ function App() {
               <Invoices />
             </ProtectedRoute>
           } />
-          <Route path="orders" element={
-            <ProtectedRoute requiredPermission="read_inventory">
-              <OrdersManagement />
+          <Route path="coupons" element={
+            <ProtectedRoute requiredPermission="read_products">
+              <Promotions />
             </ProtectedRoute>
           } />
           <Route path="profile" element={<Profile />} />
@@ -1366,12 +1345,29 @@ function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       
+      {/* Footer - Only show on user pages, not admin */}
+      {!location.pathname.startsWith('/admin') && <Footer />}
+      
       {/* Auth Modal */}
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
       />
-    </>
+      
+      {/* Voice Search Modal */}
+      <VoiceSearchModal 
+        isOpen={showVoiceSearchModal}
+        onClose={() => setShowVoiceSearchModal(false)}
+        onSearch={handleVoiceSearch}
+      />
+      
+      {/* Image Search Modal */}
+      <ImageSearchModal 
+        isOpen={showImageSearchModal}
+        onClose={() => setShowImageSearchModal(false)}
+        onSearch={handleImageSearch}
+      />
+    </div>
   );
 }
 

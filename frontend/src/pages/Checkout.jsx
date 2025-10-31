@@ -7,6 +7,7 @@ import locationsBefore from "../locations_before.json"; // Dữ liệu "Trước
 import locationsAfter from "../locations_after.json";
 import { getImageUrl, handleImageError } from "../utils/imageUtils";
 import api from "../api/client.js";
+import Swal from "sweetalert2";
 
 // Icons
 const ArrowLeftIcon = () => (
@@ -100,6 +101,10 @@ export default function Checkout() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
 
   // Dùng để lưu trữ danh sách dropdown
   const [cities, setCities] = useState([]);
@@ -326,12 +331,22 @@ export default function Checkout() {
     // Validate required fields
     if (invoiceData.recipientType === "individual") {
       if (!invoiceData.fullName || !invoiceData.phone || !invoiceData.address) {
-        alert("Vui lòng điền đầy đủ thông tin bắt buộc");
+        Swal.fire({
+          icon: "warning",
+          title: "Thiếu thông tin",
+          text: "Vui lòng điền đầy đủ thông tin bắt buộc",
+          confirmButtonColor: "#3b82f6"
+        });
         return;
       }
     } else {
       if (!invoiceData.taxCode || !invoiceData.companyName || !invoiceData.address) {
-        alert("Vui lòng điền đầy đủ thông tin bắt buộc");
+        Swal.fire({
+          icon: "warning",
+          title: "Thiếu thông tin",
+          text: "Vui lòng điền đầy đủ thông tin bắt buộc",
+          confirmButtonColor: "#3b82f6"
+        });
         return;
       }
     }
@@ -369,12 +384,69 @@ export default function Checkout() {
     e.preventDefault();
     setIsSubmitting(true);
     
+    // Validation các trường bắt buộc
+    if (!formData.fullName || !formData.fullName.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Thiếu thông tin",
+        text: "Vui lòng nhập họ và tên",
+        confirmButtonColor: "#3b82f6"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    if (!formData.phone || !formData.phone.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Thiếu thông tin",
+        text: "Vui lòng nhập số điện thoại",
+        confirmButtonColor: "#3b82f6"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    if (!formData.address || !formData.address.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Thiếu thông tin",
+        text: "Vui lòng nhập địa chỉ cụ thể",
+        confirmButtonColor: "#3b82f6"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    if (!formData.city) {
+      Swal.fire({
+        icon: "warning",
+        title: "Thiếu thông tin",
+        text: "Vui lòng chọn Tỉnh/Thành phố",
+        confirmButtonColor: "#3b82f6"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    if (!formData.ward) {
+      Swal.fire({
+        icon: "warning",
+        title: "Thiếu thông tin",
+        text: "Vui lòng chọn Phường/Xã",
+        confirmButtonColor: "#3b82f6"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
     // Tìm tên từ code
     const cityName = cities.find(c => c.code === formData.city)?.name || formData.city;
     const districtName = districts.find(d => d.code === formData.district)?.name || formData.district;
     const wardName = wards.find(w => w.code === formData.ward)?.name || formData.ward;
 
     const finalAddress = [formData.address, wardName, districtName, cityName].filter(Boolean).join(", ");
+    const shippingFeeValue = total >= 300000 ? 0 : 30000;
     const payload = {
       shippingAddress: {
         fullName: formData.fullName,
@@ -392,10 +464,14 @@ export default function Checkout() {
       })),
       totals: {
         items: total,
-        discount: 0,
-        shipping: (total >= 300000 ? 0 : 30000),
-        grand: (total + (total >= 300000 ? 0 : 30000))
-      }
+        discount: couponDiscount,
+        shipping: shippingFeeValue,
+        grand: grandTotal
+      },
+      ...(appliedCoupon && {
+        couponCode: appliedCoupon.code,
+        couponId: appliedCoupon._id
+      })
     };
 
     try {
@@ -404,8 +480,20 @@ export default function Checkout() {
       const order = res.data;
       clear();
       navigate('/order-success', { state: { orderId: order._id, code: order.code } });
-    } finally {
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      Swal.fire({
+        icon: "error",
+        title: "Lỗi",
+        text: error.response?.data?.message || 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.',
+        confirmButtonColor: "#ef4444"
+      });
       setIsSubmitting(false);
+    } finally {
+      // Chỉ reset nếu không navigate thành công
+      if (!skipEmptyCartRedirectRef.current) {
+        setIsSubmitting(false);
+      }
       // Không reset cờ tại đây để tránh navigate về giỏ; component sẽ unmount sau khi điều hướng
     }
   }
@@ -415,7 +503,60 @@ export default function Checkout() {
   }
 
   const shippingFee = total >= 300000 ? 0 : 30000;
-  const grandTotal = total + shippingFee;
+  const grandTotal = total + shippingFee - couponDiscount;
+
+  // Validate và áp dụng mã khuyến mãi
+  async function handleApplyCoupon() {
+    if (!couponCode.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Thiếu thông tin",
+        text: "Vui lòng nhập mã khuyến mãi",
+        confirmButtonColor: "#3b82f6"
+      });
+      return;
+    }
+    try {
+      const res = await api.post("/coupons/validate", {
+        code: couponCode.trim().toUpperCase(),
+        orderTotal: total
+      });
+      if (res.data.valid) {
+        setAppliedCoupon(res.data.coupon);
+        setCouponDiscount(res.data.discount);
+        setShowCouponModal(false);
+        setCouponCode("");
+        Swal.fire({
+          icon: "success",
+          title: "Áp dụng thành công",
+          text: `Mã ${res.data.coupon.code} đã được áp dụng`,
+          confirmButtonColor: "#10b981",
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Mã không hợp lệ",
+          text: res.data.message || "Mã không hợp lệ",
+          confirmButtonColor: "#ef4444"
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Lỗi",
+        text: err.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn",
+        confirmButtonColor: "#ef4444"
+      });
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCode("");
+  }
 
   return (
     <>
@@ -976,8 +1117,42 @@ export default function Checkout() {
                     style={styles.radio}
                   />
                   <div style={styles.paymentContent}>
-                    <div style={styles.paymentTitle}>Thanh toán khi nhận hàng (COD)</div>
-                    <div style={styles.paymentDesc}>Thanh toán bằng tiền mặt khi nhận hàng</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ position: 'relative' }}>
+                        <img 
+                          src={getImageUrl("/uploads/logo-tienmat.png", "/uploads/logo-tienmat.png")} 
+                          alt="Tiền mặt" 
+                          style={{ width: 40, height: 40, objectFit: 'contain' }}
+                          onError={(e) => {
+                            // Fallback nếu tải ảnh thất bại
+                            e.target.style.display = 'none';
+                            const fallback = e.target.parentElement.querySelector('.cod-fallback');
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                        <div className="cod-fallback" style={{ 
+                          display: 'none',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 40, 
+                          height: 40, 
+                          background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: 14
+                        }}>
+                          COD
+                        </div>
+                      </div>
+                      <div>
+                        <div style={styles.paymentTitle}>Thanh toán khi nhận hàng (COD)</div>
+                        <div style={styles.paymentDesc}>Thanh toán bằng tiền mặt khi nhận hàng</div>
+                      </div>
+                    </div>
                   </div>
                   {formData.paymentMethod === "cod" && <CheckIcon />}
                 </label>
@@ -992,8 +1167,42 @@ export default function Checkout() {
                     style={styles.radio}
                   />
                   <div style={styles.paymentContent}>
-                    <div style={styles.paymentTitle}>Ví điện tử MoMo</div>
-                    <div style={styles.paymentDesc}>Thanh toán qua ứng dụng MoMo</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ position: 'relative' }}>
+                        <img 
+                          src={getImageUrl("/uploads/logo-momo.png", "/uploads/logo-momo.png")} 
+                          alt="MoMo" 
+                          style={{ width: 40, height: 40, objectFit: 'contain' }}
+                          onError={(e) => {
+                            // Fallback nếu tải ảnh thất bại
+                            e.target.style.display = 'none';
+                            const fallback = e.target.parentElement.querySelector('.momo-fallback');
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                        <div className="momo-fallback" style={{ 
+                          display: 'none',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 40, 
+                          height: 40, 
+                          background: 'linear-gradient(135deg, #E31837 0%, #B11C45 100%)',
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: 18
+                        }}>
+                          MM
+                        </div>
+                      </div>
+                      <div>
+                        <div style={styles.paymentTitle}>Ví điện tử MoMo</div>
+                        <div style={styles.paymentDesc}>Thanh toán qua ứng dụng MoMo</div>
+                      </div>
+                    </div>
                   </div>
                   {formData.paymentMethod === "momo" && <CheckIcon />}
                 </label>
@@ -1008,8 +1217,42 @@ export default function Checkout() {
                     style={styles.radio}
                   />
                   <div style={styles.paymentContent}>
-                    <div style={styles.paymentTitle}>VNPay</div>
-                    <div style={styles.paymentDesc}>Thanh toán qua VNPay</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ position: 'relative' }}>
+                        <img 
+                          src={getImageUrl("/uploads/logo-vnpay.png", "/uploads/logo-vnpay.png")} 
+                          alt="VNPay" 
+                          style={{ width: 40, height: 40, objectFit: 'contain' }}
+                          onError={(e) => {
+                            // Fallback nếu tải ảnh thất bại
+                            e.target.style.display = 'none';
+                            const fallback = e.target.parentElement.querySelector('.vnpay-fallback');
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                        <div className="vnpay-fallback" style={{ 
+                          display: 'none',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 40, 
+                          height: 40, 
+                          background: 'linear-gradient(135deg, #0066CC 0%, #0A84FF 100%)',
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: 16
+                        }}>
+                          VN
+                        </div>
+                      </div>
+                      <div>
+                        <div style={styles.paymentTitle}>VNPay</div>
+                        <div style={styles.paymentDesc}>Thanh toán qua VNPay</div>
+                      </div>
+                    </div>
                   </div>
                   {formData.paymentMethod === "vnpay" && <CheckIcon />}
                 </label>
@@ -1022,6 +1265,77 @@ export default function Checkout() {
         <div style={styles.rightColumn}>
           <div style={styles.summaryCard}>
             <h3 style={styles.summaryTitle}>Tóm tắt đơn hàng</h3>
+            
+            {/* Coupon Button */}
+            <div style={{ marginBottom: 16 }}>
+              {!appliedCoupon ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCouponModal(true)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "#eff6ff",
+                    border: "1px solid #3b82f6",
+                    borderRadius: "8px",
+                    color: "#3b82f6",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "#dbeafe";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "#eff6ff";
+                  }}
+                >
+                  <span>Áp dụng ưu đãi để được giảm giá</span>
+                  <span>→</span>
+                </button>
+              ) : (
+                <div style={{
+                  padding: "12px 16px",
+                  background: "#f0fdf4",
+                  border: "1px solid #10b981",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between"
+                }}>
+                  <div>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#059669", marginBottom: 4 }}>
+                      Mã: {appliedCoupon.code}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                      Giảm {appliedCoupon.discountType === 'percent' 
+                        ? `${appliedCoupon.discountValue}%` 
+                        : `${appliedCoupon.discountValue.toLocaleString()}₫`}
+                      {couponDiscount > 0 && ` (${couponDiscount.toLocaleString()}₫)`}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#ef4444",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      padding: "4px 8px"
+                    }}
+                  >
+                    Xóa
+                  </button>
+                </div>
+              )}
+            </div>
             
             <div style={styles.itemsList}>
               {items.map((item) => (
@@ -1056,7 +1370,9 @@ export default function Checkout() {
               </div>
               <div style={styles.summaryRow}>
                 <span>Giảm giá:</span>
-                <span>0₫</span>
+                <span style={{ color: couponDiscount > 0 ? "#ef4444" : "#6b7280" }}>
+                  {couponDiscount > 0 ? `-${couponDiscount.toLocaleString()}₫` : "0₫"}
+                </span>
               </div>
             </div>
 
@@ -1238,6 +1554,97 @@ export default function Checkout() {
           </div>
         </div>
       )}
+
+      {/* Coupon Modal */}
+      {showCouponModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent} className="modal-content">
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Ưu đãi dành cho bạn</h3>
+              <button
+                onClick={() => {
+                  setShowCouponModal(false);
+                  setCouponCode("");
+                }}
+                style={styles.closeButton}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Nhập mã giảm giá"
+                    style={{
+                      ...styles.modalInput,
+                      flex: 1
+                    }}
+                    className="modal-input"
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        handleApplyCoupon();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    style={{
+                      padding: "12px 24px",
+                      background: "#3b82f6",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = "#2563eb";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = "#3b82f6";
+                    }}
+                  >
+                    Xác nhận
+                  </button>
+                </div>
+                <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
+                  Nhập mã giảm giá để được áp dụng những ưu đãi
+                </p>
+              </div>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCouponModal(false);
+                  setCouponCode("");
+                }}
+                style={styles.cancelButton}
+                className="cancel-button"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                style={styles.confirmButton}
+                className="confirm-button"
+              >
+                Áp dụng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
@@ -1283,11 +1690,12 @@ const styles = {
     alignItems: "flex-start"
   },
   leftColumn: {
-    flex: 1,
-    maxWidth: "800px"
+    flex: 2,
+    maxWidth: "1000px"
   },
   rightColumn: {
-    width: "400px",
+    flex: 1,
+    width: "450px",
     position: "sticky",
     top: "24px"
   },

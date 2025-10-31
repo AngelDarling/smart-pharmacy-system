@@ -103,6 +103,11 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
         price: Number(values.price) || 0,
         costPrice: Number(values.costPrice) || 0,
         totalStock: Number(values.totalStock) || 0,
+        minStockLevel: Number(values.minStockLevel) || 0,
+        maxStockLevel: Number(values.maxStockLevel) || 0,
+        safetyStock: Number(values.safetyStock) || 0,
+        leadTimeDays: Number(values.leadTimeDays) || 0,
+        expiryThresholdDays: Number(values.expiryThresholdDays) || 0,
         isActive: values.isActive !== false,
         // Convert imageUrls from textarea to array
         imageUrls: values.imageUrls 
@@ -143,6 +148,11 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
           price: 0,
           costPrice: 0,
           totalStock: 0,
+          minStockLevel: 0,
+          maxStockLevel: 0,
+          safetyStock: 0,
+          leadTimeDays: 0,
+          expiryThresholdDays: 30,
           unit: 'hộp'
         }}
       >
@@ -303,6 +313,37 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
                 />
               </Form.Item>
             </Col>
+            <Col span={8}>
+              <Form.Item name="minStockLevel" label="Tồn tối thiểu">
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 10" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="maxStockLevel" label="Tồn tối đa">
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 200" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="safetyStock" label="Hệ số an toàn (Safety Stock)">
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 5" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="leadTimeDays" label="Thời gian cung ứng (ngày)">
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 3" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="expiryThresholdDays" label="Cảnh báo hết hạn (ngày)">
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 30" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={8}>
               <Form.Item
                 name="sku"

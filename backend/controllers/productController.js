@@ -19,6 +19,11 @@ const upsertSchema = z.object({
   sku: z.string().optional(),
   barcode: z.string().optional(),
   totalStock: z.number().nonnegative().optional(),
+  minStockLevel: z.number().nonnegative().optional(),
+  maxStockLevel: z.number().nonnegative().optional(),
+  safetyStock: z.number().nonnegative().optional(),
+  leadTimeDays: z.number().nonnegative().optional(),
+  expiryThresholdDays: z.number().nonnegative().optional(),
   contraindications: z.string().optional(),
   dosage: z.string().optional(),
   ingredients: z.string().optional(),
@@ -33,6 +38,24 @@ export async function list(req, res) {
 
   const q = {};
   if (req.query.categoryId) q.categoryId = req.query.categoryId;
+  // Filter by category using either categoryId or category slug
+  if (req.query.category) {
+    const c = await Category.findOne({ slug: req.query.category }).select('_id');
+    if (c) {
+      // Find all descendant categories (children, grandchildren, etc.)
+      const descendants = await Category.find({
+        $or: [
+          { _id: c._id }, // Include the category itself
+          { ancestors: c._id } // Include all descendants
+        ]
+      }).select('_id');
+      
+      const categoryIds = descendants.map(cat => cat._id);
+      q.categoryId = { $in: categoryIds };
+    } else {
+      q.categoryId = '__no_match__'; // force no results
+    }
+  }
   // Filter by brand using either brandId or brandSlug
   if (req.query.brandId) q.brandId = req.query.brandId;
   if (req.query.brandSlug) {
@@ -80,7 +103,9 @@ export async function list(req, res) {
 }
 
 export async function getBySlug(req, res) {
-  const doc = await Product.findOne({ slug: req.params.slug });
+  const doc = await Product.findOne({ slug: req.params.slug })
+    .populate('categoryId', 'name slug parentId')
+    .populate('brandId', 'name slug');
   if (!doc) return res.status(404).json({ message: "Không tìm thấy" });
   res.json(doc);
 }
@@ -267,6 +292,76 @@ export async function bulkUpdate(req, res, next) {
     res.json({
       message: `Đã cập nhật ${result.modifiedCount} sản phẩm`,
       modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Lấy sản phẩm nổi bật hôm nay (12 sản phẩm bán chạy nhất trong ngày)
+export async function getTodayFeatured(req, res, next) {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Aggregate để lấy sản phẩm bán chạy nhất trong ngày
+    const Order = (await import("../models/Order.js")).default;
+    
+    const todaySales = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: {
+            $gte: today,
+            $lt: tomorrow
+          }
+        }
+      },
+      {
+        $unwind: '$items'
+      },
+      {
+        $group: {
+          _id: '$items.productId',
+          totalQuantity: { $sum: '$items.quantity' },
+          productName: { $first: '$items.nameSnapshot' },
+          productPrice: { $first: '$items.priceSnapshot' },
+          productImage: { $first: '$items.imageSnapshot' }
+        }
+      },
+      {
+        $sort: { totalQuantity: -1 }
+      },
+      {
+        $limit: 12
+      }
+    ]);
+
+    // Lấy thông tin chi tiết sản phẩm từ Product collection
+    const productIds = todaySales.map(sale => sale._id);
+    const products = await Product.find({ 
+      _id: { $in: productIds },
+      isActive: true 
+    }).populate('categoryId', 'name slug').populate('brandId', 'name slug');
+
+    // Kết hợp dữ liệu bán hàng với thông tin sản phẩm
+    const featuredProducts = todaySales.map(sale => {
+      const product = products.find(p => p._id.toString() === sale._id.toString());
+      return {
+        ...product?.toObject(),
+        todaySales: sale.totalQuantity,
+        productName: sale.productName || product?.name,
+        productPrice: sale.productPrice || product?.price,
+        productImage: sale.productImage || product?.images?.[0]
+      };
+    }).filter(Boolean);
+
+    res.json({
+      success: true,
+      items: featuredProducts,
+      total: featuredProducts.length
     });
   } catch (err) {
     next(err);

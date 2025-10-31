@@ -128,6 +128,26 @@ export default function GoodsReceiptManagement() {
     loadData();
   }, [loadData]);
 
+  // Handle prefill from URL params (from inventory alerts)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('prefill') === 'true') {
+      const productId = params.get('productId');
+      const productName = params.get('productName');
+      const quantity = parseInt(params.get('quantity') || '0', 10);
+      
+      if (productId && quantity > 0) {
+        setReceiptModal({ visible: true, mode: 'create', data: null });
+        // Pre-fill form after a short delay to ensure products are loaded
+        setTimeout(() => {
+          form.setFieldsValue({
+            items: [{ productId, productName, quantity, unitPrice: 0 }]
+          });
+        }, 500);
+      }
+    }
+  }, [form]);
+
   // Handle table change
   const handleTableChange = (paginationInfo) => {
     setPagination(prev => ({

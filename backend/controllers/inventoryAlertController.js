@@ -27,8 +27,9 @@ export async function getAlerts(req, res) {
     
     if (type) filter.type = type;
     if (severity) filter.severity = severity;
-    if (isRead !== undefined) filter.isRead = isRead === 'true';
-    if (isResolved !== undefined) filter.isResolved = isResolved === 'true';
+    // Only filter if value is explicitly 'true' or 'false', not empty string
+    if (isRead && isRead !== '') filter.isRead = isRead === 'true';
+    if (isResolved && isResolved !== '') filter.isResolved = isResolved === 'true';
 
     const sort = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
@@ -216,95 +217,138 @@ export async function createAlert(req, res) {
 export async function checkAndCreateAlerts(req, res) {
   try {
     let alertsCreated = 0;
+    let alertsResolved = 0;
 
-    // Kiểm tra sản phẩm hết hàng
-    const outOfStockProducts = await Product.find({
-      $or: [
-        { totalStock: 0 },
-        { 'variants.stockOnHand': 0 }
-      ]
-    });
+    const products = await Product.find({}).select(
+      'name totalStock minStockLevel maxStockLevel safetyStock leadTimeDays expiryThresholdDays expiryDate variants'
+    );
 
-    for (const product of outOfStockProducts) {
-      if (product.totalStock === 0) {
+    const now = new Date();
+
+    for (const p of products) {
+      const total = p.totalStock || 0;
+      const minLevel = Number(p.minStockLevel || 0);
+      const maxLevel = Number(p.maxStockLevel || 0);
+      const expiryThreshold = Number(p.expiryThresholdDays || 0);
+
+      // Out of stock
+      if (total === 0) {
+        const safetyStock = Number(p.safetyStock || 0);
+        const leadTime = Number(p.leadTimeDays || 0);
+        const reorderQty = Math.max(minLevel, safetyStock + (leadTime * 2), 10);
+        
         await InventoryAlert.findOneAndUpdate(
-          { productId: product._id, type: 'out_of_stock', isResolved: false },
+          { productId: p._id, type: 'out_of_stock', isResolved: false },
           {
-            productId: product._id,
+            productId: p._id,
             type: 'out_of_stock',
             severity: 'critical',
             currentStock: 0,
             thresholdValue: 0,
-            message: `Sản phẩm ${product.name} đã hết hàng`,
-            suggestedAction: 'reorder'
+            message: `Sản phẩm ${p.name} đã hết hàng`,
+            suggestedAction: 'reorder',
+            suggestedReorderQty: reorderQty
           },
           { upsert: true, new: true }
         );
         alertsCreated++;
+      } else {
+        // Resolve out_of_stock alert if stock > 0
+        const resolved = await InventoryAlert.updateMany(
+          { productId: p._id, type: 'out_of_stock', isResolved: false },
+          { isResolved: true, resolvedAt: new Date(), resolvedNote: 'Tồn kho đã được bổ sung' }
+        );
+        alertsResolved += resolved.modifiedCount;
       }
 
-      // Kiểm tra variants hết hàng
-      for (const variant of product.variants) {
-        if (variant.stockOnHand === 0) {
-          await InventoryAlert.findOneAndUpdate(
-            { productId: product._id, variantId: variant._id, type: 'out_of_stock', isResolved: false },
-            {
-              productId: product._id,
-              variantId: variant._id,
-              type: 'out_of_stock',
-              severity: 'critical',
-              currentStock: 0,
-              thresholdValue: 0,
-              message: `Sản phẩm ${product.name} - ${variant.name} đã hết hàng`,
-              suggestedAction: 'reorder'
-            },
-            { upsert: true, new: true }
-          );
-          alertsCreated++;
-        }
-      }
-    }
-
-    // Kiểm tra sản phẩm sắp hết hàng
-    const lowStockProducts = await Product.find({
-      $or: [
-        { totalStock: { $lte: 10, $gt: 0 } },
-        { 'variants.stockOnHand': { $lte: 10, $gt: 0 } }
-      ]
-    });
-
-    for (const product of lowStockProducts) {
-      if (product.totalStock <= 10 && product.totalStock > 0) {
+      // Low stock (use minStockLevel when set, else heuristic 10)
+      const lowThreshold = minLevel > 0 ? minLevel : 10;
+      if (total > 0 && total <= lowThreshold) {
+        const safetyStock = Number(p.safetyStock || 0);
+        const leadTime = Number(p.leadTimeDays || 0);
+        const targetStock = Math.max(minLevel, lowThreshold) + safetyStock + (leadTime * 2);
+        const reorderQty = Math.max(targetStock - total, 10);
+        
         await InventoryAlert.findOneAndUpdate(
-          { productId: product._id, type: 'low_stock', isResolved: false },
+          { productId: p._id, type: 'low_stock', isResolved: false },
           {
-            productId: product._id,
+            productId: p._id,
             type: 'low_stock',
-            severity: 'high',
-            currentStock: product.totalStock,
-            thresholdValue: 10,
-            message: `Sản phẩm ${product.name} sắp hết hàng (${product.totalStock})`,
-            suggestedAction: 'reorder'
+            severity: total <= Math.max(1, Math.floor(lowThreshold / 2)) ? 'critical' : 'high',
+            currentStock: total,
+            thresholdValue: lowThreshold,
+            message: `Sản phẩm ${p.name} sắp hết hàng (${total}/${lowThreshold})`,
+            suggestedAction: 'reorder',
+            suggestedReorderQty: reorderQty
           },
           { upsert: true, new: true }
         );
         alertsCreated++;
+      } else if (total > lowThreshold) {
+        // Resolve low_stock alert if stock > threshold
+        const resolved = await InventoryAlert.updateMany(
+          { productId: p._id, type: 'low_stock', isResolved: false },
+          { isResolved: true, resolvedAt: new Date(), resolvedNote: 'Tồn kho đã đủ' }
+        );
+        alertsResolved += resolved.modifiedCount;
       }
 
-      // Kiểm tra variants sắp hết hàng
-      for (const variant of product.variants) {
-        if (variant.stockOnHand <= variant.minStockLevel && variant.stockOnHand > 0) {
+      // Overstock
+      if (maxLevel > 0 && total > maxLevel) {
+        await InventoryAlert.findOneAndUpdate(
+          { productId: p._id, type: 'overstock', isResolved: false },
+          {
+            productId: p._id,
+            type: 'overstock',
+            severity: 'medium',
+            currentStock: total,
+            thresholdValue: maxLevel,
+            message: `Sản phẩm ${p.name} vượt tồn tối đa (${total}/${maxLevel})`,
+            suggestedAction: 'discount'
+          },
+          { upsert: true, new: true }
+        );
+        alertsCreated++;
+      } else if (maxLevel > 0 && total <= maxLevel) {
+        // Resolve overstock alert if stock <= max
+        const resolved = await InventoryAlert.updateMany(
+          { productId: p._id, type: 'overstock', isResolved: false },
+          { isResolved: true, resolvedAt: new Date(), resolvedNote: 'Tồn kho đã về mức bình thường' }
+        );
+        alertsResolved += resolved.modifiedCount;
+      }
+
+      // Expiry based on product.expiryDate if available
+      if (p.expiryDate) {
+        const days = Math.ceil((new Date(p.expiryDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        if (days < 0) {
           await InventoryAlert.findOneAndUpdate(
-            { productId: product._id, variantId: variant._id, type: 'low_stock', isResolved: false },
+            { productId: p._id, type: 'expired', isResolved: false },
             {
-              productId: product._id,
-              variantId: variant._id,
-              type: 'low_stock',
-              severity: 'high',
-              currentStock: variant.stockOnHand,
-              thresholdValue: variant.minStockLevel,
-              message: `Sản phẩm ${product.name} - ${variant.name} sắp hết hàng (${variant.stockOnHand}/${variant.minStockLevel})`,
-              suggestedAction: 'reorder'
+              productId: p._id,
+              type: 'expired',
+              severity: 'critical',
+              currentStock: total,
+              thresholdValue: 0,
+              message: `Sản phẩm ${p.name} đã hết hạn`,
+              expiryDate: p.expiryDate,
+              suggestedAction: 'dispose'
+            },
+            { upsert: true, new: true }
+          );
+          alertsCreated++;
+        } else if (expiryThreshold > 0 && days <= expiryThreshold) {
+          await InventoryAlert.findOneAndUpdate(
+            { productId: p._id, type: 'expiring_soon', isResolved: false },
+            {
+              productId: p._id,
+              type: 'expiring_soon',
+              severity: days <= 7 ? 'critical' : 'high',
+              currentStock: total,
+              thresholdValue: expiryThreshold,
+              message: `Sản phẩm ${p.name} sắp hết hạn (${days} ngày)`,
+              expiryDate: p.expiryDate,
+              suggestedAction: 'discount'
             },
             { upsert: true, new: true }
           );
@@ -313,10 +357,7 @@ export async function checkAndCreateAlerts(req, res) {
       }
     }
 
-    res.json({
-      message: `Kiểm tra cảnh báo hoàn thành`,
-      alertsCreated
-    });
+    res.json({ message: 'Kiểm tra cảnh báo hoàn thành', alertsCreated, alertsResolved });
   } catch (error) {
     console.error('Check and create alerts error:', error);
     res.status(500).json({ message: 'Lỗi khi kiểm tra cảnh báo' });

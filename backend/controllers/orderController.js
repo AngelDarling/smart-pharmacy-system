@@ -1,7 +1,9 @@
 import Order from "../models/Order.js";
+import Shipment from "../models/Shipment.js";
 import Product from "../models/Product.js";
 import InventoryTransaction from "../models/InventoryTransaction.js";
 import ProductSalesDaily from "../models/ProductSalesDaily.js";
+import Coupon from "../models/Coupon.js";
 import mongoose from "mongoose";
 
 // Generate unique order code
@@ -14,7 +16,7 @@ function generateOrderCode() {
 // Create new order
 export async function create(req, res) {
   try {
-    const { items, shippingAddress, paymentMethod, totals } = req.body;
+    const { items, shippingAddress, paymentMethod, totals, couponCode, couponId } = req.body;
     const userId = req.user?.id;
 
     // Validate required fields
@@ -53,7 +55,9 @@ export async function create(req, res) {
         discount: totals?.discount || 0,
         shipping: totals?.shipping || 0,
         grand: totals?.grand || 0
-      }
+      },
+      ...(couponCode && { couponCode }),
+      ...(couponId && { couponId })
     });
 
     await order.save();
@@ -86,6 +90,11 @@ export async function create(req, res) {
         { $inc: { quantity: item.quantity, revenue: item.quantity * (item.priceSnapshot || item.price || product.price || 0) } },
         { upsert: true }
       );
+    }
+
+    // Update coupon usedCount if coupon was applied
+    if (couponId) {
+      await Coupon.findByIdAndUpdate(couponId, { $inc: { usedCount: 1 } });
     }
 
     res.status(201).json(order);
@@ -131,8 +140,10 @@ export async function getById(req, res) {
     const { orderId } = req.params;
     const userId = req.user?.id;
 
-    const order = await Order.findById(orderId)
-      .populate("items.productId", "name image");
+  const order = await Order.findById(orderId)
+      .populate("items.productId", "name image")
+      .populate("shipment", "shippingCode status timeline")
+      .lean();
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -168,12 +179,69 @@ export async function updateStatus(req, res) {
       return res.status(404).json({ message: "Order not found" });
     }
 
+    // If switching to shipping and shipment not yet created, create simulated shipment
+    if (status === "shipping" && !order.shipment) {
+      const shippingCode = `SHP${Date.now().toString().slice(-6)}${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`;
+      const shipment = new Shipment({
+        orderId: order._id,
+        shippingCode,
+        status: "pickup",
+        timeline: [
+          { status: "preparing", timestamp: new Date() },
+          { status: "pickup", timestamp: new Date(Date.now() + 10 * 1000) }
+        ]
+      });
+      await shipment.save();
+      order.shipment = shipment._id;
+    }
+
     order.status = status;
     await order.save();
 
-    res.json(order);
+    const populated = await Order.findById(order._id)
+      .populate("items.productId", "name imageUrls")
+      .populate("shipment", "shippingCode status timeline")
+      .lean();
+    res.json(populated);
   } catch (error) {
     console.error("Error updating order status:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Explicit endpoint to create shipment and move order to shipping
+export async function shipOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.shipment) {
+      const populated = await Order.findById(orderId).populate("shipment", "shippingCode status timeline");
+      return res.json(populated);
+    }
+
+    const shippingCode = `SHP${Date.now().toString().slice(-6)}${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`;
+    const shipment = new Shipment({
+      orderId: order._id,
+      shippingCode,
+      status: "pickup",
+      timeline: [
+        { status: "preparing", timestamp: new Date() },
+        { status: "pickup", timestamp: new Date(Date.now() + 10 * 1000) }
+      ]
+    });
+    await shipment.save();
+
+    order.status = "shipping";
+    order.shipment = shipment._id;
+    await order.save();
+
+    const populated = await Order.findById(order._id)
+      .populate("shipment", "shippingCode status timeline");
+    res.json(populated);
+  } catch (error) {
+    console.error("Error shipping order:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }
@@ -286,13 +354,14 @@ export async function adminList(req, res) {
     const pageSize = parseInt(limit, 10) || 10;
     const skip = (pageNum - 1) * pageSize;
 
-    const [items, total] = await Promise.all([
+  const [items, total] = await Promise.all([
       Order.find(filters)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(pageSize)
         .populate("userId", "name phone role")
         .populate("items.productId", "name imageUrls price slug")
+        .populate("shipment", "shippingCode status")
         .lean(),
       Order.countDocuments(filters),
     ]);

@@ -7,3 +7,7 @@ build/
 
 # Environment variables
 .env
+
+# Google Cloud Vision API Key
+backend/google-vision-key.json
+google-vision-key.json

@@ -70,6 +70,10 @@ const inventoryAlertSchema = new mongoose.Schema({
     type: String,
     enum: ['reorder', 'discount', 'return_to_supplier', 'dispose', 'transfer', 'none'],
     default: 'none'
+  },
+  suggestedReorderQty: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true,

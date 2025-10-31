@@ -158,6 +158,22 @@ export async function tree(req, res) {
   };
 
   annotate(sortedRoots, 0, [], "");
+  
+  // Count products for each category
+  const Product = (await import("../models/Product.js")).default;
+  const addProductCount = async (nodes) => {
+    for (const node of nodes) {
+      // Count products in this category
+      const productCount = await Product.countDocuments({ categoryId: node._id, isActive: true });
+      node.productCount = productCount;
+      
+      if (node.children && node.children.length > 0) {
+        await addProductCount(node.children);
+      }
+    }
+  };
+  
+  await addProductCount(sortedRoots);
   res.json(sortedRoots);
 }
 

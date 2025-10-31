@@ -3,7 +3,7 @@
  * Replaces the old admin layout with a professional interface
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Layout,
@@ -32,6 +32,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
+import api from '../../api/client.js';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -42,9 +43,41 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [processingOrders, setProcessingOrders] = useState(0);
+  const [shippingOrders, setShippingOrders] = useState(0);
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadOrderBadge() {
+      try {
+        const res = await api.get('/orders/stats');
+        const arr = res.data?.statusBreakdown || [];
+        const byStatus = Object.fromEntries(arr.map(s => [s._id, s.count]));
+        const pendingCount = Number(byStatus['pending'] || 0);
+        const processingCount = Number(byStatus['processing'] || 0);
+        const shippingCount = Number(byStatus['shipping'] || 0);
+        if (isMounted) {
+          setPendingOrders(pendingCount);
+          setProcessingOrders(processingCount);
+          setShippingOrders(shippingCount);
+        }
+      } catch (error) {
+        console.debug('orders stats error', error);
+        if (isMounted) {
+          setPendingOrders(0);
+          setProcessingOrders(0);
+          setShippingOrders(0);
+        }
+      }
+    }
+    loadOrderBadge();
+    const intervalRef = setInterval(loadOrderBadge, 30000);
+    return () => { isMounted = false; clearInterval(intervalRef); };
+  }, []);
 
   if (loading) {
     return (
@@ -92,17 +125,35 @@ const AdminLayout = () => {
           key: '/admin/categories',
           label: 'Danh mục',
         }] : []),
+        {
+          key: '/admin/coupons',
+          label: 'Mã khuyến mãi',
+        },
       ].filter(Boolean),
     }] : []),
     // Orders section
     ...[{
       key: 'orders',
       icon: <FolderOutlined />,
-      label: 'Quản lý đơn hàng',
+      label: (
+        <span style={{ position: 'relative', display: 'inline-block', paddingRight: 14 }}>
+          Quản lý đơn hàng
+          {pendingOrders > 0 && (
+            <Badge count={pendingOrders} size="small" style={{ backgroundColor: '#ef4444', pointerEvents: 'none' }} offset={[10, -6]} />
+          )}
+        </span>
+      ),
       children: [
         {
           key: '/admin/orders',
-          label: 'Đơn hàng',
+          label: (
+            <span style={{ position: 'relative', display: 'inline-block', paddingRight: 14 }}>
+              Đơn hàng
+              {pendingOrders > 0 && (
+                <Badge count={pendingOrders} size="small" style={{ backgroundColor: '#ef4444', pointerEvents: 'none' }} offset={[10, -6]} />
+              )}
+            </span>
+          ),
         },
         {
           key: '/admin/orders/shipping',
@@ -302,9 +353,44 @@ const AdminLayout = () => {
           />
           
           <Space size="middle">
-            <Badge count={5} size="small">
-              <Button type="text" icon={<BellOutlined />} />
-            </Badge>
+            <Dropdown
+              trigger={["click"]}
+              placement="bottomRight"
+              menu={{
+                items: [
+                  {
+                    key: 'orders-pending',
+                    label: (
+                      <div onClick={() => navigate('/admin/orders')} style={{ minWidth: 280 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 8 }}>Thông báo</div>
+                        <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                          {pendingOrders > 0 || processingOrders > 0 || shippingOrders > 0 ? (
+                            <>
+                              {pendingOrders > 0 && (
+                                <div style={{ marginBottom: 4 }}>Có {pendingOrders} đơn hàng chờ xử lý</div>
+                              )}
+                              {processingOrders > 0 && (
+                                <div style={{ marginBottom: 4 }}>Có {processingOrders} đơn hàng đang xử lý</div>
+                              )}
+                              {shippingOrders > 0 && (
+                                <div style={{ marginBottom: 4 }}>Có {shippingOrders} đơn hàng đang giao</div>
+                              )}
+                            </>
+                          ) : (
+                            'Chưa có thông báo mới'
+                          )}
+                        </div>
+                        <div style={{ marginTop: 8, color: '#1d4ed8', cursor: 'pointer' }}>Xem danh sách đơn hàng</div>
+                      </div>
+                    )
+                  }
+                ]
+              }}
+            >
+              <Badge count={pendingOrders + processingOrders + shippingOrders} size="small" overflowCount={99}>
+                <Button type="text" icon={<BellOutlined />} />
+              </Badge>
+            </Dropdown>
             
             <Dropdown
               menu={{

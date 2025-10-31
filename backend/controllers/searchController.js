@@ -47,7 +47,7 @@ export const getSearchSuggestions = async (req, res) => {
     .populate('categoryId', 'name')
     .sort({ name: 1 })
     .limit(6)
-    .select('name price imageUrls discount categoryId brand');
+    .select('name slug price imageUrls discount categoryId brand');
     
     console.log('Found products:', products.length);
 
@@ -86,12 +86,13 @@ export const getSearchSuggestions = async (req, res) => {
     .populate('categoryId', 'name')
     .sort({ discount: -1 })
     .limit(3)
-    .select('name price imageUrls discount categoryId brand');
+    .select('name slug price imageUrls discount categoryId brand');
 
     res.json({
       keywords: keywordSuggestions,
       products: products.map(p => ({
         id: p._id,
+        slug: p.slug,
         name: p.name,
         price: p.price,
         discount: p.discount || 0,
@@ -106,6 +107,7 @@ export const getSearchSuggestions = async (req, res) => {
       })),
       hotDeals: hotDeals.map(p => ({
         id: p._id,
+        slug: p.slug,
         name: p.name,
         price: p.price,
         discount: p.discount || 0,
@@ -225,6 +227,7 @@ export const getSearchResults = async (req, res) => {
     res.json({
       products: products.map(p => ({
         id: p._id,
+        slug: p.slug,
         name: p.name,
         price: p.price,
         discount: p.discount || 0,
