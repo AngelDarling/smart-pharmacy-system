@@ -48,6 +48,7 @@ import AddressLookup from "./pages/AddressLookup.jsx";
 import UserProfile from "./pages/Profile.jsx";
 import UserOrders from "./pages/Orders.jsx";
 import Promotions from "./pages/admin/promotions/Promotions.jsx";
+import ReviewManagement from "./pages/admin/reviews";
 
 // Landing move to its own file with full storefront sections
 
@@ -1337,6 +1338,11 @@ function App() {
           <Route path="coupons" element={
             <ProtectedRoute requiredPermission="read_products">
               <Promotions />
+            </ProtectedRoute>
+          } />
+          <Route path="reviews" element={
+            <ProtectedRoute requiredPermission="read_products">
+              <ReviewManagement />
             </ProtectedRoute>
           } />
           <Route path="profile" element={<Profile />} />

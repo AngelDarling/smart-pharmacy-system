@@ -12,7 +12,7 @@ const orderItemSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
-    code: { type: String, unique: true },
+    code: { type: String },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     status: { type: String, enum: ["pending", "processing", "shipping", "completed", "cancelled"], default: "pending" },
     paymentMethod: { type: String, enum: ["cod", "simulate"], default: "cod" },
@@ -32,6 +32,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+orderSchema.index({ code: 1 }, { unique: true });
 orderSchema.index({ userId: 1, createdAt: -1 });
 
 export default mongoose.model("Order", orderSchema);

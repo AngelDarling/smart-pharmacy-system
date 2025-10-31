@@ -8,7 +8,6 @@ const goodsReceiptSchema = new mongoose.Schema({
   code: {
     type: String,
     required: true,
-    unique: true,
     maxlength: 50
   },
   supplierId: {

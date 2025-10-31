@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions } from 'antd';
+import { Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions } from 'antd';
 import { SearchOutlined, ReloadOutlined, ClearOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import api from '../../../api/client';
 
 const { RangePicker } = DatePicker;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const STATUS_COLORS = {
   pending: 'gold',
@@ -116,110 +116,110 @@ export default function OrdersManagement() {
   };
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      <Title level={2} style={{ marginBottom: 16, color: '#1d4ed8' }}>Quản lý đơn hàng</Title>
-      <Row gutter={[16,16]}>
-        <Col span={24}>
-          <Card style={{ marginBottom: 16, borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-            <Space wrap>
-              <Input
-                placeholder="Tìm mã đơn / tên / SĐT"
-                value={filters.q}
-                onChange={(e)=> setFilters({ ...filters, q: e.target.value })}
-                prefix={<SearchOutlined />}
-                style={{ width: 260 }}
-                allowClear
-              />
-              <Select
-                placeholder="Trạng thái"
-                value={filters.status || undefined}
-                onChange={(v)=> setFilters({ ...filters, status: v || '' })}
-                allowClear
-                style={{ width: 180 }}
-                options={[
-                  { label: 'Chờ xử lý', value: 'pending' },
-                  { label: 'Đang xử lý', value: 'processing' },
-                  { label: 'Đang giao', value: 'shipping' },
-                  { label: 'Hoàn tất', value: 'completed' },
-                  { label: 'Đã hủy', value: 'cancelled' },
-                ]}
-              />
-              <Select
-                placeholder="Hình thức thanh toán"
-                value={filters.paymentMethod || undefined}
-                onChange={(v)=> setFilters({ ...filters, paymentMethod: v || '' })}
-                allowClear
-                style={{ width: 200 }}
-                options={[
-                  { label: 'COD', value: 'cod' },
-                  { label: 'Simulate', value: 'simulate' },
-                ]}
-              />
-              <RangePicker
-                value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
-                onChange={(vals)=> setFilters({ ...filters, from: vals?.[0] || null, to: vals?.[1] || null })}
-              />
-              <Button 
-                onClick={()=> {
-                  const today = dayjs().startOf('day');
-                  const todayEnd = dayjs().endOf('day');
-                  setFilters({ ...filters, from: today, to: todayEnd });
-                  setPagination((p) => ({ ...p, current: 1 }));
-                }}
-              >
-                Hôm nay
-              </Button>
-              <Button type="primary" onClick={()=> setPagination((p)=> ({ ...p }))} icon={<ReloadOutlined />}>Lọc</Button>
-              <Button 
-                onClick={()=> {
-                  setFilters({ q: '', status: '', paymentMethod: '', from: null, to: null });
-                  setPagination((p) => ({ ...p, current: 1 }));
-                }}
-                icon={<ClearOutlined />}
-              >
-                Reset
-              </Button>
-            </Space>
-          </Card>
-          {/* Tổng quan */}
-          <Card style={{ marginBottom: 16, borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-            <Row gutter={[16,16]}>
-              <Col xs={24} sm={12} md={8}>
-                <Statistic title="Tổng đơn hàng" value={stats.totalOrders} />
-              </Col>
-              <Col xs={24} sm={12} md={8}>
-                <Statistic title="Doanh thu hoàn tất" value={(stats.totalRevenue||0).toLocaleString('vi-VN') + '₫'} />
-              </Col>
-              <Col xs={24} md={8}>
-                <div>
-                  <Text strong>Trạng thái</Text>
-                  <div style={{ marginTop: 8, display:'flex', flexWrap:'wrap', gap: 8 }}>
-                    {(stats.statusBreakdown || []).map((s)=> (
-                      <Tag key={s._id} color={STATUS_COLORS[s._id] || 'default'}>{STATUS_LABELS[s._id] || s._id}: {s.count}</Tag>
-                    ))}
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          </Card>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ margin: 0, color: '#1d4ed8' }}>Quản lý đơn hàng</h2>
+      </div>
 
-          <Card bodyStyle={{ paddingTop: 8 }} style={{ borderRadius: 12, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <Table
-              rowKey={(r) => r._id}
-              loading={loading}
-              columns={columns}
-              dataSource={orders}
-              onChange={onTableChange}
-              pagination={{
-                ...pagination,
-                showSizeChanger: true,
-                showTotal: (t, r) => `${r[0]}-${r[1]} của ${t} đơn`
-              }}
-              scroll={{ x: 1000 }}
-            />
-          </Card>
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
+        <Input
+          placeholder="Tìm mã đơn / tên / SĐT"
+          value={filters.q}
+          onChange={(e)=> setFilters({ ...filters, q: e.target.value })}
+          prefix={<SearchOutlined />}
+          style={{ width: 260 }}
+          allowClear
+        />
+        <Select
+          placeholder="Trạng thái"
+          value={filters.status || undefined}
+          onChange={(v)=> setFilters({ ...filters, status: v || '' })}
+          allowClear
+          style={{ width: 180 }}
+          options={[
+            { label: 'Chờ xử lý', value: 'pending' },
+            { label: 'Đang xử lý', value: 'processing' },
+            { label: 'Đang giao', value: 'shipping' },
+            { label: 'Hoàn tất', value: 'completed' },
+            { label: 'Đã hủy', value: 'cancelled' },
+          ]}
+        />
+        <Select
+          placeholder="Hình thức thanh toán"
+          value={filters.paymentMethod || undefined}
+          onChange={(v)=> setFilters({ ...filters, paymentMethod: v || '' })}
+          allowClear
+          style={{ width: 200 }}
+          options={[
+            { label: 'COD', value: 'cod' },
+            { label: 'Simulate', value: 'simulate' },
+          ]}
+        />
+        <RangePicker
+          value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
+          onChange={(vals)=> setFilters({ ...filters, from: vals?.[0] || null, to: vals?.[1] || null })}
+        />
+        <Button 
+          onClick={()=> {
+            const today = dayjs().startOf('day');
+            const todayEnd = dayjs().endOf('day');
+            setFilters({ ...filters, from: today, to: todayEnd });
+            setPagination((p) => ({ ...p, current: 1 }));
+          }}
+        >
+          Hôm nay
+        </Button>
+        <Button type="primary" onClick={()=> setPagination((p)=> ({ ...p }))} icon={<ReloadOutlined />}>Lọc</Button>
+        <Button 
+          onClick={()=> {
+            setFilters({ q: '', status: '', paymentMethod: '', from: null, to: null });
+            setPagination((p) => ({ ...p, current: 1 }));
+          }}
+          icon={<ClearOutlined />}
+        >
+          Reset
+        </Button>
+      </div>
+
+      {/* Stats */}
+      <Row gutter={[16,16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={8}>
+          <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
+            <Statistic title="Tổng đơn hàng" value={stats.totalOrders} />
+          </div>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
+            <Statistic title="Doanh thu hoàn tất" value={(stats.totalRevenue||0).toLocaleString('vi-VN') + '₫'} />
+          </div>
+        </Col>
+        <Col xs={24} md={8}>
+          <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
+            <Text strong>Trạng thái</Text>
+            <div style={{ marginTop: 8, display:'flex', flexWrap:'wrap', gap: 8 }}>
+              {(stats.statusBreakdown || []).map((s)=> (
+                <Tag key={s._id} color={STATUS_COLORS[s._id] || 'default'}>{STATUS_LABELS[s._id] || s._id}: {s.count}</Tag>
+              ))}
+            </div>
+          </div>
         </Col>
       </Row>
+
+      {/* Table */}
+      <Table
+        rowKey={(r) => r._id}
+        loading={loading}
+        columns={columns}
+        dataSource={orders}
+        onChange={onTableChange}
+        pagination={{
+          ...pagination,
+          showSizeChanger: true,
+          showTotal: (t, r) => `${r[0]}-${r[1]} của ${t} đơn`
+        }}
+        scroll={{ x: 1000 }}
+      />
 
       <Modal
         open={detail.open}
@@ -232,17 +232,19 @@ export default function OrdersManagement() {
           <div>
             <Row gutter={[16,16]}>
               <Col xs={24} md={12}>
-                <Card title="Thông tin khách hàng" size="small">
+                <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Thông tin khách hàng</h3>
                   <Descriptions column={1} size="small">
                     <Descriptions.Item label="Tên khách hàng">{detail.order.shippingAddress?.fullName || detail.order.userId?.name || 'Khách vãng lai'}</Descriptions.Item>
                     <Descriptions.Item label="SĐT">{detail.order.shippingAddress?.phone || '—'}</Descriptions.Item>
                     <Descriptions.Item label="Email">{detail.order.shippingAddress?.email || '—'}</Descriptions.Item>
                     <Descriptions.Item label="Địa chỉ">{detail.order.shippingAddress?.address || '—'}</Descriptions.Item>
                   </Descriptions>
-                </Card>
+                </div>
               </Col>
               <Col xs={24} md={12}>
-                <Card title="Thông tin thanh toán" size="small">
+                <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Thông tin thanh toán</h3>
                   <Descriptions column={1} size="small">
                     <Descriptions.Item label="Phương thức">{(detail.order.paymentMethod||'cod').toUpperCase()}</Descriptions.Item>
                     <Descriptions.Item label="Tổng tiền hàng">{(detail.order.totals?.items||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
@@ -279,11 +281,12 @@ export default function OrdersManagement() {
                     )}
                     <Descriptions.Item label="Tổng thanh toán"><span style={{ color:'#16a34a', fontWeight:700 }}>{(detail.order.totals?.grand||0).toLocaleString('vi-VN')}₫</span></Descriptions.Item>
                   </Descriptions>
-                </Card>
+                </div>
               </Col>
             </Row>
 
-            <Card title="Sản phẩm" style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
+              <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Sản phẩm</h3>
               <Table
                 rowKey={(r,idx)=> `${r.productId || idx}`}
                 dataSource={detail.order.items || []}
@@ -313,7 +316,7 @@ export default function OrdersManagement() {
                   { title:'Thành tiền', align:'right', width:140, render:(_,r)=> ((r.priceSnapshot||0)* (r.quantity||0)).toLocaleString('vi-VN') + '₫' }
                 ]}
               />
-            </Card>
+            </div>
           </div>
         )}
       </Modal>

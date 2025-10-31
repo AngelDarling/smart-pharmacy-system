@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Card,
   Table,
   Button,
   Space,
@@ -18,7 +17,6 @@ import {
   Row,
   Col,
   Typography,
-  Divider,
   Form,
   Switch,
   Badge,
@@ -51,7 +49,6 @@ import { useUsers } from '../../../hooks/admin/useUsers';
 import { usePermissions } from '../../../hooks/usePermissions';
 import UserForm from '../../../components/admin/UserForm';
 
-const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
@@ -508,376 +505,259 @@ const StaffManagement = () => {
   };
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      <Card
-        style={{
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          border: 'none'
-        }}
-        styles={{ body: { padding: '24px' } }}
-      >
-        {/* Header Section */}
-        <div style={{ 
-          marginBottom: '24px',
-          paddingBottom: '16px',
-          borderBottom: '1px solid #f0f0f0'
-        }}>
-          <Row justify="space-between" align="middle">
-            <Col>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar 
-                  size="large" 
-                  icon={<TeamOutlined />}
-                  style={{ 
-                    backgroundColor: '#52c41a',
-                    marginRight: '16px'
-                  }}
-                />
-                <div>
-                  <Title level={2} style={{ margin: 0, color: '#262626' }}>
-                    Quản lý Nhân viên
-                  </Title>
-                  <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
-                    Quản lý thông tin nhân viên và quyền hạn
-                  </div>
-                </div>
-              </div>
-            </Col>
-            <Col>
-              <Space size="middle">
-                <Tooltip title="Làm mới dữ liệu">
-                  <Button
-                    icon={<ReloadOutlined />}
-                    onClick={() => fetchUsers(filters)}
-                    loading={loading}
-                    shape="circle"
-                    size="large"
-                  />
-                </Tooltip>
-                {permissions.canWriteUsers() && (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddUser}
-                    size="large"
-                    style={{
-                      borderRadius: '8px',
-                      height: '40px',
-                      paddingLeft: '20px',
-                      paddingRight: '20px',
-                      fontWeight: 500
-                    }}
-                  >
-                    Thêm nhân viên
-                  </Button>
-                )}
-              </Space>
-            </Col>
-          </Row>
-        </div>
-
-        {/* Search and Quick Stats */}
-        <Row gutter={16} style={{ marginBottom: '24px' }}>
-          <Col span={12}>
-            <Search
-              placeholder="Tìm kiếm theo tên, email, mã nhân viên..."
-              allowClear
-              onSearch={handleSearch}
-              size="large"
-              style={{ width: '100%' }}
-              prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />}
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>Quản lý Nhân viên</h2>
+        <Space>
+          <Tooltip title="Làm mới dữ liệu">
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => fetchUsers(filters)}
+              loading={loading}
             />
-          </Col>
-          <Col span={12}>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title="Tổng nhân viên"
-                    value={staffStats.totalStaff}
-                    prefix={<TeamOutlined />}
-                    valueStyle={{ color: '#52c41a', fontSize: '18px' }}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title="Đang làm việc"
-                    value={staffStats.activeStaff}
-                    prefix={<SafetyOutlined />}
-                    valueStyle={{ color: '#1890ff', fontSize: '18px' }}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title="Quản lý"
-                    value={staffStats.staffByRole.manager + staffStats.staffByRole.admin}
-                    prefix={<CrownOutlined />}
-                    valueStyle={{ color: '#faad14', fontSize: '18px' }}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title="Dược sĩ"
-                    value={staffStats.staffByRole.pharmacist}
-                    prefix={<SettingOutlined />}
-                    valueStyle={{ color: '#722ed1', fontSize: '18px' }}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
+          </Tooltip>
+          {permissions.canWriteUsers() && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddUser}
+            >
+              Thêm nhân viên
+            </Button>
+          )}
+        </Space>
+      </div>
 
-        {/* Department Distribution */}
-        <Card 
-          size="small" 
-          style={{ 
-            marginBottom: '24px',
-            background: '#f6ffed',
-            border: '1px solid #b7eb8f'
-          }}
-        >
-          <Title level={5} style={{ marginBottom: '16px', color: '#262626' }}>
-            Phân bố theo phòng ban
-          </Title>
-          <Row gutter={16}>
-            {Object.entries(staffStats.staffByDepartment)
-              .filter(([dept, count]) => count > 0)
-              .map(([dept, count]) => (
-              <Col span={3} key={dept}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 600, color: '#262626' }}>
-                    {count}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                    {dept}
-                  </div>
-                  <Progress
-                    percent={staffStats.totalStaff > 0 ? Math.round((count / staffStats.totalStaff) * 100) : 0}
-                    size="small"
-                    showInfo={false}
-                    strokeColor="#52c41a"
-                  />
-                </div>
-              </Col>
-            ))}
-          </Row>
-        </Card>
-
-        {/* Advanced Filters */}
-        <Card 
-          size="small" 
-          style={{ 
-            marginBottom: '24px',
-            background: '#fafafa',
-            border: '1px solid #f0f0f0'
-          }}
-        >
-          <div style={{ marginBottom: '16px' }}>
-            <Space>
-              <FilterOutlined style={{ color: '#1890ff' }} />
-              <Title level={5} style={{ margin: 0, color: '#262626' }}>
-                Bộ lọc nâng cao
-              </Title>
-            </Space>
-          </div>
-          
+      {/* Search and Quick Stats */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={12}>
+          <Search
+            placeholder="Tìm kiếm theo tên, email, mã nhân viên..."
+            allowClear
+            onSearch={handleSearch}
+            style={{ width: '100%' }}
+            prefix={<SearchOutlined />}
+          />
+        </Col>
+        <Col span={12}>
           <Row gutter={16}>
             <Col span={6}>
-              <Form.Item label="Vai trò" style={{ marginBottom: '8px' }}>
-                <Select
-                  placeholder="Chọn vai trò"
-                  allowClear
-                  value={filters.role}
-                  onChange={(value) => handleFilterChange('role', value)}
-                  size="large"
-                >
-                  <Option value="staff">Nhân viên</Option>
-                  <Option value="manager">Quản lý</Option>
-                  <Option value="pharmacist">Dược sĩ</Option>
-                  <Option value="admin">Quản trị viên</Option>
-                </Select>
-              </Form.Item>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic
+                  title="Tổng nhân viên"
+                  value={staffStats.totalStaff}
+                  prefix={<TeamOutlined />}
+                  valueStyle={{ color: '#52c41a', fontSize: '18px' }}
+                />
+              </div>
             </Col>
             <Col span={6}>
-              <Form.Item label="Phòng ban" style={{ marginBottom: '8px' }}>
-                <Select
-                  placeholder="Chọn phòng ban"
-                  allowClear
-                  value={filters.department}
-                  onChange={(value) => handleFilterChange('department', value)}
-                  size="large"
-                >
-                  {departmentOptions.map(dept => (
-                    <Option key={dept} value={dept}>
-                      {dept}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic
+                  title="Đang làm việc"
+                  value={staffStats.activeStaff}
+                  prefix={<SafetyOutlined />}
+                  valueStyle={{ color: '#1890ff', fontSize: '18px' }}
+                />
+              </div>
             </Col>
             <Col span={6}>
-              <Form.Item label="Trạng thái" style={{ marginBottom: '8px' }}>
-                <Select
-                  placeholder="Chọn trạng thái"
-                  allowClear
-                  value={filters.isActive}
-                  onChange={(value) => handleFilterChange('isActive', value)}
-                  size="large"
-                >
-                  <Option value={true}>Đang làm việc</Option>
-                  <Option value={false}>Nghỉ việc</Option>
-                </Select>
-              </Form.Item>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic
+                  title="Quản lý"
+                  value={staffStats.staffByRole.manager + staffStats.staffByRole.admin}
+                  prefix={<CrownOutlined />}
+                  valueStyle={{ color: '#faad14', fontSize: '18px' }}
+                />
+              </div>
             </Col>
             <Col span={6}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'end', 
-                height: '100%',
-                gap: '8px'
-              }}>
-                <Button 
-                  type="primary" 
-                  onClick={applyFilters}
-                  size="large"
-                  icon={<FilterOutlined />}
-                >
-                  Áp dụng bộ lọc
-                </Button>
-                <Button 
-                  onClick={resetFilters}
-                  size="large"
-                  icon={<ClearOutlined />}
-                >
-                  Đặt lại
-                </Button>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic
+                  title="Dược sĩ"
+                  value={staffStats.staffByRole.pharmacist}
+                  prefix={<SettingOutlined />}
+                  valueStyle={{ color: '#722ed1', fontSize: '18px' }}
+                />
               </div>
             </Col>
           </Row>
-        </Card>
+        </Col>
+      </Row>
 
-        <Divider />
-
-        {/* Staff Table */}
-        <Card
-          style={{
-            borderRadius: '8px',
-            border: '1px solid #f0f0f0',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
-          }}
-          styles={{ body: { padding: 0 } }}
-        >
-          <Table
-            columns={columns}
-            dataSource={staffUsers}
-            rowKey={(record) => record._id}
-            loading={loading}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  gap: '8px',
-                  color: '#8c8c8c'
-                }}>
-                  <TeamOutlined />
-                  <span>
-                    Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
-                    {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> nhân viên
-                  </span>
+      {/* Department Distribution */}
+      <div style={{ marginBottom: 16, padding: 16, background: '#f9fafb', borderRadius: 4 }}>
+        <h3 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Phân bố theo phòng ban</h3>
+        <Row gutter={16}>
+          {Object.entries(staffStats.staffByDepartment)
+            .filter(([dept, count]) => count > 0)
+            .map(([dept, count]) => (
+            <Col span={3} key={dept}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: '#262626' }}>
+                  {count}
                 </div>
-              ),
-              pageSizeOptions: ['10', '20', '50', '100'],
-              size: 'default'
-            }}
-            rowSelection={rowSelection}
-            onChange={handleTableChange}
-            scroll={{ x: 1200 }}
-            style={{
-              background: '#fff'
-            }}
-          />
-        </Card>
+                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                  {dept}
+                </div>
+                <Progress
+                  percent={staffStats.totalStaff > 0 ? Math.round((count / staffStats.totalStaff) * 100) : 0}
+                  size="small"
+                  showInfo={false}
+                  strokeColor="#52c41a"
+                />
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </div>
 
-        {/* Bulk Actions */}
-        {selectedRowKeys.length > 0 && (
-          <Card 
-            size="small" 
-            style={{ 
-              marginTop: '16px',
-              background: '#f6ffed',
-              border: '1px solid #b7eb8f',
-              borderRadius: '8px'
-            }}
-          >
-            <Row justify="space-between" align="middle">
-              <Col>
-                <Space>
-                  <Badge 
-                    count={selectedRowKeys.length} 
-                    style={{ backgroundColor: '#52c41a' }}
-                  />
-                  <span style={{ color: '#262626', fontWeight: 500 }}>
-                    Đã chọn {selectedRowKeys.length} nhân viên
-                  </span>
-                </Space>
-              </Col>
-              <Col>
-                <Space>
-                  <Button
-                    type="primary"
-                    icon={<UserAddOutlined />}
-                    onClick={() => handleBulkStatusUpdate(true)}
-                  >
-                    Kích hoạt đã chọn
-                  </Button>
-                  <Button
-                    icon={<UserDeleteOutlined />}
-                    onClick={() => handleBulkStatusUpdate(false)}
-                  >
-                    Tạm dừng đã chọn
-                  </Button>
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={handleBulkDelete}
-                  >
-                    Xóa đã chọn
-                  </Button>
-                  <Button 
-                    onClick={() => setSelectedRowKeys([])}
-                    icon={<ClearOutlined />}
-                  >
-                    Bỏ chọn
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-        )}
+      {/* Advanced Filters */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
+        <Select
+          placeholder="Vai trò"
+          allowClear
+          style={{ width: 150 }}
+          value={filters.role || undefined}
+          onChange={(value) => handleFilterChange('role', value)}
+        >
+          <Option value="staff">Nhân viên</Option>
+          <Option value="manager">Quản lý</Option>
+          <Option value="pharmacist">Dược sĩ</Option>
+          <Option value="admin">Quản trị viên</Option>
+        </Select>
+        <Select
+          placeholder="Phòng ban"
+          allowClear
+          style={{ width: 150 }}
+          value={filters.department || undefined}
+          onChange={(value) => handleFilterChange('department', value)}
+        >
+          {departmentOptions.map(dept => (
+            <Option key={dept} value={dept}>
+              {dept}
+            </Option>
+          ))}
+        </Select>
+        <Select
+          placeholder="Trạng thái"
+          allowClear
+          style={{ width: 150 }}
+          value={filters.isActive}
+          onChange={(value) => handleFilterChange('isActive', value)}
+        >
+          <Option value={true}>Đang làm việc</Option>
+          <Option value={false}>Nghỉ việc</Option>
+        </Select>
+        <Button 
+          type="primary" 
+          onClick={applyFilters}
+          icon={<FilterOutlined />}
+        >
+          Áp dụng
+        </Button>
+        <Button 
+          onClick={resetFilters}
+          icon={<ClearOutlined />}
+        >
+          Đặt lại
+        </Button>
+      </div>
 
-        {/* User Form Modal */}
-        <UserForm
-          visible={isUserFormVisible}
-          onCancel={handleUserFormClose}
-          onSubmit={handleUserFormSubmit}
-          initialValues={editingUser}
-          isEditing={!!editingUser}
-        />
-      </Card>
+      {/* Staff Table */}
+      <Table
+        columns={columns}
+        dataSource={staffUsers}
+        rowKey={(record) => record._id}
+        loading={loading}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              gap: '8px',
+              color: '#8c8c8c'
+            }}>
+              <TeamOutlined />
+              <span>
+                Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
+                {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> nhân viên
+              </span>
+            </div>
+          ),
+          pageSizeOptions: ['10', '20', '50', '100'],
+          size: 'default'
+        }}
+        rowSelection={rowSelection}
+        onChange={handleTableChange}
+        scroll={{ x: 1200 }}
+      />
+
+      {/* Bulk Actions */}
+      {selectedRowKeys.length > 0 && (
+        <div style={{ 
+          marginTop: 16,
+          padding: 16,
+          background: '#f6ffed',
+          border: '1px solid #b7eb8f',
+          borderRadius: 4,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Space>
+            <Badge 
+              count={selectedRowKeys.length} 
+              style={{ backgroundColor: '#52c41a' }}
+            />
+            <span style={{ color: '#262626', fontWeight: 500 }}>
+              Đã chọn {selectedRowKeys.length} nhân viên
+            </span>
+          </Space>
+          <Space>
+            <Button
+              type="primary"
+              icon={<UserAddOutlined />}
+              onClick={() => handleBulkStatusUpdate(true)}
+            >
+              Kích hoạt đã chọn
+            </Button>
+            <Button
+              icon={<UserDeleteOutlined />}
+              onClick={() => handleBulkStatusUpdate(false)}
+            >
+              Tạm dừng đã chọn
+            </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleBulkDelete}
+            >
+              Xóa đã chọn
+            </Button>
+            <Button 
+              onClick={() => setSelectedRowKeys([])}
+              icon={<ClearOutlined />}
+            >
+              Bỏ chọn
+            </Button>
+          </Space>
+        </div>
+      )}
+
+      {/* User Form Modal */}
+      <UserForm
+        visible={isUserFormVisible}
+        onCancel={handleUserFormClose}
+        onSubmit={handleUserFormSubmit}
+        initialValues={editingUser}
+        isEditing={!!editingUser}
+      />
     </div>
   );
 };

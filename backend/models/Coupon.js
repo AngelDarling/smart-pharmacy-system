@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const CouponSchema = new mongoose.Schema({
-  code: { type: String, required: true, unique: true, trim: true, uppercase: true },
+  code: { type: String, required: true, trim: true, uppercase: true },
   description: { type: String, default: "" },
   discountType: { type: String, enum: ["percent", "amount"], required: true },
   discountValue: { type: Number, required: true },

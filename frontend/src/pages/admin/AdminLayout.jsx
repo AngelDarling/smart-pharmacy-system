@@ -129,6 +129,10 @@ const AdminLayout = () => {
           key: '/admin/coupons',
           label: 'Mã khuyến mãi',
         },
+        {
+          key: '/admin/reviews',
+          label: 'Đánh giá sản phẩm',
+        },
       ].filter(Boolean),
     }] : []),
     // Orders section

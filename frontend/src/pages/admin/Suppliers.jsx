@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, Row, Col, Typography, message, Select, Tooltip, Switch, Statistic, TreeSelect } from "antd";
+import { Table, Button, Space, Tag, Modal, Form, Input, Row, Col, message, Select, Tooltip, Switch, Statistic, TreeSelect } from "antd";
 import { PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ShopOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined } from "@ant-design/icons";
 import api from "../../api/client.js";
 
-const { Title } = Typography;
 const { Option } = Select;
 
 export default function AdminSuppliers() {
@@ -124,81 +123,76 @@ export default function AdminSuppliers() {
   };
 
   return (
-    <div style={{ padding: 24, background: "#f5f5f5", minHeight: "100vh" }}>
-      <Card style={{ borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", border: "none" }} styles={{ body: { padding: 24 } }}>
-        <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid #f0f0f0" }}>
-          <Row justify="space-between" align="middle">
-            <Col>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, background: "#1890ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", marginRight: 16 }}>
-                  <ShopOutlined />
-                </div>
-                <div>
-                  <Title level={2} style={{ margin: 0 }}>Quản lý Nhà cung cấp</Title>
-                  <div style={{ color: "#8c8c8c" }}>Quản lý danh sách nhà cung cấp và thông tin liên hệ</div>
-                </div>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>Quản lý Nhà cung cấp</h2>
+        <Space>
+          <Tooltip title="Làm mới">
+            <Button icon={<ReloadOutlined />} onClick={() => fetchSuppliers()} loading={loading} />
+          </Tooltip>
+          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+            Thêm nhà cung cấp
+          </Button>
+        </Space>
+      </div>
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={12}>
+          <Input allowClear placeholder="Tìm theo tên, email, SĐT, địa chỉ..." prefix={<SearchOutlined />} onPressEnter={(e) => { setFilters({ ...filters, search: e.target.value }); fetchSuppliers(); }} />
+        </Col>
+        <Col span={12}>
+          <Row gutter={16}>
+            <Col span={8}>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic title="Tổng NCC" value={suppliers.length} />
               </div>
             </Col>
-            <Col>
-              <Space>
-                <Tooltip title="Làm mới"><Button icon={<ReloadOutlined />} onClick={() => fetchSuppliers()} loading={loading} shape="circle" size="large" /></Tooltip>
-                <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large" style={{ borderRadius: 8, height: 40, paddingLeft: 20, paddingRight: 20, fontWeight: 500 }}>Thêm nhà cung cấp</Button>
-              </Space>
+            <Col span={8}>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic title="Đang hoạt động" value={suppliers.filter(s => s.isActive).length} />
+              </div>
+            </Col>
+            <Col span={8}>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic title="Ưu tiên" value={suppliers.filter(s => s.isPreferred).length} />
+              </div>
             </Col>
           </Row>
-        </div>
+        </Col>
+      </Row>
 
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={12}>
-            <Input size="large" allowClear placeholder="Tìm theo tên, email, SĐT, địa chỉ..." prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />} onPressEnter={(e) => { setFilters({ ...filters, search: e.target.value }); fetchSuppliers(); }} />
-          </Col>
-          <Col span={12}>
-            <Row gutter={16}>
-              <Col span={8}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic title="Tổng NCC" value={suppliers.length} />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic title="Đang hoạt động" value={suppliers.filter(s => s.isActive).length} />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic title="Ưu tiên" value={suppliers.filter(s => s.isPreferred).length} />
-                </Card>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
+        <Select 
+          allowClear 
+          placeholder="Trạng thái" 
+          style={{ width: 150 }}
+          value={filters.isActive}
+          onChange={(v) => { setFilters({ ...filters, isActive: v }); fetchSuppliers(); }}
+        >
+          <Option value={true}>Hoạt động</Option>
+          <Option value={false}>Tạm dừng</Option>
+        </Select>
+        <Select 
+          allowClear 
+          placeholder="Phân loại" 
+          style={{ width: 200 }}
+          value={filters.category}
+          onChange={(v) => { setFilters({ ...filters, category: v }); fetchSuppliers(); }}
+        >
+          {rootCategories.map(c => (
+            <Option key={c._id} value={c._id}>{c.name}</Option>
+          ))}
+        </Select>
+      </div>
 
-        <Card size="small" style={{ marginBottom: 24, background: '#fafafa', border: '1px solid #f0f0f0' }}>
-          <Row gutter={16} align="middle">
-            <Col span={6}>
-              <Form.Item label="Trạng thái" style={{ marginBottom: 8 }}>
-                <Select allowClear placeholder="Chọn trạng thái" size="large" value={filters.isActive} onChange={(v) => { setFilters({ ...filters, isActive: v }); fetchSuppliers(); }}>
-                  <Option value={true}>Hoạt động</Option>
-                  <Option value={false}>Tạm dừng</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Phân loại" style={{ marginBottom: 8 }}>
-                <Select allowClear placeholder="Chọn phân loại" size="large" value={filters.category} onChange={(v) => { setFilters({ ...filters, category: v }); fetchSuppliers(); }}>
-                  {rootCategories.map(c => (
-                    <Option key={c._id} value={c._id}>{c.name}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-        </Card>
-
-        <Card style={{ borderRadius: 8, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }} styles={{ body: { padding: 0 } }}>
-          <Table rowKey={(r) => r._id} columns={columns} dataSource={suppliers} loading={loading} pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }} onChange={(p) => fetchSuppliers({ page: p.current, limit: p.pageSize })} />
-        </Card>
-      </Card>
+      <Table 
+        rowKey={(r) => r._id} 
+        columns={columns} 
+        dataSource={suppliers} 
+        loading={loading} 
+        pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }} 
+        onChange={(p) => fetchSuppliers({ page: p.current, limit: p.pageSize })} 
+      />
 
       <Modal title={editing ? 'Sửa nhà cung cấp' : 'Thêm nhà cung cấp'} open={isModalOpen} onOk={onSubmit} onCancel={() => setIsModalOpen(false)} okText="Lưu" width={720}>
         <Form layout="vertical" form={form}>

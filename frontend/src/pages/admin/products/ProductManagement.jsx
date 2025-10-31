@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Card,
   Table,
   Button,
   Space,
@@ -18,7 +17,6 @@ import {
   Tooltip,
   Row,
   Col,
-  Typography,
   Form,
   InputNumber,
   Switch,
@@ -46,7 +44,6 @@ import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import { useCategories } from '../../../hooks/admin/useCategories';
 import ProductForm from '../../../components/admin/ProductForm';
 
-const { Title } = Typography;
 const { Option } = Select;
 
 const ProductManagement = () => {
@@ -430,343 +427,324 @@ const ProductManagement = () => {
   };
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      <Card
-        style={{
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          border: 'none'
-        }}
-        styles={{ body: { padding: '24px' } }}
-      >
-        {/* Header Section */}
-        <div style={{ 
-          marginBottom: '24px',
-          paddingBottom: '16px',
-          borderBottom: '1px solid #f0f0f0'
-        }}>
-          <Row justify="space-between" align="middle">
-            <Col>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar 
-                  size="large" 
-                  icon={<ShoppingOutlined />}
-                  style={{ 
-                    backgroundColor: '#52c41a',
-                    marginRight: '16px'
-                  }}
-                />
-                <div>
-                  <Title level={2} style={{ margin: 0, color: '#262626' }}>
-                    Quản lý Sản phẩm
-                  </Title>
-                  <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
-                    Quản lý danh mục sản phẩm và tồn kho
-                  </div>
-                </div>
-              </div>
-            </Col>
-            <Col>
-              <Space size="middle">
-                <Tooltip title="Làm mới dữ liệu">
-                  <Button
-                    icon={<ReloadOutlined />}
-                    onClick={() => fetchProducts(filters)}
-                    loading={loading}
-                    shape="circle"
-                    size="large"
-                  />
-                </Tooltip>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleAddProduct}
-                  size="large"
-                  style={{
-                    borderRadius: '8px',
-                    height: '40px',
-                    paddingLeft: '20px',
-                    paddingRight: '20px',
-                    fontWeight: 500
-                  }}
-                >
-                  Thêm sản phẩm
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-        </div>
-
-        {/* Search and Quick Stats */}
-        <Row gutter={16} style={{ marginBottom: '24px' }}>
-          <Col span={12}>
-            <Search
-              placeholder="Tìm kiếm sản phẩm theo tên, SKU..."
-              allowClear
-              onSearch={handleSearch}
-              size="large"
-              style={{ width: '100%' }}
-              prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />}
-            />
-          </Col>
-          <Col span={12}>
-            <Row gutter={16}>
-              <Col span={8}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title="Tổng sản phẩm"
-                    value={pagination?.total || 0}
-                    prefix={<ShoppingOutlined />}
-                    valueStyle={{ color: '#1890ff', fontSize: '18px' }}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title="Đang hoạt động"
-                    value={products?.filter(p => p.isActive).length || 0}
-                    prefix={<StarOutlined />}
-                    valueStyle={{ color: '#52c41a', fontSize: '18px' }}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card size="small" style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title="Hết hàng"
-                    value={products?.filter(p => p.totalStock === 0).length || 0}
-                    prefix={<TagsOutlined />}
-                    valueStyle={{ color: '#ff4d4f', fontSize: '18px' }}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-
-        {/* Filters */}
-        <Card 
-          size="small" 
-          style={{ 
-            marginBottom: '24px',
-            background: '#fafafa',
-            border: '1px solid #f0f0f0'
-          }}
-        >
-          <Row gutter={16} align="middle">
-            <Col span={6}>
-              <Form.Item label="Danh mục" style={{ marginBottom: '8px' }}>
-                <TreeSelect
-                  placeholder="Chọn danh mục"
-                  allowClear
-                  value={filters.categoryId}
-                  onChange={(value) => handleFilterChange('categoryId', value)}
-                  treeData={categoryOptions || []}
-                  treeDefaultExpandAll
-                  size="large"
-                  showSearch
-                  filterTreeNode={(input, node) =>
-                    node.title.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Thương hiệu" style={{ marginBottom: '8px' }}>
-                <Select
-                  placeholder="Chọn thương hiệu"
-                  allowClear
-                  size="large"
-                  value={filters.brandId || undefined}
-                  onChange={(value, option) => {
-                    // Khi chọn thương hiệu, dùng brandSlug để filter đẹp URL, nhưng API hiện nhận brandId/brandSlug đều được
-                    const selected = brandOptions.find(b => b._id === value);
-                    const nf = { ...filters, brandId: value || '', brandSlug: selected?.slug || undefined };
-                    setFilters(nf);
-                    fetchProducts(nf);
-                  }}
-                  showSearch
-                  optionFilterProp="children"
-                >
-                  {brandOptions.map((b) => (
-                    <Option key={b._id} value={b._id}>{b.name}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Trạng thái" style={{ marginBottom: '8px' }}>
-                <Select
-                  placeholder="Chọn trạng thái"
-                  allowClear
-                  value={filters.isActive}
-                  onChange={(value) => handleFilterChange('isActive', value)}
-                  size="large"
-                >
-                  <Option value={true}>Hoạt động</Option>
-                  <Option value={false}>Tạm dừng</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'end', 
-                height: '100%',
-                gap: '8px'
-              }}>
-                <Button 
-                  type="primary" 
-                  onClick={applyFilters}
-                  size="large"
-                >
-                  Áp dụng bộ lọc
-                </Button>
-                <Button 
-                  onClick={resetFilters}
-                  size="large"
-                >
-                  Đặt lại
-                </Button>
-              </div>
-            </Col>
-          </Row>
-        </Card>
-
-        {/* Products Table */}
-        <Card
-          style={{
-            borderRadius: '8px',
-            border: '1px solid #f0f0f0',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
-          }}
-          styles={{ body: { padding: 0 } }}
-        >
-          <Table
-            columns={columns}
-            dataSource={products}
-            rowKey={(record) => record._id}
-            loading={loading}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  gap: '8px',
-                  color: '#8c8c8c'
-                }}>
-                  <span>
-                    Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
-                    {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> sản phẩm
-                  </span>
-                </div>
-              ),
-              pageSizeOptions: ['10', '20', '50', '100'],
-              size: 'default'
-            }}
-            rowSelection={rowSelection}
-            onChange={(p, f, s) => {
-              const payload = { ...filters, page: p.current, limit: p.pageSize };
-              if (s && s.field) {
-                payload.sortBy = s.order === 'ascend' ? s.field : `-${s.field}`;
-              }
-              fetchProducts(payload);
-            }}
-            scroll={{ x: 1000 }}
-            style={{
-              background: '#fff'
+    <div>
+      {/* Header Section */}
+      <div style={{ 
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar 
+            size="large" 
+            icon={<ShoppingOutlined />}
+            style={{ 
+              backgroundColor: '#52c41a',
+              marginRight: '16px'
             }}
           />
-        </Card>
-
-        {/* Bulk Actions */}
-        {selectedRowKeys.length > 0 && (
-          <Card 
-            size="small" 
-            style={{ 
-              marginTop: '16px',
-              background: '#f6ffed',
-              border: '1px solid #b7eb8f',
-              borderRadius: '8px'
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý Sản phẩm
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý danh mục sản phẩm và tồn kho
+            </div>
+          </div>
+        </div>
+        <Space size="middle">
+          <Tooltip title="Làm mới dữ liệu">
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => fetchProducts(filters)}
+              loading={loading}
+              shape="circle"
+              size="large"
+            />
+          </Tooltip>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAddProduct}
+            size="large"
+            style={{
+              borderRadius: '8px',
+              height: '40px',
+              paddingLeft: '20px',
+              paddingRight: '20px',
+              fontWeight: 500
             }}
           >
-            <Row justify="space-between" align="middle">
-              <Col>
-                <Space>
-                  <Badge 
-                    count={selectedRowKeys.length} 
-                    style={{ backgroundColor: '#52c41a' }}
-                  />
-                  <span style={{ color: '#262626', fontWeight: 500 }}>
-                    Đã chọn {selectedRowKeys.length} sản phẩm
-                  </span>
-                </Space>
-              </Col>
-              <Col>
-                <Space>
-                  <Button
-                    type="primary"
-                    icon={<EditOutlined />}
-                    onClick={() => bulkUpdateProducts(selectedRowKeys, { isActive: true })}
-                  >
-                    Kích hoạt đã chọn
-                  </Button>
-                  <Button
-                    icon={<EditOutlined />}
-                    onClick={() => bulkUpdateProducts(selectedRowKeys, { isActive: false })}
-                  >
-                    Tạm dừng đã chọn
-                  </Button>
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={handleBulkDelete}
-                  >
-                    Xóa đã chọn
-                  </Button>
-                  <Button 
-                    onClick={() => setSelectedRowKeys([])}
-                  >
-                    Bỏ chọn
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-        )}
+            Thêm sản phẩm
+          </Button>
+        </Space>
+      </div>
 
-        {/* Product Form Modal */}
-        <ProductForm
-          visible={isProductFormVisible}
-          onCancel={handleProductFormClose}
-          onSubmit={handleProductFormSubmit}
-          initialValues={editingProduct}
-          isEditing={!!editingProduct}
-        />
+      {/* Search and Quick Stats */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+        <div style={{ flex: 1 }}>
+          <Search
+            placeholder="Tìm kiếm sản phẩm theo tên, SKU..."
+            allowClear
+            onSearch={handleSearch}
+            size="large"
+            style={{ width: '100%' }}
+            prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ 
+            padding: '16px', 
+            background: '#fff', 
+            borderRadius: '8px', 
+            border: '1px solid #f0f0f0',
+            textAlign: 'center',
+            minWidth: '150px'
+          }}>
+            <Statistic
+              title="Tổng sản phẩm"
+              value={pagination?.total || 0}
+              prefix={<ShoppingOutlined />}
+              valueStyle={{ color: '#1890ff', fontSize: '18px' }}
+            />
+          </div>
+          <div style={{ 
+            padding: '16px', 
+            background: '#fff', 
+            borderRadius: '8px', 
+            border: '1px solid #f0f0f0',
+            textAlign: 'center',
+            minWidth: '150px'
+          }}>
+            <Statistic
+              title="Đang hoạt động"
+              value={products?.filter(p => p.isActive).length || 0}
+              prefix={<StarOutlined />}
+              valueStyle={{ color: '#52c41a', fontSize: '18px' }}
+            />
+          </div>
+          <div style={{ 
+            padding: '16px', 
+            background: '#fff', 
+            borderRadius: '8px', 
+            border: '1px solid #f0f0f0',
+            textAlign: 'center',
+            minWidth: '150px'
+          }}>
+            <Statistic
+              title="Hết hàng"
+              value={products?.filter(p => p.totalStock === 0).length || 0}
+              prefix={<TagsOutlined />}
+              valueStyle={{ color: '#ff4d4f', fontSize: '18px' }}
+            />
+          </div>
+        </div>
+      </div>
 
-        {/* Product Detail Modal */}
-        <Modal
-          title="Chi tiết sản phẩm"
-          open={isDetailModalVisible}
-          onCancel={handleCloseDetailModal}
-          footer={[
-            <Button key="close" onClick={handleCloseDetailModal}>
-              Đóng
+      {/* Filters */}
+      <div style={{ 
+        display: 'flex',
+        gap: 16,
+        marginBottom: 24,
+        padding: '16px',
+        background: '#fafafa',
+        borderRadius: '8px',
+        border: '1px solid #f0f0f0',
+        flexWrap: 'wrap',
+        alignItems: 'end'
+      }}>
+        <Form.Item label="Danh mục" style={{ marginBottom: 0, flex: '1 1 200px' }}>
+          <TreeSelect
+            placeholder="Chọn danh mục"
+            allowClear
+            value={filters.categoryId}
+            onChange={(value) => handleFilterChange('categoryId', value)}
+            treeData={categoryOptions || []}
+            treeDefaultExpandAll
+            size="large"
+            showSearch
+            filterTreeNode={(input, node) =>
+              node.title.toLowerCase().indexOf(input.toLowerCase()) >= 0
+            }
+          />
+        </Form.Item>
+        <Form.Item label="Thương hiệu" style={{ marginBottom: 0, flex: '1 1 200px' }}>
+          <Select
+            placeholder="Chọn thương hiệu"
+            allowClear
+            size="large"
+            value={filters.brandId || undefined}
+            onChange={(value, option) => {
+              // Khi chọn thương hiệu, dùng brandSlug để filter đẹp URL, nhưng API hiện nhận brandId/brandSlug đều được
+              const selected = brandOptions.find(b => b._id === value);
+              const nf = { ...filters, brandId: value || '', brandSlug: selected?.slug || undefined };
+              setFilters(nf);
+              fetchProducts(nf);
+            }}
+            showSearch
+            optionFilterProp="children"
+          >
+            {brandOptions.map((b) => (
+              <Option key={b._id} value={b._id}>{b.name}</Option>
+            ))}
+          </Select>
+        </Form.Item>
+        <Form.Item label="Trạng thái" style={{ marginBottom: 0, flex: '1 1 200px' }}>
+          <Select
+            placeholder="Chọn trạng thái"
+            allowClear
+            value={filters.isActive}
+            onChange={(value) => handleFilterChange('isActive', value)}
+            size="large"
+          >
+            <Option value={true}>Hoạt động</Option>
+            <Option value={false}>Tạm dừng</Option>
+          </Select>
+        </Form.Item>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button 
+            type="primary" 
+            onClick={applyFilters}
+            size="large"
+          >
+            Áp dụng bộ lọc
+          </Button>
+          <Button 
+            onClick={resetFilters}
+            size="large"
+          >
+            Đặt lại
+          </Button>
+        </div>
+      </div>
+
+      {/* Products Table */}
+      <Table
+        columns={columns}
+        dataSource={products}
+        rowKey={(record) => record._id}
+        loading={loading}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              gap: '8px',
+              color: '#8c8c8c'
+            }}>
+              <span>
+                Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
+                {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> sản phẩm
+              </span>
+            </div>
+          ),
+          pageSizeOptions: ['10', '20', '50', '100'],
+          size: 'default'
+        }}
+        rowSelection={rowSelection}
+        onChange={(p, f, s) => {
+          const payload = { ...filters, page: p.current, limit: p.pageSize };
+          if (s && s.field) {
+            payload.sortBy = s.order === 'ascend' ? s.field : `-${s.field}`;
+          }
+          fetchProducts(payload);
+        }}
+        scroll={{ x: 1000 }}
+        style={{
+          background: '#fff'
+        }}
+      />
+
+      {/* Bulk Actions */}
+      {selectedRowKeys.length > 0 && (
+        <div style={{ 
+          marginTop: 16,
+          padding: '16px',
+          background: '#f6ffed',
+          border: '1px solid #b7eb8f',
+          borderRadius: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Space>
+            <Badge 
+              count={selectedRowKeys.length} 
+              style={{ backgroundColor: '#52c41a' }}
+            />
+            <span style={{ color: '#262626', fontWeight: 500 }}>
+              Đã chọn {selectedRowKeys.length} sản phẩm
+            </span>
+          </Space>
+          <Space>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => bulkUpdateProducts(selectedRowKeys, { isActive: true })}
+            >
+              Kích hoạt đã chọn
             </Button>
-          ]}
-          width={800}
-        >
-          {viewingProduct && (
-            <div>
-              <Row gutter={[16, 16]}>
-                <Col span={24}>
-                  <Card title="Thông tin cơ bản" size="small">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => bulkUpdateProducts(selectedRowKeys, { isActive: false })}
+            >
+              Tạm dừng đã chọn
+            </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleBulkDelete}
+            >
+              Xóa đã chọn
+            </Button>
+            <Button 
+              onClick={() => setSelectedRowKeys([])}
+            >
+              Bỏ chọn
+            </Button>
+          </Space>
+        </div>
+      )}
+
+      {/* Product Form Modal */}
+      <ProductForm
+        visible={isProductFormVisible}
+        onCancel={handleProductFormClose}
+        onSubmit={handleProductFormSubmit}
+        initialValues={editingProduct}
+        isEditing={!!editingProduct}
+      />
+
+      {/* Product Detail Modal */}
+      <Modal
+        title="Chi tiết sản phẩm"
+        open={isDetailModalVisible}
+        onCancel={handleCloseDetailModal}
+        footer={[
+          <Button key="close" onClick={handleCloseDetailModal}>
+            Đóng
+          </Button>
+        ]}
+        width={800}
+      >
+        {viewingProduct && (
+          <div>
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <div style={{ 
+                  padding: '16px', 
+                  background: '#fafafa', 
+                  borderRadius: '8px', 
+                  border: '1px solid #f0f0f0',
+                  marginBottom: 16
+                }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 16 }}>Thông tin cơ bản</h3>
                     <Row gutter={16}>
                       <Col span={12}>
                         <div style={{ marginBottom: '12px' }}>
@@ -825,145 +803,172 @@ const ProductManagement = () => {
                         </div>
                       </Col>
                     </Row>
-                  </Card>
-                </Col>
+                </div>
+              </Col>
 
+              <Col span={24}>
+                <div style={{ 
+                  padding: '16px', 
+                  background: '#fafafa', 
+                  borderRadius: '8px', 
+                  border: '1px solid #f0f0f0',
+                  marginBottom: 16
+                }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 16 }}>Thông tin giá và tồn kho</h3>
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Statistic
+                        title="Giá thu (Giá bán)"
+                        value={viewingProduct.price || 0}
+                        formatter={(value) => `${value?.toLocaleString() || 0}đ`}
+                        valueStyle={{ color: '#52c41a' }}
+                      />
+                    </Col>
+                    <Col span={8}>
+                      <Statistic
+                        title="Giá nhập"
+                        value={viewingProduct.costPrice || 0}
+                        formatter={(value) => `${value?.toLocaleString() || 0}đ`}
+                        valueStyle={{ color: '#1890ff' }}
+                      />
+                    </Col>
+                    <Col span={8}>
+                      <Statistic
+                        title="Tồn kho"
+                        value={viewingProduct.totalStock || 0}
+                        valueStyle={{ 
+                          color: viewingProduct.totalStock > 0 ? '#52c41a' : '#ff4d4f' 
+                        }}
+                      />
+                    </Col>
+                  </Row>
+                </div>
+              </Col>
+
+              {(viewingProduct.shortDescription || viewingProduct.description) && (
                 <Col span={24}>
-                  <Card title="Thông tin giá và tồn kho" size="small">
-                    <Row gutter={16}>
-                      <Col span={8}>
-                        <Statistic
-                          title="Giá thu (Giá bán)"
-                          value={viewingProduct.price || 0}
-                          formatter={(value) => `${value?.toLocaleString() || 0}đ`}
-                          valueStyle={{ color: '#52c41a' }}
-                        />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic
-                          title="Giá nhập"
-                          value={viewingProduct.costPrice || 0}
-                          formatter={(value) => `${value?.toLocaleString() || 0}đ`}
-                          valueStyle={{ color: '#1890ff' }}
-                        />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic
-                          title="Tồn kho"
-                          value={viewingProduct.totalStock || 0}
-                          valueStyle={{ 
-                            color: viewingProduct.totalStock > 0 ? '#52c41a' : '#ff4d4f' 
-                          }}
-                        />
-                      </Col>
-                    </Row>
-                  </Card>
-                </Col>
-
-                {(viewingProduct.shortDescription || viewingProduct.description) && (
-                  <Col span={24}>
-                    <Card title="Mô tả sản phẩm" size="small">
-                      {viewingProduct.shortDescription && (
-                        <div style={{ marginBottom: '16px' }}>
-                          <strong>Mô tả ngắn:</strong>
-                          <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                            {viewingProduct.shortDescription}
-                          </div>
+                  <div style={{ 
+                    padding: '16px', 
+                    background: '#fafafa', 
+                    borderRadius: '8px', 
+                    border: '1px solid #f0f0f0',
+                    marginBottom: 16
+                  }}>
+                    <h3 style={{ marginTop: 0, marginBottom: 16 }}>Mô tả sản phẩm</h3>
+                    {viewingProduct.shortDescription && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <strong>Mô tả ngắn:</strong>
+                        <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                          {viewingProduct.shortDescription}
                         </div>
-                      )}
-                      {viewingProduct.description && (
-                        <div>
-                          <strong>Mô tả chi tiết:</strong>
-                          <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                            {viewingProduct.description}
-                          </div>
-                        </div>
-                      )}
-                    </Card>
-                  </Col>
-                )}
-
-                {viewingProduct.imageUrls && viewingProduct.imageUrls.length > 0 && (
-                  <Col span={24}>
-                    <Card title="Hình ảnh sản phẩm" size="small">
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {viewingProduct.imageUrls.map((url, index) => (
-                          <div key={index} style={{ width: '120px', height: '120px' }}>
-                            <img
-                              src={getImageUrl(url)}
-                              alt={`Product ${index + 1}`}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                borderRadius: '4px',
-                                border: '1px solid #d9d9d9'
-                              }}
-                              onError={(e) => handleImageError(e, '/default-product.png')}
-                            />
-                            <div
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'none',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: '#f5f5f5',
-                                borderRadius: '4px',
-                                border: '1px solid #d9d9d9',
-                                fontSize: '12px',
-                                color: '#8c8c8c'
-                              }}
-                            >
-                              Lỗi tải ảnh
-                            </div>
-                          </div>
-                        ))}
                       </div>
-                    </Card>
-                  </Col>
-                )}
-
-                <Col span={24}>
-                  <Card title="Thông tin bổ sung" size="small">
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Ngày tạo:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            {viewingProduct.createdAt ? new Date(viewingProduct.createdAt).toLocaleString('vi-VN') : 'N/A'}
-                          </div>
+                    )}
+                    {viewingProduct.description && (
+                      <div>
+                        <strong>Mô tả chi tiết:</strong>
+                        <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                          {viewingProduct.description}
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Ngày cập nhật:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            {viewingProduct.updatedAt ? new Date(viewingProduct.updatedAt).toLocaleString('vi-VN') : 'N/A'}
-                          </div>
-                        </div>
-                      </Col>
-                      <Col span={12}>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Tính năng đặc biệt:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            <Space wrap>
-                              {viewingProduct.isFeatured && <Tag color="gold">Nổi bật</Tag>}
-                              {viewingProduct.isNewProduct && <Tag color="blue">Sản phẩm mới</Tag>}
-                              {viewingProduct.isBestSeller && <Tag color="red">Bán chạy</Tag>}
-                              {!viewingProduct.isFeatured && !viewingProduct.isNewProduct && !viewingProduct.isBestSeller && (
-                                <span style={{ color: '#8c8c8c' }}>Không có</span>
-                              )}
-                            </Space>
-                          </div>
-                        </div>
-                      </Col>
-                    </Row>
-                  </Card>
+                      </div>
+                    )}
+                  </div>
                 </Col>
+              )}
+
+              {viewingProduct.imageUrls && viewingProduct.imageUrls.length > 0 && (
+                <Col span={24}>
+                  <div style={{ 
+                    padding: '16px', 
+                    background: '#fafafa', 
+                    borderRadius: '8px', 
+                    border: '1px solid #f0f0f0',
+                    marginBottom: 16
+                  }}>
+                    <h3 style={{ marginTop: 0, marginBottom: 16 }}>Hình ảnh sản phẩm</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {viewingProduct.imageUrls.map((url, index) => (
+                        <div key={index} style={{ width: '120px', height: '120px' }}>
+                          <img
+                            src={getImageUrl(url)}
+                            alt={`Product ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              borderRadius: '4px',
+                              border: '1px solid #d9d9d9'
+                            }}
+                            onError={(e) => handleImageError(e, '/default-product.png')}
+                          />
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'none',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#f5f5f5',
+                              borderRadius: '4px',
+                              border: '1px solid #d9d9d9',
+                              fontSize: '12px',
+                              color: '#8c8c8c'
+                            }}
+                          >
+                            Lỗi tải ảnh
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Col>
+              )}
+
+              <Col span={24}>
+                <div style={{ 
+                  padding: '16px', 
+                  background: '#fafafa', 
+                  borderRadius: '8px', 
+                  border: '1px solid #f0f0f0',
+                  marginBottom: 16
+                }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 16 }}>Thông tin bổ sung</h3>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Ngày tạo:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          {viewingProduct.createdAt ? new Date(viewingProduct.createdAt).toLocaleString('vi-VN') : 'N/A'}
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Ngày cập nhật:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          {viewingProduct.updatedAt ? new Date(viewingProduct.updatedAt).toLocaleString('vi-VN') : 'N/A'}
+                        </div>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Tính năng đặc biệt:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          <Space wrap>
+                            {viewingProduct.isFeatured && <Tag color="gold">Nổi bật</Tag>}
+                            {viewingProduct.isNewProduct && <Tag color="blue">Sản phẩm mới</Tag>}
+                            {viewingProduct.isBestSeller && <Tag color="red">Bán chạy</Tag>}
+                            {!viewingProduct.isFeatured && !viewingProduct.isNewProduct && !viewingProduct.isBestSeller && (
+                              <span style={{ color: '#8c8c8c' }}>Không có</span>
+                            )}
+                          </Space>
+                        </div>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+              </Col>
               </Row>
             </div>
           )}
         </Modal>
-      </Card>
     </div>
   );
 };

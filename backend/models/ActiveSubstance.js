@@ -15,7 +15,6 @@ const activeSubstanceSchema = new mongoose.Schema(
     slug: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
       maxlength: 250
@@ -33,7 +32,6 @@ const activeSubstanceSchema = new mongoose.Schema(
     // Mã CAS (Chemical Abstracts Service)
     casNumber: {
       type: String,
-      sparse: true,
       validate: {
         validator: function(v) {
           return !v || /^\d{1,7}-\d{2}-\d$/.test(v);

@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: false, unique: true, sparse: true, lowercase: true, trim: true },
+    email: { type: String, required: false, sparse: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     phone: { type: String, trim: true },
     address: { type: String, trim: true },
@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     // Staff specific fields
-    employeeId: { type: String, sparse: true, unique: true },
+    employeeId: { type: String, sparse: true },
     department: { type: String, trim: true },
     position: { type: String, trim: true },
     hireDate: { type: Date },
@@ -48,6 +48,9 @@ userSchema.statics.hashPassword = async function (plainPassword) {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(plainPassword, salt);
 };
+
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ employeeId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model("User", userSchema);
 

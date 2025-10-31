@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Card,
   Tree,
   Button,
   Space,
@@ -20,7 +19,6 @@ import {
   Tag,
   Row,
   Col,
-  Typography,
   Divider,
   Badge,
   Avatar,
@@ -44,7 +42,6 @@ import { useCategories } from '../../../hooks/admin/useCategories';
 import CategoryForm from '../../../components/admin/CategoryForm';
 import '../../../styles/sweetalert2-custom.css';
 
-const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
@@ -491,204 +488,186 @@ const CategoryManagement = () => {
 
   try {
     return (
-      <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-        <Card
-          style={{
-            borderRadius: '12px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            border: 'none'
-          }}
-          styles={{ body: { padding: '24px' } }}
-        >
-          {/* Header Section */}
-          <div style={{ 
-            marginBottom: '24px',
-            paddingBottom: '16px',
-            borderBottom: '1px solid #f0f0f0'
-          }}>
-            <Row justify="space-between" align="middle">
-              <Col>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar 
-                    size="large" 
-                    icon={<FolderOutlined />}
-                    style={{ 
-                      backgroundColor: '#1890ff',
-                      marginRight: '16px'
-                    }}
-                  />
-                  <div>
-                    <Title level={2} style={{ margin: 0, color: '#262626' }}>
-                      Quản lý Danh mục Sản phẩm
-                    </Title>
-                    <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
-                      Quản lý cấu trúc phân cấp danh mục sản phẩm
-                    </div>
-                  </div>
-                </div>
-              </Col>
-              <Col>
-                <Space size="middle">
-                  <Tooltip title="Làm mới dữ liệu">
-                    <Button
-                      icon={<ReloadOutlined />}
-                      onClick={fetchCategories}
-                      loading={loading}
-                      shape="circle"
-                      size="large"
-                    />
-                  </Tooltip>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => handleAddCategory()}
-                    size="large"
-                    style={{
-                      borderRadius: '8px',
-                      height: '40px',
-                      paddingLeft: '20px',
-                      paddingRight: '20px',
-                      fontWeight: 500
-                    }}
-                  >
-                    Thêm danh mục gốc
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
+      <div>
+        {/* Header Section */}
+        <div style={{ 
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 24
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar 
+              size="large" 
+              icon={<FolderOutlined />}
+              style={{ 
+                backgroundColor: '#1890ff',
+                marginRight: '16px'
+              }}
+            />
+            <div>
+              <h2 style={{ margin: 0, color: '#262626' }}>
+                Quản lý Danh mục Sản phẩm
+              </h2>
+              <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+                Quản lý cấu trúc phân cấp danh mục sản phẩm
+              </div>
+            </div>
           </div>
-
-          {/* Search and Filter Section */}
-          <div style={{ marginBottom: '24px' }}>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Search
-                  placeholder="Tìm kiếm danh mục theo tên, slug..."
-                  allowClear
-                  onSearch={handleSearch}
-                  size="large"
-                  style={{ width: '100%' }}
-                  prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />}
-                />
-              </Col>
-              <Col span={6}>
-                <Select
-                  placeholder="Lọc theo level"
-                  value={levelFilter}
-                  onChange={setLevelFilter}
-                  size="large"
-                  style={{ width: '100%' }}
-                  allowClear
-                >
-                  <Option value="all">Tất cả level</Option>
-                  <Option value="0">Level 0 (Gốc)</Option>
-                  <Option value="1">Level 1</Option>
-                  <Option value="2">Level 2</Option>
-                  <Option value="3">Level 3</Option>
-                </Select>
-              </Col>
-              <Col span={6}>
-                <Select
-                  placeholder="Lọc theo trạng thái"
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  size="large"
-                  style={{ width: '100%' }}
-                  allowClear
-                >
-                  <Option value="all">Tất cả trạng thái</Option>
-                  <Option value="active">Hoạt động</Option>
-                  <Option value="inactive">Tạm dừng</Option>
-                </Select>
-              </Col>
-              <Col span={6}>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  height: '100%',
-                  color: '#8c8c8c',
-                  fontSize: '14px'
-                }}>
-                  <FileTextOutlined style={{ marginRight: '8px' }} />
-                  Tổng cộng: <strong style={{ color: '#262626', marginLeft: '4px' }}>
-                    {getAllCategoriesCount(categories)} danh mục
-                  </strong>
-                </div>
-              </Col>
-            </Row>
-          </div>
-
-          {/* Tree Section */}
-          <div style={{ 
-            minHeight: '500px',
-            background: '#fafafa',
-            borderRadius: '8px',
-            padding: '16px',
-            border: '1px solid #f0f0f0'
-          }}>
-            {loading ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '80px 20px',
-                color: '#8c8c8c'
-              }}>
-                <ReloadOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-                <div style={{ fontSize: '16px' }}>Đang tải danh mục...</div>
-              </div>
-            ) : error ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '80px 20px',
-                color: '#ff4d4f'
-              }}>
-                <DeleteOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-                <div style={{ fontSize: '16px', marginBottom: '16px' }}>
-                  Lỗi: {error}
-                </div>
-                <Button 
-                  type="primary" 
-                  onClick={fetchCategories}
-                  icon={<ReloadOutlined />}
-                >
-                  Thử lại
-                </Button>
-              </div>
-            ) : !filteredTreeData || filteredTreeData.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '80px 20px',
-                color: '#8c8c8c'
-              }}>
-                <FolderOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-                <div style={{ fontSize: '16px', marginBottom: '16px' }}>
-                  {searchValue ? 'Không tìm thấy danh mục phù hợp' : 'Chưa có danh mục nào'}
-                </div>
-                <Button 
-                  type="primary" 
-                  onClick={() => handleAddCategory()}
-                  icon={<PlusOutlined />}
-                  size="large"
-                >
-                  {searchValue ? 'Tạo danh mục mới' : 'Thêm danh mục đầu tiên'}
-                </Button>
-              </div>
-            ) : (
-              <Tree
-                treeData={filteredTreeData}
-                expandedKeys={expandedKeys || []}
-                selectedKeys={selectedKeys || []}
-                onExpand={setExpandedKeys}
-                onSelect={setSelectedKeys}
-                showLine={{ showLeafIcon: false }}
-                showIcon={false}
-                defaultExpandAll
-                style={{
-                  background: 'transparent'
-                }}
+          <Space size="middle">
+            <Tooltip title="Làm mới dữ liệu">
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchCategories}
+                loading={loading}
+                shape="circle"
+                size="large"
               />
-            )}
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleAddCategory()}
+              size="large"
+              style={{
+                borderRadius: '8px',
+                height: '40px',
+                paddingLeft: '20px',
+                paddingRight: '20px',
+                fontWeight: 500
+              }}
+            >
+              Thêm danh mục gốc
+            </Button>
+          </Space>
+        </div>
+
+        {/* Search and Filter Section */}
+        <div style={{ 
+          display: 'flex',
+          gap: 16,
+          marginBottom: 24,
+          flexWrap: 'wrap',
+          alignItems: 'end'
+        }}>
+          <Search
+            placeholder="Tìm kiếm danh mục theo tên, slug..."
+            allowClear
+            onSearch={handleSearch}
+            size="large"
+            style={{ flex: '1 1 250px' }}
+            prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />}
+          />
+          <Select
+            placeholder="Lọc theo level"
+            value={levelFilter}
+            onChange={setLevelFilter}
+            size="large"
+            style={{ flex: '1 1 200px' }}
+            allowClear
+          >
+            <Option value="all">Tất cả level</Option>
+            <Option value="0">Level 0 (Gốc)</Option>
+            <Option value="1">Level 1</Option>
+            <Option value="2">Level 2</Option>
+            <Option value="3">Level 3</Option>
+          </Select>
+          <Select
+            placeholder="Lọc theo trạng thái"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            size="large"
+            style={{ flex: '1 1 200px' }}
+            allowClear
+          >
+            <Option value="all">Tất cả trạng thái</Option>
+            <Option value="active">Hoạt động</Option>
+            <Option value="inactive">Tạm dừng</Option>
+          </Select>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            color: '#8c8c8c',
+            fontSize: '14px',
+            flex: '1 1 200px'
+          }}>
+            <FileTextOutlined style={{ marginRight: '8px' }} />
+            Tổng cộng: <strong style={{ color: '#262626', marginLeft: '4px' }}>
+              {getAllCategoriesCount(categories)} danh mục
+            </strong>
           </div>
-        </Card>
+        </div>
+
+        {/* Tree Section */}
+        <div style={{ 
+          minHeight: '500px',
+          background: '#fafafa',
+          borderRadius: '8px',
+          padding: '16px',
+          border: '1px solid #f0f0f0'
+        }}>
+          {loading ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '80px 20px',
+              color: '#8c8c8c'
+            }}>
+              <ReloadOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
+              <div style={{ fontSize: '16px' }}>Đang tải danh mục...</div>
+            </div>
+          ) : error ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '80px 20px',
+              color: '#ff4d4f'
+            }}>
+              <DeleteOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
+              <div style={{ fontSize: '16px', marginBottom: '16px' }}>
+                Lỗi: {error}
+              </div>
+              <Button 
+                type="primary" 
+                onClick={fetchCategories}
+                icon={<ReloadOutlined />}
+              >
+                Thử lại
+              </Button>
+            </div>
+          ) : !filteredTreeData || filteredTreeData.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '80px 20px',
+              color: '#8c8c8c'
+            }}>
+              <FolderOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
+              <div style={{ fontSize: '16px', marginBottom: '16px' }}>
+                {searchValue ? 'Không tìm thấy danh mục phù hợp' : 'Chưa có danh mục nào'}
+              </div>
+              <Button 
+                type="primary" 
+                onClick={() => handleAddCategory()}
+                icon={<PlusOutlined />}
+                size="large"
+              >
+                {searchValue ? 'Tạo danh mục mới' : 'Thêm danh mục đầu tiên'}
+              </Button>
+            </div>
+          ) : (
+            <Tree
+              treeData={filteredTreeData}
+              expandedKeys={expandedKeys || []}
+              selectedKeys={selectedKeys || []}
+              onExpand={setExpandedKeys}
+              onSelect={setSelectedKeys}
+              showLine={{ showLeafIcon: false }}
+              showIcon={false}
+              defaultExpandAll
+              style={{
+                background: 'transparent'
+              }}
+            />
+          )}
+        </div>
 
         {/* Category Form Modal */}
         <CategoryForm
@@ -793,19 +772,17 @@ const CategoryManagement = () => {
     console.error('Error in CategoryManagement render:', error);
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Card>
-          <div style={{ padding: '50px', color: '#ff4d4f' }}>
-            <h3>Lỗi khi tải trang</h3>
-            <p>Vui lòng thử lại sau</p>
-            <Button 
-              type="primary" 
-              onClick={() => window.location.reload()}
-              style={{ marginTop: 16 }}
-            >
-              Tải lại trang
-            </Button>
-          </div>
-        </Card>
+        <div style={{ padding: '50px', color: '#ff4d4f' }}>
+          <h3>Lỗi khi tải trang</h3>
+          <p>Vui lòng thử lại sau</p>
+          <Button 
+            type="primary" 
+            onClick={() => window.location.reload()}
+            style={{ marginTop: 16 }}
+          >
+            Tải lại trang
+          </Button>
+        </div>
       </div>
     );
   }

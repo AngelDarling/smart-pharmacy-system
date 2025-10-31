@@ -20,6 +20,7 @@ import shippingRoutes from "./routes/shipping.js";
 import salesRoutes from "./routes/sales.js";
 import couponRoutes from "./routes/coupons.js";
 import imageSearchRoutes from "./routes/imageSearch.js";
+import reviewRoutes from "./routes/reviews.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -51,6 +52,7 @@ app.use("/api/shipping", shippingRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/search/image", imageSearchRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });

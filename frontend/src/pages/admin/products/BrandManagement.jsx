@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, message, Row, Col, Typography, Select, Avatar, Tooltip, Switch, Upload } from 'antd';
+import { Table, Button, Space, Tag, Modal, Form, Input, message, Row, Col, Typography, Select, Avatar, Tooltip, Switch, Upload } from 'antd';
 import { PlusOutlined, EditOutlined, ReloadOutlined, SearchOutlined, TagsOutlined, EyeOutlined, DeleteOutlined, GlobalOutlined, FlagOutlined, UploadOutlined } from '@ant-design/icons';
 import api from '../../../api/client.js';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils.js';
@@ -154,49 +154,53 @@ const BrandManagement = () => {
   };
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      <Card style={{ borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: 'none' }} styles={{ body: { padding: '24px' } }}>
-        {/* Header */}
-        <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
-          <Row justify="space-between" align="middle">
-            <Col>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar size="large" icon={<TagsOutlined />} style={{ backgroundColor: '#1890ff', marginRight: 16 }} />
-                <div>
-                  <Typography.Title level={2} style={{ margin: 0 }}>Quản lý Thương hiệu</Typography.Title>
-                  <div style={{ color: '#8c8c8c' }}>Quản lý danh sách thương hiệu sản phẩm</div>
-                </div>
-              </div>
-            </Col>
-            <Col>
-              <Space>
-                <Button icon={<ReloadOutlined />} onClick={() => fetchBrands(filters)} loading={loading} shape="circle" size="large" />
-                <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large" style={{ borderRadius: 8, height: 40, paddingLeft: 20, paddingRight: 20, fontWeight: 500 }}>Thêm thương hiệu</Button>
-              </Space>
-            </Col>
-          </Row>
-        </div>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>Quản lý Thương hiệu</h2>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>Thêm thương hiệu</Button>
+      </div>
 
-        {/* Filters */}
-        <Card size="small" style={{ marginBottom: 24, background: '#fafafa', border: '1px solid #f0f0f0' }}>
-          <Row gutter={16} align="middle">
-            <Col span={8}>
-              <Input size="large" allowClear placeholder="Tìm theo tên, website, quốc gia..." prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />} onPressEnter={(e) => { setFilters({ ...filters, search: e.target.value }); fetchBrands({ ...filters, search: e.target.value }); }} />
-            </Col>
-            <Col span={4}>
-              <Select size="large" allowClear placeholder="Trạng thái" style={{ width: '100%' }} value={filters.isActive} onChange={(v) => { const nf = { ...filters, isActive: v }; setFilters(nf); fetchBrands(nf); }}>
-                <Select.Option value={true}>Hoạt động</Select.Option>
-                <Select.Option value={false}>Tạm dừng</Select.Option>
-              </Select>
-            </Col>
-          </Row>
-        </Card>
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <Input 
+          allowClear 
+          placeholder="Tìm theo tên, website, quốc gia..." 
+          prefix={<SearchOutlined />} 
+          style={{ width: 300 }}
+          onPressEnter={(e) => { setFilters({ ...filters, search: e.target.value }); fetchBrands({ ...filters, search: e.target.value }); }} 
+        />
+        <Select 
+          allowClear 
+          placeholder="Trạng thái" 
+          style={{ width: 150 }} 
+          value={filters.isActive} 
+          onChange={(v) => { const nf = { ...filters, isActive: v }; setFilters(nf); fetchBrands(nf); }}
+        >
+          <Select.Option value={true}>Hoạt động</Select.Option>
+          <Select.Option value={false}>Tạm dừng</Select.Option>
+        </Select>
+        <Button icon={<ReloadOutlined />} onClick={() => fetchBrands(filters)} loading={loading}>Làm mới</Button>
+      </div>
 
-        {/* Table */}
-        <Card style={{ borderRadius: 8, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }} styles={{ body: { padding: 0 } }}>
-          <Table rowKey={(r) => r._id || r.slug} columns={columns} dataSource={brands} loading={loading} pagination={{ current: pagination.current, pageSize: pagination.pageSize, total: pagination.total, showSizeChanger: true, showQuickJumper: true, pageSizeOptions: ['10', '20', '50', '100'] }} onChange={(p) => { setPagination({ ...pagination, current: p.current, pageSize: p.pageSize }); fetchBrands({ ...filters, page: p.current, limit: p.pageSize }); }} />
-        </Card>
-      </Card>
+      {/* Table */}
+      <Table 
+        rowKey={(r) => r._id || r.slug} 
+        columns={columns} 
+        dataSource={brands} 
+        loading={loading} 
+        pagination={{ 
+          current: pagination.current, 
+          pageSize: pagination.pageSize, 
+          total: pagination.total, 
+          showSizeChanger: true, 
+          showQuickJumper: true, 
+          pageSizeOptions: ['10', '20', '50', '100'] 
+        }} 
+        onChange={(p) => { 
+          setPagination({ ...pagination, current: p.current, pageSize: p.pageSize }); 
+          fetchBrands({ ...filters, page: p.current, limit: p.pageSize }); 
+        }} 
+      />
 
       <Modal title={editing ? 'Sửa thương hiệu' : 'Thêm thương hiệu'} open={isModalOpen} onOk={onSubmit} onCancel={() => setIsModalOpen(false)} okText="Lưu" width={720}>
         <Form layout="vertical" form={form}>

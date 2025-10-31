@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api/client.js";
 import useCart from "../hooks/useCart.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import { getImageUrl, handleImageError } from "../utils/imageUtils";
+import Swal from "sweetalert2";
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -14,7 +16,38 @@ export default function ProductDetail() {
   const [activeTab, setActiveTab] = useState('description');
   const [expandedFAQ, setExpandedFAQ] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [ratingDistribution, setRatingDistribution] = useState({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
+  const [reviewForm, setReviewForm] = useState({
+    rating: 0,
+    comment: "",
+    guestName: "",
+    guestEmail: "",
+    guestPhone: ""
+  });
   const { add } = useCart();
+  const { user } = useAuth();
+
+  // Load reviews and rating
+  const loadReviews = async (productId) => {
+    try {
+      const [reviewsRes, ratingRes] = await Promise.all([
+        api.get(`/reviews/product/${productId}?limit=50`),
+        api.get(`/reviews/product/${productId}/rating`)
+      ]);
+      setReviews(reviewsRes.data.items || []);
+      setAverageRating(ratingRes.data.averageRating || 0);
+      setTotalReviews(ratingRes.data.totalReviews || 0);
+      setRatingDistribution(ratingRes.data.distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      setReviews([]);
+      setAverageRating(0);
+      setTotalReviews(0);
+    }
+  };
 
   useEffect(() => {
     // Scroll to top when product changes
@@ -25,6 +58,11 @@ export default function ProductDetail() {
       setProduct(res.data);
       setSelectedImage(0);
       setQuantity(1); // Reset quantity to 1
+      
+      // Load reviews and rating
+      if (res.data._id) {
+        loadReviews(res.data._id);
+      }
       
       // Build category breadcrumb
       if (res.data.categoryId) {
@@ -136,28 +174,41 @@ export default function ProductDetail() {
     }
   ];
 
-  // Mock reviews (có thể thay bằng data từ database)
-  const reviews = [
-    {
-      id: 1,
-      name: 'Nguyễn Văn Hậu',
-      rating: 5,
-      date: '4 tháng trước',
-      comment: 'Sản phẩm rất tốt, da mịn màng hơn sau khi sử dụng.',
-      avatar: 'VH'
-    },
-    {
-      id: 2,
-      name: 'Chị Thúy',
-      rating: 5,
-      date: '9 tháng trước',
-      comment: 'Chất lượng tuyệt vời, giá cả hợp lý. Sẽ ủng hộ dài dài!',
-      avatar: 'CT'
+  // Format date helper
+  const formatReviewDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Hôm nay';
+    if (diffDays === 1) return 'Hôm qua';
+    if (diffDays < 30) return `${diffDays} ngày trước`;
+    if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `${months} tháng trước`;
     }
-  ];
+    const years = Math.floor(diffDays / 365);
+    return `${years} năm trước`;
+  };
 
-  const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length || 5;
-  const totalReviews = reviews.length;
+  // Get user display name from review
+  const getReviewerName = (review) => {
+    if (review.userId) {
+      return review.userId.fullName || review.userId.name || 'Người dùng';
+    }
+    return review.guestName || 'Khách';
+  };
+
+  // Get initials for avatar
+  const getInitials = (name) => {
+    if (!name) return '??';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
     <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: 40, marginTop: 'auto' }}>
@@ -296,10 +347,31 @@ export default function ProductDetail() {
                 borderBottom: '1px solid #e5e7eb'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ color: '#fbbf24', fontSize: 18 }}>
-                    {'★'.repeat(Math.floor(averageRating))}{'☆'.repeat(5 - Math.floor(averageRating))}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map(star => {
+                      const filled = averageRating >= star;
+                      const halfFilled = averageRating >= star - 0.5 && averageRating < star;
+                      return (
+                        <span key={star} style={{ fontSize: 18, lineHeight: 1 }}>
+                          {filled ? (
+                            <span style={{ color: '#fbbf24' }}>★</span>
+                          ) : halfFilled ? (
+                            <span style={{ color: '#fbbf24', opacity: 0.5 }}>★</span>
+                          ) : (
+                            <span style={{ color: '#d1d5db' }}>☆</span>
+                          )}
+                        </span>
+                      );
+                    })}
                   </div>
-                  <span style={{ fontSize: 14, color: '#6b7280' }}>({totalReviews} đánh giá)</span>
+                  {averageRating > 0 && (
+                    <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600 }}>
+                      {averageRating.toFixed(1)}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 14, color: '#6b7280' }}>
+                    ({totalReviews} đánh giá)
+                  </span>
                 </div>
                 <span style={{ color: '#d1d5db' }}>|</span>
                 <div style={{ 
@@ -755,7 +827,7 @@ export default function ProductDetail() {
               </div>
               <div style={{ flex: 1 }}>
                 {[5, 4, 3, 2, 1].map(star => {
-                  const count = reviews.filter(r => r.rating === star).length;
+                  const count = ratingDistribution[star] || 0;
                   const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
                   return (
                     <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
@@ -786,58 +858,105 @@ export default function ProductDetail() {
 
           {/* Reviews List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {reviews.map(review => (
-              <div key={review.id} style={{ 
-                paddingBottom: 20, 
-                borderBottom: '1px solid #e5e7eb'
+            {reviews.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px 20px',
+                color: '#6b7280'
               }}>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <div style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 18,
-                    fontWeight: 700,
-                    flexShrink: 0
-                  }}>
-                    {review.avatar}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 12, 
-                      marginBottom: 8 
+                Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!
+              </div>
+            ) : (
+              reviews.map(review => (
+                <div key={review._id} style={{ 
+                  paddingBottom: 20, 
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <div style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 18,
+                      fontWeight: 700,
+                      flexShrink: 0
                     }}>
-                      <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 16 }}>
-                        {review.name}
-                      </span>
-                      <div style={{ display: 'flex', gap: 2 }}>
-                        {[...Array(review.rating)].map((_, i) => (
-                          <svg key={i} width="16" height="16" viewBox="0 0 20 20" fill="#fbbf24">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
-                      </div>
-                      <span style={{ fontSize: 14, color: '#9ca3af' }}>{review.date}</span>
+                      {getInitials(getReviewerName(review))}
                     </div>
-                    <p style={{ 
-                      margin: 0, 
-                      color: '#374151', 
-                      fontSize: 15,
-                      lineHeight: 1.6
-                    }}>
-                      {review.comment}
-                    </p>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 12, 
+                        marginBottom: 8 
+                      }}>
+                        <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 16 }}>
+                          {getReviewerName(review)}
+                        </span>
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          {[...Array(review.rating)].map((_, i) => (
+                            <svg key={i} width="16" height="16" viewBox="0 0 20 20" fill="#fbbf24">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <span style={{ fontSize: 14, color: '#9ca3af' }}>
+                          {formatReviewDate(review.createdAt)}
+                        </span>
+                      </div>
+                      <p style={{ 
+                        margin: 0, 
+                        color: '#374151', 
+                        fontSize: 15,
+                        lineHeight: 1.6,
+                        marginBottom: review.adminReply ? 12 : 0
+                      }}>
+                        {review.comment}
+                      </p>
+                      {review.adminReply && (
+                        <div style={{
+                          marginTop: 12,
+                          padding: 12,
+                          background: '#f0f9ff',
+                          borderRadius: 8,
+                          borderLeft: '3px solid #3b82f6'
+                        }}>
+                          <div style={{ 
+                            fontSize: 13, 
+                            fontWeight: 600, 
+                            color: '#3b82f6', 
+                            marginBottom: 6 
+                          }}>
+                            Phản hồi từ cửa hàng:
+                          </div>
+                          <div style={{ 
+                            fontSize: 14, 
+                            color: '#374151',
+                            lineHeight: 1.6
+                          }}>
+                            {review.adminReply}
+                          </div>
+                          {review.adminReplyAt && (
+                            <div style={{ 
+                              fontSize: 12, 
+                              color: '#6b7280', 
+                              marginTop: 8 
+                            }}>
+                              {formatReviewDate(review.adminReplyAt)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -943,7 +1062,16 @@ export default function ProductDetail() {
             zIndex: 1000,
             padding: 20
           }}
-          onClick={() => setShowReviewModal(false)}
+          onClick={() => {
+            setShowReviewModal(false);
+            setReviewForm({
+              rating: 0,
+              comment: "",
+              guestName: "",
+              guestEmail: "",
+              guestPhone: ""
+            });
+          }}
         >
           <div 
             style={{
@@ -972,7 +1100,16 @@ export default function ProductDetail() {
                 Đánh giá sản phẩm
               </h3>
               <button
-                onClick={() => setShowReviewModal(false)}
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setReviewForm({
+                    rating: 0,
+                    comment: "",
+                    guestName: "",
+                    guestEmail: "",
+                    guestPhone: ""
+                  });
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -1021,10 +1158,95 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
-              alert('Chức năng đánh giá đang được phát triển!');
-              setShowReviewModal(false);
+              
+              // Validation
+              if (!reviewForm.rating || reviewForm.rating === 0) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "Thiếu thông tin",
+                  text: "Vui lòng chọn số sao đánh giá",
+                  confirmButtonColor: "#3b82f6"
+                });
+                return;
+              }
+              
+              if (!reviewForm.comment || !reviewForm.comment.trim()) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "Thiếu thông tin",
+                  text: "Vui lòng nhập nội dung đánh giá",
+                  confirmButtonColor: "#3b82f6"
+                });
+                return;
+              }
+              
+              // Nếu chưa đăng nhập, kiểm tra thông tin guest
+              if (!user) {
+                if (!reviewForm.guestName || !reviewForm.guestName.trim()) {
+                  Swal.fire({
+                    icon: "warning",
+                    title: "Thiếu thông tin",
+                    text: "Vui lòng nhập họ và tên",
+                    confirmButtonColor: "#3b82f6"
+                  });
+                  return;
+                }
+                if (!reviewForm.guestPhone || !reviewForm.guestPhone.trim()) {
+                  Swal.fire({
+                    icon: "warning",
+                    title: "Thiếu thông tin",
+                    text: "Vui lòng nhập số điện thoại",
+                    confirmButtonColor: "#3b82f6"
+                  });
+                  return;
+                }
+              }
+              
+              try {
+                const payload = {
+                  rating: reviewForm.rating,
+                  comment: reviewForm.comment.trim(),
+                  ...(user ? {} : {
+                    guestName: reviewForm.guestName.trim(),
+                    guestEmail: reviewForm.guestEmail.trim() || null,
+                    guestPhone: reviewForm.guestPhone.trim()
+                  })
+                };
+                
+                await api.post(`/reviews/product/${product._id}`, payload);
+                
+                Swal.fire({
+                  icon: "success",
+                  title: "Thành công",
+                  text: "Đánh giá của bạn đã được gửi!",
+                  confirmButtonColor: "#10b981",
+                  timer: 2000,
+                  showConfirmButton: false
+                });
+                
+                // Reset form
+                setReviewForm({
+                  rating: 0,
+                  comment: "",
+                  guestName: "",
+                  guestEmail: "",
+                  guestPhone: ""
+                });
+                
+                // Reload reviews
+                await loadReviews(product._id);
+                
+                setShowReviewModal(false);
+              } catch (error) {
+                Swal.fire({
+                  icon: "error",
+                  title: "Lỗi",
+                  text: error.response?.data?.message || "Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.",
+                  confirmButtonColor: "#ef4444"
+                });
+              }
             }}>
               <div style={{ marginBottom: 20 }}>
                 <label style={{ 
@@ -1033,20 +1255,32 @@ export default function ProductDetail() {
                   fontWeight: 600,
                   color: '#374151'
                 }}>
-                  Chọn đánh giá
+                  Chọn đánh giá <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ display: 'flex', gap: 8, fontSize: 36 }}>
                   {[1, 2, 3, 4, 5].map(star => (
                     <button
                       key={star}
                       type="button"
+                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
                       style={{
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        color: '#fbbf24',
+                        color: reviewForm.rating >= star ? '#fbbf24' : '#d1d5db',
                         padding: 0,
-                        fontSize: 36
+                        fontSize: 36,
+                        transition: 'color 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (reviewForm.rating < star) {
+                          e.target.style.color = '#fbbf24';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (reviewForm.rating < star) {
+                          e.target.style.color = '#d1d5db';
+                        }
                       }}
                     >
                       ★
@@ -1059,81 +1293,102 @@ export default function ProductDetail() {
                   color: '#f59e0b',
                   fontWeight: 600
                 }}>
-                  Tuyệt vời
+                  {reviewForm.rating === 0 && 'Chưa chọn'}
+                  {reviewForm.rating === 1 && 'Rất tệ'}
+                  {reviewForm.rating === 2 && 'Tệ'}
+                  {reviewForm.rating === 3 && 'Bình thường'}
+                  {reviewForm.rating === 4 && 'Tốt'}
+                  {reviewForm.rating === 5 && 'Tuyệt vời'}
                 </div>
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: 8, 
-                  fontWeight: 600,
-                  color: '#374151'
-                }}>
-                  Họ và tên
-                </label>
-                <input
-                  type="text"
-                  placeholder="Nhập họ và tên"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: 8,
-                    fontSize: 15,
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
-                  }}
-                />
-              </div>
+              {!user && (
+                <>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: 8, 
+                      fontWeight: 600,
+                      color: '#374151'
+                    }}>
+                      Họ và tên <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={reviewForm.guestName}
+                      onChange={(e) => setReviewForm({ ...reviewForm, guestName: e.target.value })}
+                      placeholder="Nhập họ và tên"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 8,
+                        fontSize: 15,
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                      onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                    />
+                  </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: 8, 
-                  fontWeight: 600,
-                  color: '#374151'
-                }}>
-                  Số điện thoại
-                </label>
-                <input
-                  type="tel"
-                  placeholder="Nhập số điện thoại"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: 8,
-                    fontSize: 15,
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
-                  }}
-                />
-              </div>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: 8, 
+                      fontWeight: 600,
+                      color: '#374151'
+                    }}>
+                      Số điện thoại <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={reviewForm.guestPhone}
+                      onChange={(e) => setReviewForm({ ...reviewForm, guestPhone: e.target.value })}
+                      placeholder="Nhập số điện thoại"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 8,
+                        fontSize: 15,
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                      onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                    />
+                  </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: 8, 
-                  fontWeight: 600,
-                  color: '#374151'
-                }}>
-                  Email (Không bắt buộc)
-                </label>
-                <input
-                  type="email"
-                  placeholder="Nhập email (Không bắt buộc)"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: 8,
-                    fontSize: 15,
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
-                  }}
-                />
-              </div>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: 8, 
+                      fontWeight: 600,
+                      color: '#374151'
+                    }}>
+                      Email (Không bắt buộc)
+                    </label>
+                    <input
+                      type="email"
+                      value={reviewForm.guestEmail}
+                      onChange={(e) => setReviewForm({ ...reviewForm, guestEmail: e.target.value })}
+                      placeholder="Nhập email (Không bắt buộc)"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 8,
+                        fontSize: 15,
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                      onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                    />
+                  </div>
+                </>
+              )}
 
               <div style={{ marginBottom: 24 }}>
                 <label style={{ 
@@ -1142,10 +1397,12 @@ export default function ProductDetail() {
                   fontWeight: 600,
                   color: '#374151'
                 }}>
-                  Nội dung trả lời
+                  Nội dung đánh giá <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <textarea
-                  placeholder="Nhập nội dung trả lời (Vui lòng gõ tiếng Việt có dấu)..."
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  placeholder="Nhập nội dung đánh giá (Vui lòng gõ tiếng Việt có dấu)..."
                   rows={5}
                   style={{
                     width: '100%',
@@ -1158,6 +1415,8 @@ export default function ProductDetail() {
                     resize: 'vertical',
                     fontFamily: 'inherit'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                 />
               </div>
 
@@ -1178,7 +1437,7 @@ export default function ProductDetail() {
                 onMouseEnter={(e) => e.target.style.background = '#2563eb'}
                 onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
               >
-                Gửi
+                Gửi đánh giá
               </button>
             </form>
           </div>

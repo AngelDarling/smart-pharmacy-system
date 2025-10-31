@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Card, Table, Tag, Space, Input, Button, Typography, Row, Col, message } from 'antd';
+import { Table, Tag, Space, Input, Button, Row, Col, message } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../../api/client';
 
-const { Title } = Typography;
 
 const STATUS_COLORS = {
   pending: 'gold',
@@ -63,41 +62,38 @@ export default function ShippingOrders() {
   };
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      <Title level={2} style={{ marginBottom: 16, color: '#1d4ed8' }}>Đơn đang giao</Title>
-      <Row gutter={[16,16]}>
-        <Col span={24}>
-          <Card style={{ marginBottom: 16, borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-            <Space>
-              <Input
-                placeholder="Tìm mã đơn / tên / SĐT"
-                value={q}
-                onChange={(e)=> setQ(e.target.value)}
-                prefix={<SearchOutlined />}
-                style={{ width: 280 }}
-                allowClear
-              />
-              <Button type="primary" icon={<ReloadOutlined />} onClick={()=> setPagination((p)=> ({ ...p }))}>Lọc</Button>
-            </Space>
-          </Card>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ margin: 0, color: '#1d4ed8' }}>Đơn đang giao</h2>
+      </div>
 
-          <Card bodyStyle={{ paddingTop: 8 }} style={{ borderRadius: 12, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <Table
-              rowKey={(r)=> r._id}
-              loading={loading}
-              columns={columns}
-              dataSource={orders}
-              onChange={onTableChange}
-              pagination={{
-                ...pagination,
-                showSizeChanger: true,
-                showTotal: (t, r) => `${r[0]}-${r[1]} của ${t} đơn`
-              }}
-              scroll={{ x: 1000 }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
+        <Input
+          placeholder="Tìm mã đơn / tên / SĐT"
+          value={q}
+          onChange={(e)=> setQ(e.target.value)}
+          prefix={<SearchOutlined />}
+          style={{ width: 280 }}
+          allowClear
+        />
+        <Button type="primary" icon={<ReloadOutlined />} onClick={()=> setPagination((p)=> ({ ...p }))}>Lọc</Button>
+      </div>
+
+      {/* Table */}
+      <Table
+        rowKey={(r)=> r._id}
+        loading={loading}
+        columns={columns}
+        dataSource={orders}
+        onChange={onTableChange}
+        pagination={{
+          ...pagination,
+          showSizeChanger: true,
+          showTotal: (t, r) => `${r[0]}-${r[1]} của ${t} đơn`
+        }}
+        scroll={{ x: 1000 }}
+      />
     </div>
   );
 }
