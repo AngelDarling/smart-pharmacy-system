@@ -148,6 +148,20 @@ export default function Promotions() {
           </Form.Item>
           <Form.Item name="usageLimit" label="Giới hạn sử dụng"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
           <Form.Item name="dates" label="Thời gian áp dụng"><DatePicker.RangePicker style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="isDirectApply" label="Áp dụng trực tiếp cho sản phẩm" valuePropName="checked" initialValue={false}>
+            <Switch />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.isDirectApply !== cur.isDirectApply}>
+            {({ getFieldValue }) => getFieldValue('isDirectApply') ? (
+              <Form.Item 
+                name="productSlug" 
+                label="Slug sản phẩm" 
+                rules={[{ required: true, message: 'Vui lòng nhập slug sản phẩm' }]}
+              >
+                <Input placeholder="VD: thuoc-than-kinh-31-mhbkq6zn-8zd4" />
+              </Form.Item>
+            ) : null}
+          </Form.Item>
           <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked" initialValue={true}><Switch /></Form.Item>
         </Form>
       </Modal>

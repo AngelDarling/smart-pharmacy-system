@@ -55,4 +55,34 @@ export async function validate(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// Lấy khuyến mãi trực tiếp cho sản phẩm
+export async function getDirectApply(req, res, next) {
+  try {
+    const { productSlug } = req.params;
+    const now = new Date();
+    
+    const coupons = await Coupon.find({
+      isDirectApply: true,
+      productSlug: productSlug,
+      isActive: true
+    }).sort({ createdAt: -1 });
+
+    // Tìm coupon hợp lệ về thời gian và số lần sử dụng
+    const validCoupon = coupons.find(coupon => {
+      if (coupon.startDate && now < new Date(coupon.startDate)) return false;
+      if (coupon.endDate && now > new Date(coupon.endDate)) return false;
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) return false;
+      return true;
+    });
+
+    if (!validCoupon) {
+      return res.json({ success: true, coupon: null });
+    }
+
+    res.json({ success: true, coupon: validCoupon });
+  } catch (err) {
+    next(err);
+  }
+}
+
 

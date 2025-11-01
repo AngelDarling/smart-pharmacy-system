@@ -91,7 +91,22 @@ export default function OrdersManagement() {
       title: 'Thao tác', fixed: 'right', width: 120,
       render: (_, r) => (
         <Space>
-          <Button type="primary" size="small" onClick={() => setDetail({ open: true, order: r })}>Chi tiết</Button>
+          <Button 
+            type="primary" 
+            size="small" 
+            onClick={async () => {
+              try {
+                // Fetch chi tiết đơn hàng để có đầy đủ thông tin
+                const res = await api.get(`/orders/${r._id}`);
+                setDetail({ open: true, order: res.data });
+              } catch (error) {
+                // Fallback to order from list if fetch fails
+                setDetail({ open: true, order: r });
+              }
+            }}
+          >
+            Chi tiết
+          </Button>
         </Space>
       )
     }
@@ -249,7 +264,26 @@ export default function OrdersManagement() {
                     <Descriptions.Item label="Phương thức">{(detail.order.paymentMethod||'cod').toUpperCase()}</Descriptions.Item>
                     <Descriptions.Item label="Tổng tiền hàng">{(detail.order.totals?.items||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
                     <Descriptions.Item label="Phí vận chuyển">{(detail.order.totals?.shipping||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
-                    <Descriptions.Item label="Giảm giá">{(detail.order.totals?.discount||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
+                    {detail.order.couponCode && (
+                      <Descriptions.Item label="Mã giảm giá">
+                        <Space>
+                          <Text code style={{ background: '#f0f0f0', padding: '2px 8px', borderRadius: 4 }}>
+                            {detail.order.couponCode}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            (Giảm {(detail.order.totals?.discount||0).toLocaleString('vi-VN')}₫)
+                          </Text>
+                        </Space>
+                      </Descriptions.Item>
+                    )}
+                    <Descriptions.Item label="Giảm giá">
+                      {(detail.order.totals?.discount||0).toLocaleString('vi-VN')}₫
+                      {detail.order.totals?.discount > 0 && detail.order.couponCode && (
+                        <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                          (từ mã {detail.order.couponCode})
+                        </Text>
+                      )}
+                    </Descriptions.Item>
                     <Descriptions.Item label="Trạng thái">
                       <Space>
                         <Tag color={STATUS_COLORS[detail.order.status] || 'default'}>{STATUS_LABELS[detail.order.status] || detail.order.status}</Tag>
@@ -311,9 +345,66 @@ export default function OrdersManagement() {
                       </div>
                     )
                   },
-                  { title:'SL', dataIndex:'quantity', align:'right', width:80 },
-                  { title:'Đơn giá', dataIndex:'priceSnapshot', align:'right', width:120, render:(v)=> (v||0).toLocaleString('vi-VN') + '₫' },
-                  { title:'Thành tiền', align:'right', width:140, render:(_,r)=> ((r.priceSnapshot||0)* (r.quantity||0)).toLocaleString('vi-VN') + '₫' }
+                  { 
+                    title:'SL', 
+                    dataIndex:'quantity', 
+                    align:'right', 
+                    width:80 
+                  },
+                  { 
+                    title:'Đơn giá', 
+                    dataIndex:'priceSnapshot', 
+                    align:'right', 
+                    width:180, 
+                    render:(v, r) => {
+                      // Kiểm tra có giảm giá: có originalPriceSnapshot hoặc có discount > 0
+                      const hasDiscount = (r.originalPriceSnapshot && r.originalPriceSnapshot > r.priceSnapshot) || 
+                                         (r.discount > 0 && r.priceSnapshot < (r.originalPriceSnapshot || r.priceSnapshot));
+                      const displayPrice = r.priceSnapshot || 0; // Giá đã giảm (finalPrice)
+                      const originalPrice = r.originalPriceSnapshot || (hasDiscount ? r.priceSnapshot : null);
+                      
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                          <span style={{ color: '#3b82f6', fontWeight: 600 }}>
+                            {displayPrice.toLocaleString('vi-VN')}₫
+                          </span>
+                          {hasDiscount && originalPrice && originalPrice > displayPrice && (
+                            <span style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through' }}>
+                              {originalPrice.toLocaleString('vi-VN')}₫
+                            </span>
+                          )}
+                          {r.discount > 0 && (
+                            <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 500 }}>
+                              Giảm {r.discountType === 'percent' ? `${r.discount}%` : `${(r.discountValue||0).toLocaleString('vi-VN')}₫`}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+                  },
+                  { 
+                    title:'Thành tiền', 
+                    align:'right', 
+                    width:180, 
+                    render:(_,r)=> {
+                      const hasDiscount = r.originalPriceSnapshot && r.originalPriceSnapshot > r.priceSnapshot;
+                      const totalPrice = (r.priceSnapshot||0) * (r.quantity||0);
+                      const totalOriginalPrice = hasDiscount ? (r.originalPriceSnapshot||0) * (r.quantity||0) : null;
+                      
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                          <span style={{ color: '#3b82f6', fontWeight: 600 }}>
+                            {totalPrice.toLocaleString('vi-VN')}₫
+                          </span>
+                          {totalOriginalPrice && (
+                            <span style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through' }}>
+                              {totalOriginalPrice.toLocaleString('vi-VN')}₫
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+                  }
                 ]}
               />
             </div>

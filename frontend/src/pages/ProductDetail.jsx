@@ -27,6 +27,7 @@ export default function ProductDetail() {
     guestEmail: "",
     guestPhone: ""
   });
+  const [directCoupon, setDirectCoupon] = useState(null);
   const { add } = useCart();
   const { user } = useAuth();
 
@@ -63,6 +64,17 @@ export default function ProductDetail() {
       if (res.data._id) {
         loadReviews(res.data._id);
       }
+      
+      // Load direct apply coupon
+      api.get(`/coupons/direct-apply/${slug}`).then((couponRes) => {
+        if (couponRes.data.success && couponRes.data.coupon) {
+          setDirectCoupon(couponRes.data.coupon);
+        } else {
+          setDirectCoupon(null);
+        }
+      }).catch(() => {
+        setDirectCoupon(null);
+      });
       
       // Build category breadcrumb
       if (res.data.categoryId) {
@@ -120,6 +132,20 @@ export default function ProductDetail() {
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price);
+  };
+
+  const formatDiscountAmount = (amount) => {
+    if (amount >= 1000) {
+      const thousands = amount / 1000;
+      // Nếu là số nguyên thì không hiển thị phần thập phân
+      if (thousands % 1 === 0) {
+        return `${thousands}K`;
+      } else {
+        // Hiển thị 1 chữ số thập phân
+        return `${thousands.toFixed(1)}K`;
+      }
+    }
+    return amount.toString();
   };
 
   const handleAddToCart = () => {
@@ -385,38 +411,107 @@ export default function ProductDetail() {
 
               {/* Price */}
               <div style={{ marginBottom: 24 }}>
-                <div style={{ 
-                  fontSize: 36, 
-                  fontWeight: 700, 
-                  color: '#dc2626',
-                  marginBottom: 8
-                }}>
-                  {formatPrice(product.price)}₫
-                  <span style={{ fontSize: 18, color: '#6b7280', fontWeight: 400, marginLeft: 8 }}>
-                    / {product.unit || 'Hộp'}
-                  </span>
-                </div>
-                {product.discount > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ 
-                      fontSize: 20, 
-                      color: '#9ca3af', 
-                      textDecoration: 'line-through' 
-                    }}>
-                      {formatPrice(Math.round(product.price / (1 - product.discount / 100)))}₫
-                    </span>
-                    <span style={{ 
-                      background: '#dc2626', 
-                      color: 'white', 
-                      padding: '6px 14px', 
-                      borderRadius: 20,
-                      fontSize: 14,
-                      fontWeight: 600
-                    }}>
-                      -{product.discount}%
-                    </span>
-                  </div>
-                )}
+                {(() => {
+                  // Tính giá sau khi áp dụng coupon trực tiếp
+                  let finalPrice = product.price;
+                  let discountAmount = 0;
+                  let originalPrice = product.price;
+                  
+                  if (directCoupon) {
+                    originalPrice = product.price;
+                    if (directCoupon.discountType === 'percent') {
+                      discountAmount = Math.round(product.price * directCoupon.discountValue / 100);
+                      if (directCoupon.maxDiscount && discountAmount > directCoupon.maxDiscount) {
+                        discountAmount = directCoupon.maxDiscount;
+                      }
+                    } else {
+                      discountAmount = directCoupon.discountValue;
+                    }
+                    finalPrice = Math.max(0, product.price - discountAmount);
+                  }
+                  
+                  return (
+                    <>
+                      {directCoupon ? (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                            <div style={{ 
+                              fontSize: 36, 
+                              fontWeight: 700, 
+                              color: '#dc2626',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8
+                            }}>
+                              {formatPrice(finalPrice)}₫
+                              <span style={{ fontSize: 36, color: '#dc2626', fontWeight: 400 }}>
+                                / {product.unit || 'Hộp'}
+                              </span>
+                            </div>
+                            <span style={{ 
+                              background: '#dc2626', 
+                              color: 'white', 
+                              padding: '6px 14px', 
+                              borderRadius: 20,
+                              fontSize: 14,
+                              fontWeight: 600
+                            }}>
+                              {directCoupon.discountType === 'percent' 
+                                ? `-${directCoupon.discountValue}%` 
+                                : `-${formatPrice(directCoupon.discountValue)}₫`}
+                            </span>
+                          </div>
+                          <span style={{ 
+                            fontSize: 20, 
+                            color: '#9ca3af', 
+                            textDecoration: 'line-through',
+                            fontWeight: 500
+                          }}>
+                            {formatPrice(originalPrice)}₫
+                          </span>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ 
+                            fontSize: 36, 
+                            fontWeight: 700, 
+                            color: '#3b82f6',
+                            marginBottom: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8
+                          }}>
+                            {formatPrice(product.price)}₫
+                            <span style={{ fontSize: 36, color: '#3b82f6', fontWeight: 400 }}>
+                              / {product.unit || 'Hộp'}
+                            </span>
+                          </div>
+                          {product.discount > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <span style={{ 
+                                fontSize: 20, 
+                                color: '#9ca3af', 
+                                textDecoration: 'line-through' 
+                              }}>
+                                {formatPrice(Math.round(product.price / (1 - product.discount / 100)))}₫
+                              </span>
+                              <span style={{ 
+                                background: '#dc2626', 
+                                color: 'white', 
+                                padding: '6px 14px', 
+                                borderRadius: 20,
+                                fontSize: 14,
+                                fontWeight: 600
+                              }}>
+                                -{product.discount}%
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Product Specs */}
@@ -462,6 +557,66 @@ export default function ProductDetail() {
                   )}
                 </div>
               </div>
+
+              {/* Khuyến mãi được áp dụng */}
+              {directCoupon && (
+                <div style={{ 
+                  background: 'white',
+                  borderRadius: 8,
+                  border: '1px solid #f0f0f0',
+                  marginBottom: 24,
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    background: '#fff7e6',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fa8c16" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 6v6M12 16h.01"/>
+                    </svg>
+                    <span style={{ color: '#fa8c16', fontWeight: 600, fontSize: 14 }}>
+                      Khuyến mãi được áp dụng
+                    </span>
+                  </div>
+                  <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 48,
+                      height: 48,
+                      background: '#e6f7ff',
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1890ff" strokeWidth="2">
+                        <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                      </svg>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 500, color: '#262626', marginBottom: 4 }}>
+                        Giảm ngay {directCoupon.discountType === 'percent' 
+                          ? `${directCoupon.discountValue}%` 
+                          : `${formatPrice(directCoupon.discountValue)}₫`}
+                        {directCoupon.endDate && (
+                          <span style={{ color: '#8c8c8c', fontWeight: 400 }}>
+                            {' '}áp dụng đến {new Date(directCoupon.endDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                      {directCoupon.description && (
+                        <div style={{ fontSize: 13, color: '#8c8c8c' }}>
+                          {directCoupon.description}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Quantity & Add to Cart */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
@@ -988,7 +1143,11 @@ export default function ProductDetail() {
                     overflow: 'hidden',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     transition: 'all 0.3s ease',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-4px)';
@@ -1005,7 +1164,9 @@ export default function ProductDetail() {
                       alignItems: 'center', 
                       justifyContent: 'center',
                       background: '#f8f9fa',
-                      padding: 16
+                      padding: 16,
+                      position: 'relative',
+                      flexShrink: 0
                     }}>
                       <img
                         src={getImageUrl(rp.imageUrls?.[0], '/default-product.svg')}
@@ -1017,8 +1178,27 @@ export default function ProductDetail() {
                         }}
                         onError={(e) => handleImageError(e, '/default-product.svg')}
                       />
+                      {rp.discount > 0 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          background: '#dc2626',
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderTopLeftRadius: 12,
+                          borderBottomRightRadius: 12,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          zIndex: 1
+                        }}>
+                          {rp.discountType === 'amount' 
+                            ? `-${formatDiscountAmount(rp.discountValue)}` 
+                            : `-${rp.discount}%`}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ padding: 16 }}>
+                    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', flex: 1 }}>
                       <h3 style={{
                         fontSize: 15,
                         fontWeight: 600,
@@ -1029,16 +1209,39 @@ export default function ProductDetail() {
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        flexShrink: 0
                       }}>
                         {rp.name}
                       </h3>
-                      <div style={{ 
-                        fontSize: 18, 
-                        fontWeight: 700, 
-                        color: '#dc2626' 
-                      }}>
-                        {formatPrice(rp.price)}₫
+                      <div style={{ minHeight: '48px', flexShrink: 0 }}>
+                        {rp.discount > 0 && rp.finalPrice !== undefined && rp.originalPrice !== undefined ? (
+                          <>
+                            <div style={{ 
+                              fontSize: 18, 
+                              fontWeight: 700, 
+                              color: '#3b82f6',
+                              marginBottom: 4
+                            }}>
+                              {formatPrice(rp.finalPrice)}₫
+                            </div>
+                            <div style={{ 
+                              fontSize: 13, 
+                              color: '#9ca3af',
+                              textDecoration: 'line-through'
+                            }}>
+                              {formatPrice(rp.originalPrice)}₫
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ 
+                            fontSize: 18, 
+                            fontWeight: 700, 
+                            color: '#3b82f6' 
+                          }}>
+                            {formatPrice(rp.price)}₫
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

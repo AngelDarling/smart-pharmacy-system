@@ -300,38 +300,78 @@ const ProductManagement = () => {
     {
       title: 'Giá & Tồn kho',
       key: 'priceStock',
-      width: 200,
-      render: (_, record) => (
-        <div>
-          <div style={{ 
-            fontSize: '14px', 
-            fontWeight: 600, 
-            color: '#52c41a',
-            marginBottom: '4px'
-          }}>
-            Giá bán: {record.price?.toLocaleString() || 0}đ
-          </div>
-          <div style={{ 
-            fontSize: '12px', 
-            color: '#8c8c8c',
-            marginBottom: '8px'
-          }}>
-            Giá nhập: {record.costPrice?.toLocaleString() || 0}đ
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ 
-              fontSize: '14px', 
-              fontWeight: 500,
-              color: record.totalStock > 0 ? '#52c41a' : '#ff4d4f'
+      width: 220,
+      render: (_, record) => {
+        // Kiểm tra có giảm giá không (từ direct coupon hoặc promotionInfo)
+        const hasDiscount = record.finalPrice !== undefined && 
+                           record.finalPrice < record.price && 
+                           record.discount > 0;
+        const displayPrice = hasDiscount ? record.finalPrice : record.price;
+        const originalPrice = hasDiscount ? (record.originalPrice || record.price) : null;
+        
+        return (
+          <div>
+            <div style={{ marginBottom: '4px' }}>
+              {hasDiscount ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: 600, 
+                    color: '#3b82f6',
+                  }}>
+                    Giá bán: {displayPrice?.toLocaleString() || 0}đ
+                  </div>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#9ca3af',
+                    textDecoration: 'line-through'
+                  }}>
+                    {originalPrice?.toLocaleString() || 0}đ
+                  </div>
+                  {record.discount > 0 && (
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: '#ef4444',
+                      fontWeight: 500
+                    }}>
+                      Giảm {record.discountType === 'percent' 
+                        ? `${record.discount}%` 
+                        : `${(record.discountValue || 0).toLocaleString()}đ`}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 600, 
+                  color: '#52c41a',
+                }}>
+                  Giá bán: {record.price?.toLocaleString() || 0}đ
+                </div>
+              )}
+            </div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#8c8c8c',
+              marginBottom: '8px'
             }}>
-              {record.totalStock || 0}
-            </span>
-            <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
-              {record.unit || 'sản phẩm'}
-            </span>
+              Giá nhập: {record.costPrice?.toLocaleString() || 0}đ
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ 
+                fontSize: '14px', 
+                fontWeight: 500,
+                color: record.totalStock > 0 ? '#52c41a' : '#ff4d4f'
+              }}>
+                {record.totalStock || 0}
+              </span>
+              <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                {record.unit || 'sản phẩm'}
+              </span>
+            </div>
           </div>
-        </div>
-      )
+        );
+      }
     },
     {
       title: 'Trạng thái',

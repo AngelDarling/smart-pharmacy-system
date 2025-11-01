@@ -1035,13 +1035,33 @@ function App() {
                                     }}>
                                       {item.name || "Tên sản phẩm không xác định"}
                                     </div>
-                                    <div style={{ 
-                                      color: "#2e7d32", 
-                                      fontWeight: 600, 
-                                      fontSize: 14 
-                                    }}>
-                                      {item.price.toLocaleString()}₫
-                                    </div>
+                                    {item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice) ? (
+                                      <div style={{ marginBottom: 4 }}>
+                                        <div style={{ 
+                                          color: "#3b82f6", 
+                                          fontWeight: 600, 
+                                          fontSize: 14 
+                                        }}>
+                                          {item.finalPrice.toLocaleString()}₫
+                                        </div>
+                                        <div style={{ 
+                                          color: "#9ca3af", 
+                                          fontSize: 11,
+                                          textDecoration: "line-through"
+                                        }}>
+                                          {(item.originalPrice || item.price).toLocaleString()}₫
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div style={{ 
+                                        color: "#2e7d32", 
+                                        fontWeight: 600, 
+                                        fontSize: 14,
+                                        marginBottom: 4
+                                      }}>
+                                        {item.price.toLocaleString()}₫
+                                      </div>
+                                    )}
                                     <div style={{ 
                                       color: "#6b7280", 
                                       fontSize: 12 

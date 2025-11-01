@@ -159,17 +159,25 @@ export async function tree(req, res) {
 
   annotate(sortedRoots, 0, [], "");
   
-  // Count products for each category
+  // Count products for each category (including products in descendant categories)
   const Product = (await import("../models/Product.js")).default;
   const addProductCount = async (nodes) => {
+    // Tính từ dưới lên: tính productCount cho các node con trước, rồi cộng vào node cha
     for (const node of nodes) {
-      // Count products in this category
-      const productCount = await Product.countDocuments({ categoryId: node._id, isActive: true });
-      node.productCount = productCount;
+      let productCount = 0;
       
+      // Nếu có children, tính tổng số sản phẩm của các children trước
       if (node.children && node.children.length > 0) {
         await addProductCount(node.children);
+        // Cộng tổng số sản phẩm của tất cả children
+        productCount += node.children.reduce((sum, child) => sum + (child.productCount || 0), 0);
       }
+      
+      // Đếm số sản phẩm trực tiếp thuộc category này
+      const directProductCount = await Product.countDocuments({ categoryId: node._id, isActive: true });
+      productCount += directProductCount;
+      
+      node.productCount = productCount;
     }
   };
   

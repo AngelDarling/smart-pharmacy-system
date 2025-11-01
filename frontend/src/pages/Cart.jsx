@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart";
 import { getImageUrl, handleImageError } from "../utils/imageUtils";
 import Swal from "sweetalert2";
+import api from "../api/client.js";
 
 // Biểu tượng thùng rác (Trash Icon)
 const TrashIcon = () => (
@@ -17,17 +18,59 @@ export default function Cart() {
 
   // State để quản lý các sản phẩm được chọn
   const [selectedItems, setSelectedItems] = useState(() => items.map(item => item.id));
+  
+  // State để lưu direct coupons cho mỗi sản phẩm
+  const [directCoupons, setDirectCoupons] = useState({});
 
   // Cập nhật selectedItems khi items thay đổi
   useEffect(() => {
     setSelectedItems(items.map(item => item.id));
   }, [items]);
 
+  // Fetch direct coupons cho các sản phẩm có giảm giá
+  useEffect(() => {
+    const fetchDirectCoupons = async () => {
+      const couponsMap = {};
+      
+      // Lọc các sản phẩm có giảm giá và có slug
+      const discountedItems = items.filter(item => 
+        item.slug && 
+        item.finalPrice !== undefined && 
+        item.finalPrice < item.price && 
+        (item.discount > 0 || item.originalPrice > item.finalPrice)
+      );
+
+      // Fetch coupon cho từng sản phẩm
+      await Promise.all(
+        discountedItems.map(async (item) => {
+          try {
+            const res = await api.get(`/coupons/direct-apply/${item.slug}`);
+            if (res.data.success && res.data.coupon) {
+              couponsMap[item.id] = res.data.coupon;
+            }
+          } catch (error) {
+            // Ignore errors
+          }
+        })
+      );
+
+      setDirectCoupons(couponsMap);
+    };
+
+    if (items.length > 0) {
+      fetchDirectCoupons();
+    }
+  }, [items]);
+
   // Tính toán tổng tiền chỉ dựa trên các sản phẩm đã được chọn
   const selectedTotal = useMemo(() => {
     return items
       .filter(item => selectedItems.includes(item.id))
-      .reduce((total, item) => total + item.price * item.qty, 0);
+      .reduce((total, item) => {
+        // Sử dụng finalPrice nếu có, ngược lại dùng price
+        const itemPrice = item.finalPrice !== undefined ? item.finalPrice : item.price;
+        return total + itemPrice * item.qty;
+      }, 0);
   }, [items, selectedItems]);
 
   // Xử lý thay đổi số lượng
@@ -69,6 +112,18 @@ export default function Cart() {
 
   // Xử lý khi nhấn nút "Mua hàng"
   function handleCheckout() {
+    if (selectedItems.length === 0) {
+      Swal.fire({
+        title: 'Chưa chọn sản phẩm',
+        text: 'Vui lòng chọn ít nhất một sản phẩm để tiếp tục.',
+        icon: 'warning',
+        confirmButtonColor: '#3b82f6'
+      });
+      return;
+    }
+    
+    // Lưu selectedItems vào localStorage để Checkout có thể đọc
+    localStorage.setItem('checkoutSelectedItems', JSON.stringify(selectedItems));
     console.log("Checkout with selected items:", selectedItems);
     navigate("/checkout");
   }
@@ -197,13 +252,87 @@ export default function Cart() {
                     style={styles.productImage}
                     onError={(e) => handleImageError(e, "/default-product.svg")}
                   />
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={styles.productName}>{item.name}</div>
+                    {/* Hiển thị thông tin mã giảm giá trực tiếp nếu có */}
+                    {directCoupons[item.id] && (() => {
+                      const coupon = directCoupons[item.id];
+                      const formatPrice = (price) => {
+                        return new Intl.NumberFormat('vi-VN').format(price);
+                      };
+                      return (
+                        <div style={{
+                          marginTop: 8,
+                          padding: '8px 12px',
+                          backgroundColor: '#fef3f2',
+                          borderRadius: 6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8
+                        }}>
+                          <div style={{ flexShrink: 0 }}>
+                            <img 
+                              src={getImageUrl('/uploads/introduce/fast-delivery.png')}
+                              alt="Mã giảm giá"
+                              style={{
+                                width: 24,
+                                height: 24,
+                                objectFit: 'contain'
+                              }}
+                              onError={(e) => {
+                                // Fallback SVG icon nếu không load được ảnh
+                                e.target.style.display = 'none';
+                                const parent = e.target.parentElement;
+                                if (parent && !parent.querySelector('svg')) {
+                                  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                                  svg.setAttribute('width', '24');
+                                  svg.setAttribute('height', '24');
+                                  svg.setAttribute('viewBox', '0 0 24 24');
+                                  svg.setAttribute('fill', 'none');
+                                  svg.setAttribute('stroke', '#ef4444');
+                                  svg.setAttribute('stroke-width', '2');
+                                  svg.style.flexShrink = '0';
+                                  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                                  path.setAttribute('d', 'M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM8 12h8');
+                                  svg.appendChild(path);
+                                  parent.appendChild(svg);
+                                }
+                              }}
+                            />
+                          </div>
+                          <div style={{ flex: 1, fontSize: 12, color: '#1f2937', lineHeight: 1.4 }}>
+                            {coupon.description || (
+                              <>
+                                Giảm ngay {coupon.discountType === 'percent' 
+                                  ? `${coupon.discountValue}%` 
+                                  : `${formatPrice(coupon.discountValue)}₫`}
+                                {coupon.endDate && (
+                                  <span style={{ color: '#6b7280' }}>
+                                    {' '}áp dụng đến {new Date(coupon.endDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 {/* Đơn giá */}
                 <div style={styles.cellCenter}>
-                   <span style={styles.price}>{item.price.toLocaleString('vi-VN')}₫</span>
+                  {item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice) ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <span style={{ ...styles.price, color: '#3b82f6', fontWeight: 600 }}>
+                        {item.finalPrice.toLocaleString('vi-VN')}₫
+                      </span>
+                      <span style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>
+                        {(item.originalPrice || item.price).toLocaleString('vi-VN')}₫
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={styles.price}>{item.price.toLocaleString('vi-VN')}₫</span>
+                  )}
                 </div>
                 {/* Số lượng */}
                 <div style={styles.cellCenter}>
@@ -215,7 +344,11 @@ export default function Cart() {
                 </div>
                 {/* Thành tiền */}
                 <div style={{...styles.cellCenter, ...styles.totalPrice}}>
-                  {(item.price * item.qty).toLocaleString('vi-VN')}₫
+                  {(() => {
+                    const hasDiscount = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice);
+                    const itemPrice = hasDiscount ? item.finalPrice : item.price;
+                    return (itemPrice * item.qty).toLocaleString('vi-VN') + '₫';
+                  })()}
                 </div>
                 {/* Nút xóa */}
                 <div style={styles.cellCenter}>

@@ -200,7 +200,6 @@ const ReviewManagement = () => {
     {
       title: 'Sản phẩm',
       key: 'product',
-      width: 200,
       render: (_, record) => {
         const product = record.productId;
         if (!product) return '-';
@@ -210,12 +209,14 @@ const ReviewManagement = () => {
               <Avatar
                 src={product.imageUrls[0]}
                 shape="square"
-                size={40}
+                size={36}
               />
             )}
-            <div>
-              <div style={{ fontWeight: 500 }}>{product.name}</div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 500, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {product.name}
+              </div>
+              <div style={{ fontSize: 11, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {product.slug}
               </div>
             </div>
@@ -226,11 +227,12 @@ const ReviewManagement = () => {
     {
       title: 'Người đánh giá',
       key: 'reviewer',
-      width: 150,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{getReviewerName(record)}</div>
-          <div style={{ fontSize: 12, color: '#6b7280' }}>
+          <div style={{ fontWeight: 500, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {getReviewerName(record)}
+          </div>
+          <div style={{ fontSize: 11, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {getReviewerInfo(record)}
           </div>
         </div>
@@ -239,11 +241,10 @@ const ReviewManagement = () => {
     {
       title: 'Đánh giá',
       key: 'rating',
-      width: 120,
       render: (_, record) => (
         <div>
-          <Rate disabled value={record.rating} style={{ fontSize: 14 }} />
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+          <Rate disabled value={record.rating} style={{ fontSize: 12 }} />
+          <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
             {record.rating}/5
           </div>
         </div>
@@ -254,25 +255,24 @@ const ReviewManagement = () => {
       key: 'comment',
       ellipsis: true,
       render: (_, record) => (
-        <div style={{ maxWidth: 300 }}>
-          <div style={{ marginBottom: 4 }}>{record.comment}</div>
+        <div>
+          <div style={{ fontSize: 13, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {record.comment}
+          </div>
           {record.adminReply && (
             <div style={{
-              marginTop: 8,
-              padding: 8,
+              marginTop: 6,
+              padding: 6,
               background: '#f0f9ff',
               borderRadius: 4,
-              borderLeft: '3px solid #3b82f6'
+              borderLeft: '2px solid #3b82f6'
             }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', marginBottom: 4 }}>
-                Phản hồi của admin:
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#3b82f6', marginBottom: 2 }}>
+                Admin:
               </div>
-              <div style={{ fontSize: 13 }}>{record.adminReply}</div>
-              {record.adminReplyAt && (
-                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
-                  {dayjs(record.adminReplyAt).format('DD/MM/YYYY HH:mm')}
-                </div>
-              )}
+              <div style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                {record.adminReply}
+              </div>
             </div>
           )}
         </div>
@@ -281,62 +281,76 @@ const ReviewManagement = () => {
     {
       title: 'Trạng thái',
       key: 'status',
-      width: 120,
       render: (_, record) => getStatusTag(record.status)
     },
     {
       title: 'Ngày tạo',
       key: 'createdAt',
-      width: 150,
-      render: (_, record) => dayjs(record.createdAt).format('DD/MM/YYYY HH:mm')
+      render: (_, record) => (
+        <div style={{ fontSize: 12 }}>
+          {dayjs(record.createdAt).format('DD/MM/YYYY')}
+          <br />
+          <span style={{ color: '#6b7280', fontSize: 11 }}>
+            {dayjs(record.createdAt).format('HH:mm')}
+          </span>
+        </div>
+      )
     },
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 200,
-      fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space size="small" direction="vertical" style={{ width: '100%' }}>
           <Button
             type="link"
             icon={<MessageOutlined />}
             onClick={() => handleReply(record)}
+            size="small"
+            style={{ padding: 0, height: 'auto', fontSize: 12 }}
           >
             Phản hồi
           </Button>
-          {record.status !== 'approved' && (
-            <Button
-              type="link"
-              icon={<CheckCircleOutlined />}
-              onClick={() => handleStatusChange(record._id, 'approved')}
+          <Space size="small" style={{ flexWrap: 'wrap' }}>
+            {record.status !== 'approved' && (
+              <Button
+                type="link"
+                icon={<CheckCircleOutlined />}
+                onClick={() => handleStatusChange(record._id, 'approved')}
+                size="small"
+                style={{ padding: 0, height: 'auto', fontSize: 12 }}
+              >
+                Duyệt
+              </Button>
+            )}
+            {record.status !== 'rejected' && (
+              <Button
+                type="link"
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => handleStatusChange(record._id, 'rejected')}
+                size="small"
+                style={{ padding: 0, height: 'auto', fontSize: 12 }}
+              >
+                Từ chối
+              </Button>
+            )}
+            <Popconfirm
+              title="Xóa đánh giá này?"
+              onConfirm={() => handleDelete(record._id)}
+              okText="Xóa"
+              cancelText="Hủy"
             >
-              Duyệt
-            </Button>
-          )}
-          {record.status !== 'rejected' && (
-            <Button
-              type="link"
-              danger
-              icon={<CloseCircleOutlined />}
-              onClick={() => handleStatusChange(record._id, 'rejected')}
-            >
-              Từ chối
-            </Button>
-          )}
-          <Popconfirm
-            title="Xóa đánh giá này?"
-            onConfirm={() => handleDelete(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-            >
-              Xóa
-            </Button>
-          </Popconfirm>
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+                style={{ padding: 0, height: 'auto', fontSize: 12 }}
+              >
+                Xóa
+              </Button>
+            </Popconfirm>
+          </Space>
         </Space>
       )
     }
@@ -357,7 +371,6 @@ const ReviewManagement = () => {
           value={filters.status || undefined}
           onChange={(value) => setFilters({ ...filters, status: value || '' })}
         >
-          <Option value="pending">Chờ duyệt</Option>
           <Option value="approved">Đã duyệt</Option>
           <Option value="rejected">Từ chối</Option>
         </Select>
@@ -402,7 +415,7 @@ const ReviewManagement = () => {
         loading={loading}
         pagination={pagination}
         onChange={handleTableChange}
-        scroll={{ x: 1500 }}
+        size="small"
       />
 
       {/* Reply Modal */}

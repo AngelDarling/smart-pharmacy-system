@@ -1,8 +1,10 @@
 import { z } from "zod";
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Brand from "../models/Brand.js";
 import Category from "../models/Category.js";
 import ProductSalesDaily from "../models/ProductSalesDaily.js";
+import Coupon from "../models/Coupon.js";
 import xlsx from "xlsx";
 
 const upsertSchema = z.object({
@@ -32,27 +34,93 @@ const upsertSchema = z.object({
 });
 
 export async function list(req, res) {
-  const page = Math.max(1, parseInt(req.query.page || "1", 10));
+  // Support both skip (offset) and page-based pagination
+  let skip = 0;
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || "20", 10)));
-  const skip = (page - 1) * limit;
+  
+  if (req.query.skip !== undefined) {
+    // If skip is provided, use it directly (for load more functionality)
+    skip = Math.max(0, parseInt(req.query.skip, 10));
+  } else {
+    // Traditional page-based pagination
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    skip = (page - 1) * limit;
+  }
 
   const q = {};
-  if (req.query.categoryId) q.categoryId = req.query.categoryId;
-  // Filter by category using either categoryId or category slug
-  if (req.query.category) {
-    const c = await Category.findOne({ slug: req.query.category }).select('_id');
-    if (c) {
-      // Find all descendant categories (children, grandchildren, etc.)
-      const descendants = await Category.find({
-        $or: [
-          { _id: c._id }, // Include the category itself
-          { ancestors: c._id } // Include all descendants
-        ]
-      }).select('_id');
+  
+  // Helper function to recursively get all descendant category IDs including the category itself
+  const getCategoryAndDescendants = async (categoryId) => {
+    if (!categoryId) return [];
+    
+    // Convert to ObjectId if it's a string
+    let categoryObjectId;
+    try {
+      if (typeof categoryId === 'string') {
+        categoryObjectId = new mongoose.Types.ObjectId(categoryId);
+      } else {
+        categoryObjectId = categoryId;
+      }
+    } catch (error) {
+      console.error('Invalid categoryId:', categoryId);
+      return [];
+    }
+    
+    // Find the category
+    const category = await Category.findById(categoryObjectId).select('_id name');
+    if (!category) return [];
+    
+    // Recursive function to find all descendants
+    const findAllDescendants = async (parentId) => {
+      const result = [parentId];
       
-      const categoryIds = descendants.map(cat => cat._id);
+      // Find direct children
+      const children = await Category.find({ parent: parentId }).select('_id');
+      
+      // Recursively find descendants of each child
+      for (const child of children) {
+        const childDescendants = await findAllDescendants(child._id);
+        result.push(...childDescendants);
+      }
+      
+      return result;
+    };
+    
+    // Get all descendants including the category itself
+    const allCategoryIds = await findAllDescendants(categoryObjectId);
+    
+    // Remove duplicates (in case of any)
+    const uniqueIds = [...new Set(allCategoryIds.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id));
+    
+    console.log(`[ProductController] Category "${category.name}" (${category._id}) has ${uniqueIds.length} categories (including itself and all descendants)`);
+    
+    return uniqueIds;
+  };
+  
+  // Filter by categoryId (from admin panel) - include descendants
+  if (req.query.categoryId) {
+    const categoryIds = await getCategoryAndDescendants(req.query.categoryId);
+    console.log(`[ProductController] Filtering by categoryId: ${req.query.categoryId}, found ${categoryIds.length} categories (including descendants)`);
+    if (categoryIds.length > 0) {
       q.categoryId = { $in: categoryIds };
     } else {
+      q.categoryId = '__no_match__'; // force no results
+    }
+  }
+  
+  // Filter by category using category slug (from user-facing pages)
+  if (req.query.category) {
+    const c = await Category.findOne({ slug: req.query.category }).select('_id name');
+    if (c) {
+      const categoryIds = await getCategoryAndDescendants(c._id);
+      console.log(`[ProductController] Filtering by category slug "${req.query.category}" (${c.name}), found ${categoryIds.length} categories (including descendants)`);
+      if (categoryIds.length > 0) {
+        q.categoryId = { $in: categoryIds };
+      } else {
+        q.categoryId = '__no_match__'; // force no results
+      }
+    } else {
+      console.log(`[ProductController] Category with slug "${req.query.category}" not found`);
       q.categoryId = '__no_match__'; // force no results
     }
   }
@@ -70,6 +138,9 @@ export async function list(req, res) {
   const text = req.query.q?.trim();
   const filter = text ? { $and: [q, { $text: { $search: text } }] } : q;
 
+  console.log(`[ProductController] Query filter:`, JSON.stringify(filter, null, 2));
+  console.log(`[ProductController] Pagination: skip=${skip}, limit=${limit}`);
+  
   const [items, total] = await Promise.all([
     Product.find(filter)
       .populate('categoryId', 'name slug')
@@ -79,8 +150,42 @@ export async function list(req, res) {
       .limit(limit),
     Product.countDocuments(filter)
   ]);
+  
+  console.log(`[ProductController] Found ${items.length} products (skip=${skip}, limit=${limit}), total=${total}`);
 
-  // Default image/icon fallback and add productType
+  // Fetch all active direct apply coupons
+  const now = new Date();
+  const allDirectCoupons = await Coupon.find({
+    isDirectApply: true,
+    isActive: true
+  }).lean();
+  
+  // Filter valid coupons (check dates and usage limit)
+  const directCoupons = allDirectCoupons.filter(coupon => {
+    // Check start date
+    if (coupon.startDate && new Date(coupon.startDate) > now) return false;
+    // Check end date
+    if (coupon.endDate && new Date(coupon.endDate) < now) return false;
+    // Check usage limit
+    if (coupon.usageLimit && coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) return false;
+    return true;
+  });
+
+  // Create a map of productSlug -> coupon for quick lookup
+  const couponMap = new Map();
+  directCoupons.forEach(coupon => {
+    if (coupon.productSlug) {
+      // Check if coupon is valid
+      const isValid = (!coupon.startDate || new Date(coupon.startDate) <= now) &&
+                      (!coupon.endDate || new Date(coupon.endDate) >= now) &&
+                      (!coupon.usageLimit || coupon.usedCount < coupon.usageLimit);
+      if (isValid) {
+        couponMap.set(coupon.productSlug, coupon);
+      }
+    }
+  });
+
+  // Default image/icon fallback and add productType, calculate discount
   const withImage = items.map((p) => {
     const product = p.toObject();
     
@@ -92,14 +197,79 @@ export async function list(req, res) {
       'Thực phẩm chức năng': 'FunctionalFood'
     };
     
+    // Calculate discount and final price: only if there's a valid promotion or direct coupon
+    let discount = 0;
+    let discountType = 'percent'; // 'percent' or 'amount'
+    let discountValue = 0; // The actual discount value (percentage or amount)
+    let finalPrice = product.price; // Default final price is original price
+    let originalPrice = product.price; // Default original price
+    
+    const directCoupon = couponMap.get(product.slug);
+    const now = new Date();
+    
+    if (directCoupon) {
+      // Calculate discount from direct coupon
+      originalPrice = product.price; // Keep original price
+      let discountAmount = 0;
+      discountType = directCoupon.discountType; // 'percent' or 'amount'
+      discountValue = directCoupon.discountValue;
+      
+      if (directCoupon.discountType === 'percent') {
+        discount = directCoupon.discountValue;
+        discountAmount = Math.round(product.price * discount / 100);
+        // Apply maxDiscount if exists
+        if (directCoupon.maxDiscount && discountAmount > directCoupon.maxDiscount) {
+          discountAmount = directCoupon.maxDiscount;
+          discount = Math.round((discountAmount / product.price) * 100);
+          discountValue = discount; // Update discountValue to reflect actual discount percentage
+        }
+      } else {
+        // If discount is amount
+        discountAmount = directCoupon.discountValue;
+        // Calculate percentage for display
+        if (product.price > 0) {
+          discount = Math.round((discountAmount / product.price) * 100);
+        }
+      }
+      
+      finalPrice = Math.max(0, product.price - discountAmount);
+    } else if (product.promotionInfo?.isOnSale && product.promotionInfo?.discountPercentage) {
+      // Only use promotionInfo discount if isOnSale is true
+      // Check if sale is currently active (check dates if provided)
+      const saleStartDate = product.promotionInfo.saleStartDate ? new Date(product.promotionInfo.saleStartDate) : null;
+      const saleEndDate = product.promotionInfo.saleEndDate ? new Date(product.promotionInfo.saleEndDate) : null;
+      
+      // Check if sale is active
+      const isSaleActive = (!saleStartDate || saleStartDate <= now) && (!saleEndDate || saleEndDate >= now);
+      
+      if (isSaleActive && product.promotionInfo.discountPercentage > 0) {
+        discount = product.promotionInfo.discountPercentage;
+        discountType = 'percent';
+        discountValue = discount;
+        originalPrice = product.price;
+        finalPrice = Math.round(product.price * (1 - discount / 100));
+      }
+    }
+    // Removed compareAtPrice logic - it's not reliable for discount calculation
+    
+    // Ensure discount is between 0 and 100
+    discount = Math.max(0, Math.min(100, discount));
+    
     return {
       ...product,
       imageUrls: (product.imageUrls && product.imageUrls.length > 0) ? product.imageUrls : ["/uploads/default.png"],
-      productType: typeMap[product.categoryId?.name] || product.categoryId?.name || 'Unknown'
+      productType: typeMap[product.categoryId?.name] || product.categoryId?.name || 'Unknown',
+      discount: discount,
+      discountType: discount > 0 ? discountType : null, // 'percent' or 'amount' or null
+      discountValue: discount > 0 ? discountValue : 0, // The actual discount value
+      originalPrice: originalPrice, // Giá gốc (trước khi giảm)
+      finalPrice: discount > 0 ? finalPrice : product.price // Giá sau khi giảm, nếu không có discount thì dùng price gốc
     };
   });
 
-  res.json({ items: withImage, page, limit, total });
+  // Calculate page for response (for compatibility)
+  const responsePage = Math.floor(skip / limit) + 1;
+  res.json({ items: withImage, page: responsePage, limit, total });
 }
 
 export async function getBySlug(req, res) {
@@ -107,7 +277,93 @@ export async function getBySlug(req, res) {
     .populate('categoryId', 'name slug parentId')
     .populate('brandId', 'name slug');
   if (!doc) return res.status(404).json({ message: "Không tìm thấy" });
-  res.json(doc);
+  
+  const product = doc.toObject();
+  
+  // Fetch direct coupon for this product
+  const now = new Date();
+  const allDirectCoupons = await Coupon.find({
+    isDirectApply: true,
+    isActive: true,
+    productSlug: product.slug
+  }).lean();
+  
+  // Filter valid coupons (check dates and usage limit)
+  const directCoupons = allDirectCoupons.filter(coupon => {
+    // Check start date
+    if (coupon.startDate && new Date(coupon.startDate) > now) return false;
+    // Check end date
+    if (coupon.endDate && new Date(coupon.endDate) < now) return false;
+    // Check usage limit
+    if (coupon.usageLimit && coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) return false;
+    return true;
+  });
+  
+  const directCoupon = directCoupons.length > 0 ? directCoupons[0] : null;
+  
+  // Calculate discount and final price: only if there's a valid promotion or direct coupon
+  let discount = 0;
+  let discountType = 'percent'; // 'percent' or 'amount'
+  let discountValue = 0; // The actual discount value (percentage or amount)
+  let finalPrice = product.price; // Default final price is original price
+  let originalPrice = product.price; // Default original price
+  
+  if (directCoupon) {
+    // Calculate discount from direct coupon
+    originalPrice = product.price; // Keep original price
+    let discountAmount = 0;
+    discountType = directCoupon.discountType; // 'percent' or 'amount'
+    discountValue = directCoupon.discountValue;
+    
+    if (directCoupon.discountType === 'percent') {
+      discount = directCoupon.discountValue;
+      discountAmount = Math.round(product.price * discount / 100);
+      // Apply maxDiscount if exists
+      if (directCoupon.maxDiscount && discountAmount > directCoupon.maxDiscount) {
+        discountAmount = directCoupon.maxDiscount;
+        discount = Math.round((discountAmount / product.price) * 100);
+        discountValue = discount; // Update discountValue to reflect actual discount percentage
+      }
+    } else {
+      // If discount is amount
+      discountAmount = directCoupon.discountValue;
+      // Calculate percentage for display
+      if (product.price > 0) {
+        discount = Math.round((discountAmount / product.price) * 100);
+      }
+    }
+    
+    finalPrice = Math.max(0, product.price - discountAmount);
+  } else if (product.promotionInfo?.isOnSale && product.promotionInfo?.discountPercentage) {
+    // Only use promotionInfo discount if isOnSale is true
+    // Check if sale is currently active (check dates if provided)
+    const saleStartDate = product.promotionInfo.saleStartDate ? new Date(product.promotionInfo.saleStartDate) : null;
+    const saleEndDate = product.promotionInfo.saleEndDate ? new Date(product.promotionInfo.saleEndDate) : null;
+    
+    // Check if sale is active
+    const isSaleActive = (!saleStartDate || saleStartDate <= now) && (!saleEndDate || saleEndDate >= now);
+    
+    if (isSaleActive && product.promotionInfo.discountPercentage > 0) {
+      discount = product.promotionInfo.discountPercentage;
+      discountType = 'percent';
+      discountValue = discount;
+      originalPrice = product.price;
+      finalPrice = Math.round(product.price * (1 - discount / 100));
+    }
+  }
+  // Removed compareAtPrice logic - it's not reliable for discount calculation
+  
+  // Ensure discount is between 0 and 100
+  discount = Math.max(0, Math.min(100, discount));
+  
+  res.json({ 
+    ...product, 
+    discount: discount,
+    discountType: discount > 0 ? discountType : null,
+    discountValue: discount > 0 ? discountValue : 0,
+    originalPrice: originalPrice,
+    finalPrice: discount > 0 ? finalPrice : product.price
+  });
 }
 
 export async function create(req, res, next) {

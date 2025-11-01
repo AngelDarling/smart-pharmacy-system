@@ -20,15 +20,32 @@ const addToGlobalCart = (product, qty = 1) => {
   const found = globalCartState.items.find((i) => String(i.id) === productId);
   
   if (found) {
-    globalCartState.items = globalCartState.items.map((i) => 
-      String(i.id) === productId ? { ...i, qty: i.qty + qty } : i
+      globalCartState.items = globalCartState.items.map((i) => 
+      String(i.id) === productId ? { 
+        ...i, 
+        qty: i.qty + qty,
+        // Cập nhật thông tin giá giảm nếu có
+        finalPrice: product.finalPrice !== undefined ? product.finalPrice : i.finalPrice || i.price,
+        originalPrice: product.originalPrice !== undefined ? product.originalPrice : i.originalPrice || i.price,
+        discount: product.discount || i.discount || 0,
+        discountType: product.discountType || i.discountType,
+        discountValue: product.discountValue || i.discountValue,
+        slug: product.slug || i.slug // Cập nhật slug nếu có
+      } : i
     );
   } else {
     const newItem = { 
       id: productId,
       name: product.name, 
-      price: product.price, 
-      image: product.imageUrls?.[0] || product.image || '/default-product.svg', 
+      price: product.price,
+      // Lưu thông tin giá đã giảm nếu có
+      finalPrice: product.finalPrice !== undefined ? product.finalPrice : product.price,
+      originalPrice: product.originalPrice !== undefined ? product.originalPrice : product.price,
+      discount: product.discount || 0,
+      discountType: product.discountType,
+      discountValue: product.discountValue,
+      image: product.imageUrls?.[0] || product.image || '/default-product.svg',
+      slug: product.slug, // Lưu slug để fetch direct coupon
       qty 
     };
     globalCartState.items = [...globalCartState.items, newItem];

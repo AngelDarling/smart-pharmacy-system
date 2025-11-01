@@ -12,6 +12,8 @@ const CouponSchema = new mongoose.Schema({
   usageLimit: { type: Number, default: 0 },
   usedCount: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
+  isDirectApply: { type: Boolean, default: false }, // Áp dụng trực tiếp cho sản phẩm
+  productSlug: { type: String, trim: true }, // Slug sản phẩm nếu áp dụng trực tiếp
 }, { timestamps: true });
 
 CouponSchema.index({ code: 1 }, { unique: true });

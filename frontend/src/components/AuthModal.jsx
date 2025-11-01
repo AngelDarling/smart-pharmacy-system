@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import Swal from "sweetalert2";
+import TextField from "@mui/material/TextField";
+import Box from "@mui/material/Box";
+import { getImageUrl } from "../utils/imageUtils";
 
 export default function AuthModal({ isOpen, onClose }) {
   const { login, register } = useAuth();
@@ -14,6 +17,11 @@ export default function AuthModal({ isOpen, onClose }) {
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [imageErrors, setImageErrors] = useState({
+    freeShipping: false,
+    prescriptionMedicine: false,
+    fastDelivery: false
+  });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -186,6 +194,149 @@ export default function AuthModal({ isOpen, onClose }) {
           </p>
         </div>
 
+        {/* Promotional Features */}
+        {isLogin && (
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            gap: 16, 
+            marginBottom: 16,
+            padding: "8px 0"
+          }}>
+            {/* Feature 1: Free Shipping */}
+            <div style={{ 
+              flex: 1, 
+              display: "flex", 
+              flexDirection: "column", 
+              alignItems: "center",
+              gap: 4
+            }}>
+              <div style={{
+                width: 50,
+                height: 50,
+                borderRadius: "50%",
+                background: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 4,
+                padding: 4
+              }}>
+                {imageErrors.freeShipping ? (
+                  <div style={{ fontSize: 20, color: "#3b82f6" }}>🚚</div>
+                ) : (
+                  <img 
+                    src={getImageUrl("/uploads/introduce/free-shipping.png", "/default-product.svg")}
+                    alt="Miễn phí vận chuyển"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain"
+                    }}
+                    onError={() => setImageErrors(prev => ({ ...prev, freeShipping: true }))}
+                  />
+                )}
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontWeight: 400, color: "#1f2937", fontSize: 13, marginBottom: 2 }}>
+                  Miễn phí
+                </div>
+                <div style={{ color: "#1f2937", fontSize: 13 }}>
+                  vận chuyển
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 2: Top Prescription Medicine */}
+            <div style={{ 
+              flex: 1, 
+              display: "flex", 
+              flexDirection: "column", 
+              alignItems: "center",
+              gap: 4
+            }}>
+              <div style={{
+                width: 50,
+                height: 50,
+                borderRadius: "50%",
+                background: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 4,
+                padding: 4
+              }}>
+                {imageErrors.prescriptionMedicine ? (
+                  <div style={{ fontSize: 20, color: "#3b82f6" }}>🏆</div>
+                ) : (
+                  <img 
+                    src={getImageUrl("/uploads/introduce/prescription-medicine.png", "/default-product.svg")}
+                    alt="Số 1 thuốc kê đơn"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain"
+                    }}
+                    onError={() => setImageErrors(prev => ({ ...prev, prescriptionMedicine: true }))}
+                  />
+                )}
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontWeight: 400, color: "#1f2937", fontSize: 13, marginBottom: 2 }}>
+                  Số 1 thuốc
+                </div>
+                <div style={{ color: "#1f2937", fontSize: 13 }}>
+                  kê đơn
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 3: Fast Delivery */}
+            <div style={{ 
+              flex: 1, 
+              display: "flex", 
+              flexDirection: "column", 
+              alignItems: "center",
+              gap: 4
+            }}>
+              <div style={{
+                width: 50,
+                height: 50,
+                borderRadius: "50%",
+                background: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 4,
+                padding: 4
+              }}>
+                {imageErrors.fastDelivery ? (
+                  <div style={{ fontSize: 20, color: "#3b82f6" }}>⏰</div>
+                ) : (
+                  <img 
+                    src={getImageUrl("/uploads/introduce/fast-delivery.png", "/default-product.svg")}
+                    alt="Giao nhanh trong 1 giờ"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain"
+                    }}
+                    onError={() => setImageErrors(prev => ({ ...prev, fastDelivery: true }))}
+                  />
+                )}
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontWeight: 400, color: "#1f2937", fontSize: 13, marginBottom: 2 }}>
+                  Giao nhanh
+                </div>
+                <div style={{ color: "#1f2937", fontSize: 13 }}>
+                  trong 1 giờ
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!isLogin && (
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", marginBottom: 8, fontWeight: 500, color: "#374151" }}>
@@ -210,27 +361,31 @@ export default function AuthModal({ isOpen, onClose }) {
           </div>
         )}
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 500, color: "#374151" }}>
-            Số điện thoại *
-          </label>
-          <input
+        <Box sx={{ marginBottom: 2 }}>
+          <TextField
+            fullWidth
             type="tel"
             name="phone"
+            label="Số điện thoại"
             value={formData.phone}
             onChange={handleInputChange}
             required
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              border: "1px solid #d1d5db",
-              borderRadius: 8,
-              fontSize: 14,
-              boxSizing: "border-box"
-            }}
+            variant="outlined"
             placeholder="Nhập số điện thoại"
+            InputLabelProps={{ required: false }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+              },
+              '& .MuiInputLabel-root': {
+                fontSize: '14px',
+                '&.Mui-focused': {
+                  fontSize: '15px',
+                }
+              }
+            }}
           />
-        </div>
+        </Box>
 
         {!isLogin && (
           <div style={{ marginBottom: 16 }}>
@@ -255,27 +410,31 @@ export default function AuthModal({ isOpen, onClose }) {
           </div>
         )}
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 500, color: "#374151" }}>
-            Mật khẩu *
-          </label>
-          <input
+        <Box sx={{ marginBottom: 2 }}>
+          <TextField
+            fullWidth
             type="password"
             name="password"
+            label="Mật khẩu"
             value={formData.password}
             onChange={handleInputChange}
             required
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              border: "1px solid #d1d5db",
-              borderRadius: 8,
-              fontSize: 14,
-              boxSizing: "border-box"
-            }}
+            variant="outlined"
             placeholder="Nhập mật khẩu"
+            InputLabelProps={{ required: false }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+              },
+              '& .MuiInputLabel-root': {
+                fontSize: '14px',
+                '&.Mui-focused': {
+                  fontSize: '15px',
+                }
+              }
+            }}
           />
-        </div>
+        </Box>
 
         {!isLogin && (
           <div style={{ marginBottom: 16 }}>

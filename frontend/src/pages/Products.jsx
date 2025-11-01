@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SelectPurchaseModal from '../components/SelectPurchaseModal.jsx';
@@ -11,6 +11,7 @@ export default function Products() {
   
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const productsRef = useRef([]); // Ref to track current products for accurate skip calculation
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -95,7 +96,14 @@ export default function Products() {
     const saved = localStorage.getItem('recentlyViewed');
     if (saved) {
       try {
-        setRecentlyViewed(JSON.parse(saved));
+        const savedProducts = JSON.parse(saved);
+        // Filter out products with invalid discount (discount = 0, null, or undefined should not show badge)
+        const validProducts = savedProducts.map(p => ({
+          ...p,
+          // Ensure discount is a valid number > 0
+          discount: (p.discount && p.discount > 0) ? p.discount : 0
+        }));
+        setRecentlyViewed(validProducts);
       } catch (error) {
         console.error('Error parsing recently viewed products:', error);
       }
@@ -132,7 +140,7 @@ export default function Products() {
   const fetchProducts = useCallback(async (opts = { reset: true, nextPage: 1 }) => {
     const { reset, nextPage } = opts;
     if (reset) {
-    setLoading(true);
+      setLoading(true);
       setPage(1);
     }
     try {
@@ -141,19 +149,46 @@ export default function Products() {
         if (filters.minPrice) params.append('minPrice', filters.minPrice);
         if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
       if (filters.searchTerm && filters.searchTerm.trim()) params.append('q', filters.searchTerm.trim());
-      params.append('page', String(nextPage));
-      const pageLimit = nextPage === 1 ? initialLimit : loadMoreLimit;
+      
+      // Calculate skip based on current products count to avoid duplicates
+      let skip = 0;
+      let pageLimit = initialLimit;
+      
+      if (reset) {
+        // First page: skip = 0, limit = initialLimit
+        skip = 0;
+        pageLimit = initialLimit;
+      } else {
+        // Load more: use ref to get current products count (always up-to-date)
+        skip = productsRef.current.length;
+        pageLimit = loadMoreLimit;
+      }
+      
+      // Send skip directly to backend to avoid pagination issues with different limits
+      params.append('skip', String(skip));
       params.append('limit', String(pageLimit));
         
-        const response = await axios.get(`/api/products?${params}`);
+      console.log(`[Products] Fetching products: skip=${skip}, limit=${pageLimit}, category=${filters.category}, reset=${reset}`);
+      const response = await axios.get(`/api/products?${params}`);
       const fetchedProducts = response.data.items || [];
+      console.log(`[Products] Received ${fetchedProducts.length} products, total=${response.data.total}`);
       const sortedProducts = sortProducts(fetchedProducts, filters.sortBy);
 
       setTotal(response.data.total || 0);
       if (reset) {
         setProducts(sortedProducts);
+        productsRef.current = sortedProducts; // Update ref
+        setPage(1); // Reset page when resetting products
       } else {
-        setProducts((prev) => sortProducts([...prev, ...sortedProducts], filters.sortBy));
+        // Filter out duplicates by product ID before appending
+        setProducts((prev) => {
+          const existingIds = new Set(prev.map(p => p._id || p.id));
+          const newProducts = sortedProducts.filter(p => !existingIds.has(p._id || p.id));
+          console.log(`[Products] Adding ${newProducts.length} new products (${sortedProducts.length} fetched, ${existingIds.size} existing)`);
+          const updated = sortProducts([...prev, ...newProducts], filters.sortBy);
+          productsRef.current = updated; // Update ref
+          return updated;
+        });
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -252,6 +287,25 @@ export default function Products() {
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price);
+  };
+
+  const formatDiscountAmount = (amount) => {
+    if (amount >= 1000) {
+      const thousands = amount / 1000;
+      // Nếu là số nguyên thì không hiển thị phần thập phân
+      if (thousands % 1 === 0) {
+        return `${thousands}K`;
+      } else {
+        // Hiển thị 1 chữ số thập phân
+        return `${thousands.toFixed(1)}K`;
+      }
+    }
+    return amount.toString();
+  };
+
+  const capitalizeFirstLetter = (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
   const getSortOptions = () => [
@@ -911,7 +965,10 @@ export default function Products() {
                     overflow: 'hidden',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     transition: 'all 0.3s ease',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-4px)';
@@ -922,14 +979,14 @@ export default function Products() {
                     e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
                   }}
                 >
-                  <div style={{ position: 'relative' }}>
-                    <div style={{ padding: 8, backgroundColor: '#ffffff' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ padding: 8, backgroundColor: '#ffffff', height: 200 }}>
                     <img
                         src={getImageUrl(product.imageUrls?.[0], '/default-product.svg')}
                       alt={product.name}
                       style={{
                         width: '100%',
-                          height: 184,
+                          height: '100%',
                           objectFit: 'contain',
                           display: 'block',
                           borderRadius: 8,
@@ -941,21 +998,25 @@ export default function Products() {
                     {product.discount > 0 && (
                       <div style={{
                         position: 'absolute',
-                        top: 12,
-                        left: 12,
+                        top: 0,
+                        left: 0,
                         background: '#dc2626',
                         color: 'white',
                         padding: '6px 12px',
-                        borderRadius: 20,
+                        borderTopLeftRadius: 12,
+                        borderBottomRightRadius: 12,
                         fontSize: 12,
-                        fontWeight: 700
+                        fontWeight: 700,
+                        zIndex: 1
                       }}>
-                        -{product.discount}%
+                        {product.discountType === 'amount' 
+                          ? `-${formatDiscountAmount(product.discountValue)}` 
+                          : `-${product.discount}%`}
                       </div>
                     )}
                   </div>
                   
-                  <div style={{ padding: 16 }}>
+                  <div style={{ padding: 16, display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <h3 style={{
                       margin: '0 0 10px',
                       fontSize: 15,
@@ -966,49 +1027,60 @@ export default function Products() {
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      minHeight: '42px'
+                      minHeight: '42px',
+                      flexShrink: 0
                     }}>
                       {product.name}
                     </h3>
                     
-                    <div style={{ marginBottom: 10 }}>
+                    <div style={{ marginBottom: 10, flexShrink: 0 }}>
+                      {/* Giá xanh luôn ở vị trí này để thẳng hàng */}
                       <div style={{ 
                         display: 'flex', 
                         alignItems: 'baseline', 
                         gap: 6, 
-                        marginBottom: 2,
-                        flexWrap: 'wrap'
+                        marginBottom: 4,
+                        flexWrap: 'wrap',
+                        height: '24px'
                       }}>
                         <span style={{ 
                           fontSize: 18, 
                           fontWeight: 700, 
-                          color: '#dc2626',
+                          color: '#3b82f6',
                           lineHeight: 1.2
                         }}>
-                          {formatPrice(product.price)}₫
+                          {product.discount > 0 && product.finalPrice !== undefined 
+                            ? formatPrice(product.finalPrice) 
+                            : formatPrice(product.price)}₫
                         </span>
-                        <span style={{ fontSize: 13, color: '#6b7280' }}>
+                        <span style={{ fontSize: 13, color: '#3b82f6' }}>
                           / {product.unit || 'cái'}
                         </span>
                       </div>
-                      {product.discount > 0 && (
-                        <div style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.2 }}>
+                      {/* Giá gốc chỉ hiển thị khi có discount */}
+                      {product.discount > 0 && product.originalPrice !== undefined && (
+                        <div style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.2, height: '18px' }}>
                           <span style={{ textDecoration: 'line-through' }}>
-                            {formatPrice(Math.round(product.price / (1 - product.discount / 100)))}₫
+                            {formatPrice(product.originalPrice)}₫
                           </span>
                         </div>
                       )}
                     </div>
                     
-                    <div style={{ 
-                      fontSize: 13, 
-                      color: '#6b7280',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      marginBottom: 14
-                    }}>
-                      {product.categoryId?.name || 'Khác'}
+                    <div style={{ marginBottom: 14, flexShrink: 0 }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '4px 10px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#374151',
+                        backgroundColor: '#f3f4f6',
+                        borderRadius: 6,
+                        border: 'none',
+                        cursor: 'default'
+                      }}>
+                        {capitalizeFirstLetter(product.unit || 'cái')}
+                      </span>
                     </div>
                     
                     <button
@@ -1023,7 +1095,8 @@ export default function Products() {
                         fontSize: 14,
                         fontWeight: 600,
                         cursor: 'pointer',
-                        transition: 'background-color 0.2s'
+                        transition: 'background-color 0.2s',
+                        marginTop: 'auto'
                       }}
                       onMouseEnter={(e) => e.target.style.background = '#2563eb'}
                       onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
@@ -1081,16 +1154,20 @@ export default function Products() {
                     {product.discount > 0 && (
                       <div style={{
                         position: 'absolute',
-                        top: 12,
-                        left: 12,
+                        top: 0,
+                        left: 0,
                         background: '#dc2626',
                         color: 'white',
                         padding: '6px 12px',
-                        borderRadius: 20,
+                        borderTopLeftRadius: 12,
+                        borderBottomRightRadius: 12,
                         fontSize: 12,
-                        fontWeight: 700
+                        fontWeight: 700,
+                        zIndex: 1
                       }}>
-                        -{product.discount}%
+                        {product.discountType === 'amount' 
+                          ? `-${formatDiscountAmount(product.discountValue)}` 
+                          : `-${product.discount}%`}
             </div>
           )}
         </div>
@@ -1108,36 +1185,49 @@ export default function Products() {
                         {product.name}
                       </h3>
                       
-                      <div style={{ 
-                        fontSize: 13, 
-                        color: '#6b7280', 
-                        marginBottom: 12
-                      }}>
-                        {product.categoryId?.name || 'Khác'}
+                      <div style={{ marginBottom: 12 }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 10px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#374151',
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: 6,
+                          border: 'none',
+                          cursor: 'default'
+                        }}>
+                          {capitalizeFirstLetter(product.unit || 'cái')}
+                        </span>
       </div>
                       
                       <div style={{ marginBottom: 12 }}>
+                        {/* Giá xanh luôn ở vị trí này để thẳng hàng */}
                         <div style={{ 
                           display: 'flex', 
                           alignItems: 'baseline', 
                           gap: 8, 
-                          marginBottom: 4
+                          marginBottom: 4,
+                          height: '32px'
                         }}>
                           <span style={{ 
                             fontSize: 24, 
                             fontWeight: 700, 
-                            color: '#dc2626'
+                            color: '#3b82f6'
                           }}>
-                            {formatPrice(product.price)}₫
+                            {product.discount > 0 && product.finalPrice !== undefined 
+                              ? formatPrice(product.finalPrice) 
+                              : formatPrice(product.price)}₫
                           </span>
-                          <span style={{ fontSize: 14, color: '#6b7280' }}>
+                          <span style={{ fontSize: 14, color: '#3b82f6' }}>
                             / {product.unit || 'cái'}
                           </span>
                         </div>
-                        {product.discount > 0 && (
-                          <div style={{ fontSize: 14, color: '#9ca3af' }}>
+                        {/* Giá gốc chỉ hiển thị khi có discount */}
+                        {product.discount > 0 && product.originalPrice !== undefined && (
+                          <div style={{ fontSize: 14, color: '#9ca3af', height: '20px' }}>
                             <span style={{ textDecoration: 'line-through' }}>
-                              {formatPrice(Math.round(product.price / (1 - product.discount / 100)))}₫
+                              {formatPrice(product.originalPrice)}₫
                             </span>
                           </div>
                         )}
@@ -1174,9 +1264,11 @@ export default function Products() {
               <button
                 onClick={async () => {
                   setLoadingMore(true);
-                  const next = page + 1;
-                  setPage(next);
+                  // Calculate next page based on current products count
+                  const currentPage = Math.ceil(products.length / initialLimit);
+                  const next = currentPage + 1;
                   await fetchProducts({ reset: false, nextPage: next });
+                  setPage(next);
                 }}
                 disabled={loadingMore}
                 style={{
@@ -1311,7 +1403,10 @@ export default function Products() {
                                 boxShadow: '0 4px 16px rgba(0,0,0,0.08)', 
                                 position: 'relative', 
                                 cursor: 'pointer', 
-                                transition: 'all 0.3s ease' 
+                                transition: 'all 0.3s ease',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                height: '100%'
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = 'translateY(-4px)';
@@ -1322,24 +1417,48 @@ export default function Products() {
                                 e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)';
                               }}
                             >
-                              {product.discount && product.discount > 0 && (
-                                <div style={{ position: 'absolute', top: 8, left: 8, background: '#ef4444', color: 'white', padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
-                                  -{product.discount}%
+                              {product.discount > 0 && (
+                                <div style={{ 
+                                  position: 'absolute', 
+                                  top: 0, 
+                                  left: 0, 
+                                  background: '#ef4444', 
+                                  color: 'white', 
+                                  padding: '4px 8px', 
+                                  borderTopLeftRadius: 12,
+                                  borderBottomRightRadius: 12,
+                                  fontSize: 12, 
+                                  fontWeight: 700, 
+                                  zIndex: 1 
+                                }}>
+                                  {product.discountType === 'amount' 
+                                    ? `-${formatDiscountAmount(product.discountValue)}` 
+                                    : `-${product.discount}%`}
                                 </div>
                               )}
-                              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, flexShrink: 0 }}>
                                 <img 
-                                  src={getImageUrl(product.images?.[0], '/default-product.png')} 
+                                  src={getImageUrl(product.imageUrls?.[0] || product.images?.[0], '/default-product.png')} 
                                   alt={product.name} 
                                   style={{ maxWidth: '100%', maxHeight: 180, objectFit: 'contain' }}
                                   onError={handleImageError}
                                 />
                               </div>
-                              <div style={{ fontSize: 14, fontWeight: 600, minHeight: 44, color: '#0f172a', marginBottom: 10 }}>{product.name}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                                <span style={{ color: '#0ea5e9', fontWeight: 800, fontSize: 16 }}>{formatPrice(product.price)}₫</span>
-                                {product.originalPrice && product.originalPrice > product.price && (
-                                  <span style={{ color: '#9ca3af', textDecoration: 'line-through', fontSize: 13 }}>{formatPrice(product.originalPrice)}₫</span>
+                              <div style={{ fontSize: 14, fontWeight: 600, height: 44, color: '#0f172a', marginBottom: 10, flexShrink: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '22px' }}>{product.name}</div>
+                              <div style={{ marginBottom: 10, flexShrink: 0 }}>
+                                {/* Giá xanh luôn ở vị trí này để thẳng hàng */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: '24px', marginBottom: 4 }}>
+                                  <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: 16 }}>
+                                    {product.discount > 0 && product.finalPrice !== undefined 
+                                      ? formatPrice(product.finalPrice) 
+                                      : formatPrice(product.price)}₫
+                                  </span>
+                                </div>
+                                {/* Giá gốc chỉ hiển thị khi có discount */}
+                                {product.discount > 0 && product.originalPrice !== undefined && (
+                                  <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', height: '18px' }}>
+                                    {formatPrice(product.originalPrice)}₫
+                                  </div>
                                 )}
                               </div>
                               <button 
@@ -1348,7 +1467,6 @@ export default function Products() {
                                   handleBuyClick(e, product);
                                 }}
                                 style={{ 
-                                  marginTop: 10, 
                                   width: '100%', 
                                   background: '#2563eb', 
                                   color: 'white', 
@@ -1357,7 +1475,9 @@ export default function Products() {
                                   borderRadius: 8, 
                                   cursor: 'pointer', 
                                   fontWeight: 600,
-                                  transition: 'background-color 0.2s'
+                                  transition: 'background-color 0.2s',
+                                  marginTop: 'auto',
+                                  flexShrink: 0
                                 }}
                                 onMouseEnter={(e) => e.target.style.background = '#1d4ed8'}
                                 onMouseLeave={(e) => e.target.style.background = '#2563eb'}

@@ -218,7 +218,19 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
                       }}
                     >
                         {p.monthQuantity > 0 && (
-                          <div style={{ position: "absolute", top: 8, left: 8, background: "#ef4444", color: "white", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
+                          <div style={{ 
+                            position: "absolute", 
+                            top: 0, 
+                            left: 0, 
+                            background: "#ef4444", 
+                            color: "white", 
+                            padding: "4px 8px", 
+                            borderTopLeftRadius: 12,
+                            borderBottomRightRadius: 12,
+                            fontSize: 12, 
+                            fontWeight: 700,
+                            zIndex: 1
+                          }}>
                             -{Math.min(35, Math.round((p.compareAtPrice && p.compareAtPrice > p.price) ? (1 - p.price / p.compareAtPrice) * 100 : 0))}%
                           </div>
                         )}

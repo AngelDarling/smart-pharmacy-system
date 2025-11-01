@@ -141,8 +141,9 @@ export async function getById(req, res) {
     const userId = req.user?.id;
 
   const order = await Order.findById(orderId)
-      .populate("items.productId", "name image")
+      .populate("items.productId", "name imageUrls")
       .populate("shipment", "shippingCode status timeline")
+      .populate("couponId", "code description discountType discountValue")
       .lean();
 
     if (!order) {
@@ -201,6 +202,7 @@ export async function updateStatus(req, res) {
     const populated = await Order.findById(order._id)
       .populate("items.productId", "name imageUrls")
       .populate("shipment", "shippingCode status timeline")
+      .populate("couponId", "code description discountType discountValue")
       .lean();
     res.json(populated);
   } catch (error) {
@@ -362,6 +364,7 @@ export async function adminList(req, res) {
         .populate("userId", "name phone role")
         .populate("items.productId", "name imageUrls price slug")
         .populate("shipment", "shippingCode status")
+        .populate("couponId", "code description discountType discountValue")
         .lean(),
       Order.countDocuments(filters),
     ]);

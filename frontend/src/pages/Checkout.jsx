@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
@@ -80,10 +80,35 @@ const ChevronDownIcon = () => (
 // const API_HOST = "https://provinces.open-api.vn/api/v2/";
 
 export default function Checkout() {
-  const { items, total, clear } = useCart();
+  const { items: allItems, clear } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const skipEmptyCartRedirectRef = useRef(false);
+  
+  // Lấy danh sách sản phẩm đã chọn từ localStorage (chỉ đọc một lần khi mount)
+  const [savedSelectedIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('checkoutSelectedItems');
+      if (saved) {
+        const ids = JSON.parse(saved);
+        // Xóa sau khi đọc
+        localStorage.removeItem('checkoutSelectedItems');
+        return ids;
+      }
+    } catch (e) {
+      console.error('Error reading selected items:', e);
+    }
+    return null; // null nghĩa là dùng tất cả items
+  });
+  
+  // Filter items chỉ lấy những sản phẩm đã chọn
+  const items = useMemo(() => {
+    if (savedSelectedIds) {
+      return allItems.filter(item => savedSelectedIds.includes(item.id));
+    }
+    // Nếu không có selectedItems đã lưu, dùng tất cả items
+    return allItems;
+  }, [allItems, savedSelectedIds]);
   
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
@@ -192,6 +217,7 @@ export default function Checkout() {
 
   useEffect(() => {
     if (items.length === 0 && !skipEmptyCartRedirectRef.current) {
+      // Nếu không có sản phẩm được chọn, quay về giỏ hàng
       navigate("/cart");
     }
   }, [items, navigate]);
@@ -446,7 +472,7 @@ export default function Checkout() {
     const wardName = wards.find(w => w.code === formData.ward)?.name || formData.ward;
 
     const finalAddress = [formData.address, wardName, districtName, cityName].filter(Boolean).join(", ");
-    const shippingFeeValue = total >= 300000 ? 0 : 30000;
+    const shippingFeeValue = itemsSubtotal >= 300000 ? 0 : 30000;
     const payload = {
       shippingAddress: {
         fullName: formData.fullName,
@@ -456,14 +482,25 @@ export default function Checkout() {
         note: formData.note
       },
       paymentMethod: formData.paymentMethod || 'cod',
-      items: items.map(i => ({
-        productId: i.id,
-        nameSnapshot: i.name,
-        priceSnapshot: i.price,
-        quantity: i.qty
-      })),
+      items: items.map(i => {
+        // Sử dụng giá đã giảm nếu có
+        const hasDiscount = i.finalPrice !== undefined && i.finalPrice < i.price && (i.discount > 0 || i.originalPrice > i.finalPrice);
+        const itemPrice = hasDiscount ? i.finalPrice : i.price;
+        const originalPrice = hasDiscount ? (i.originalPrice || i.price) : null;
+        
+        return {
+          productId: i.id,
+          nameSnapshot: i.name,
+          priceSnapshot: itemPrice, // Giá đã giảm
+          originalPriceSnapshot: originalPrice, // Giá gốc (nếu có giảm giá)
+          quantity: i.qty,
+          discount: i.discount || 0,
+          discountType: i.discountType,
+          discountValue: i.discountValue
+        };
+      }),
       totals: {
-        items: total,
+        items: itemsSubtotal,
         discount: couponDiscount,
         shipping: shippingFeeValue,
         grand: grandTotal
@@ -502,8 +539,25 @@ export default function Checkout() {
     return null;
   }
 
-  const shippingFee = total >= 300000 ? 0 : 30000;
-  const grandTotal = total + shippingFee - couponDiscount;
+  // Tính toán lại subtotal dựa trên giá đã giảm
+  const itemsSubtotal = items.reduce((sum, item) => {
+    const itemPrice = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice)
+      ? item.finalPrice 
+      : item.price;
+    return sum + itemPrice * item.qty;
+  }, 0);
+  
+  // Tính tổng tiết kiệm từ giá giảm sản phẩm
+  const productSavings = items.reduce((sum, item) => {
+    if (item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice)) {
+      const originalPrice = item.originalPrice || item.price;
+      return sum + (originalPrice - item.finalPrice) * item.qty;
+    }
+    return sum;
+  }, 0);
+  
+  const shippingFee = itemsSubtotal >= 300000 ? 0 : 30000;
+  const grandTotal = itemsSubtotal + shippingFee - couponDiscount;
 
   // Validate và áp dụng mã khuyến mãi
   async function handleApplyCoupon() {
@@ -516,10 +570,19 @@ export default function Checkout() {
       });
       return;
     }
+    
+    // Tính itemsSubtotal trước khi validate coupon
+    const currentItemsSubtotal = items.reduce((sum, item) => {
+      const itemPrice = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice)
+        ? item.finalPrice 
+        : item.price;
+      return sum + itemPrice * item.qty;
+    }, 0);
+    
     try {
       const res = await api.post("/coupons/validate", {
         code: couponCode.trim().toUpperCase(),
-        orderTotal: total
+        orderTotal: currentItemsSubtotal // Sử dụng giá đã giảm trực tiếp thay vì giá gốc
       });
       if (res.data.valid) {
         setAppliedCoupon(res.data.coupon);
@@ -1352,7 +1415,26 @@ export default function Checkout() {
                       <div style={styles.itemQty}>Số lượng: {item.qty}</div>
                     </div>
                   </div>
-                  <div style={styles.itemPrice}>{(item.price * item.qty).toLocaleString()}₫</div>
+                  <div style={styles.itemPrice}>
+                    {(() => {
+                      const hasDiscount = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice);
+                      const itemPrice = hasDiscount ? item.finalPrice : item.price;
+                      const originalPrice = hasDiscount ? (item.originalPrice || item.price) : null;
+                      
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                          <span style={{ color: '#3b82f6', fontWeight: 600 }}>
+                            {(itemPrice * item.qty).toLocaleString()}₫
+                          </span>
+                          {originalPrice && (
+                            <span style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>
+                              {(originalPrice * item.qty).toLocaleString()}₫
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1360,8 +1442,16 @@ export default function Checkout() {
             <div style={styles.summaryBreakdown}>
               <div style={styles.summaryRow}>
                 <span>Tạm tính:</span>
-                <span>{total.toLocaleString()}₫</span>
+                <span>{itemsSubtotal.toLocaleString()}₫</span>
               </div>
+              {productSavings > 0 && (
+                <div style={styles.summaryRow}>
+                  <span>Tiết kiệm từ sản phẩm:</span>
+                  <span style={{ color: "#10b981" }}>
+                    -{productSavings.toLocaleString()}₫
+                  </span>
+                </div>
+              )}
               <div style={styles.summaryRow}>
                 <span>Phí vận chuyển:</span>
                 <span style={{ color: shippingFee === 0 ? "#10b981" : "#6b7280" }}>

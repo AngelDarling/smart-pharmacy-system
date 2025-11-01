@@ -4,8 +4,12 @@ const orderItemSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
     nameSnapshot: { type: String, required: true },
-    priceSnapshot: { type: Number, required: true },
-    quantity: { type: Number, required: true }
+    priceSnapshot: { type: Number, required: true }, // Giá đã giảm (finalPrice)
+    originalPriceSnapshot: { type: Number }, // Giá gốc (nếu có giảm giá)
+    quantity: { type: Number, required: true },
+    discount: { type: Number, default: 0 }, // Phần trăm giảm giá sản phẩm
+    discountType: { type: String }, // 'percent' hoặc 'amount'
+    discountValue: { type: Number } // Giá trị giảm giá
   },
   { _id: false }
 );

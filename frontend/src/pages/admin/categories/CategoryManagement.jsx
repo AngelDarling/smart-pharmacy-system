@@ -135,22 +135,78 @@ const CategoryManagement = () => {
     }
   };
 
-  // Filter tree data based on search
+  // Helper function to find a node and its path (ancestors) in the tree
+  const findNodeAndPath = (data, searchText, ancestors = []) => {
+    try {
+      if (!data || !Array.isArray(data)) return null;
+      
+      for (const item of data) {
+        if (!item) continue;
+        
+        const matches = item.name && item.name.toLowerCase().includes(searchText.toLowerCase());
+        
+        if (matches) {
+          // Found matching node, return it with its ancestors
+          return {
+            node: item,
+            ancestors: ancestors,
+            path: [...ancestors, item]
+          };
+        }
+        
+        // Search in children
+        if (item.children && item.children.length > 0) {
+          const found = findNodeAndPath(item.children, searchText, [...ancestors, item]);
+          if (found) return found;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error finding node:', error);
+      return null;
+    }
+  };
+
+  // Filter tree data based on search - show matching node with its parent and children
   const filterTreeData = (data, searchText) => {
     try {
       if (!searchText || !data || !Array.isArray(data)) return data || [];
       
-      return data.filter(item => {
-        if (!item) return false;
-        const matches = item.name && item.name.toLowerCase().includes(searchText.toLowerCase());
-        const hasMatchingChildren = item.children && 
-          filterTreeData(item.children, searchText).length > 0;
+      const searchLower = searchText.toLowerCase();
+      
+      // Recursive function to filter tree
+      // Returns node if it matches or has matching descendants, or if it's a parent of a matching node
+      const filterNode = (node) => {
+        if (!node) return null;
         
-        return matches || hasMatchingChildren;
-      }).map(item => ({
-        ...item,
-        children: item.children ? filterTreeData(item.children, searchText) : []
-      }));
+        const nodeMatches = node.name && node.name.toLowerCase().includes(searchLower);
+        
+        // Filter children recursively first
+        const filteredChildren = node.children && node.children.length > 0
+          ? node.children.map(filterNode).filter(Boolean)
+          : [];
+        
+        const hasMatchingChildren = filteredChildren.length > 0;
+        
+        // Include node if:
+        // 1. Node itself matches (include all its children, but filter them too)
+        // 2. Node has matching children (include as parent context)
+        if (nodeMatches || hasMatchingChildren) {
+          return {
+            ...node,
+            children: nodeMatches 
+              ? (node.children && node.children.length > 0
+                  ? node.children.map(filterNode).filter(Boolean) // Filter children even if parent matches
+                  : [])
+              : filteredChildren // If only children match, show only filtered children
+          };
+        }
+        
+        return null;
+      };
+      
+      return data.map(filterNode).filter(Boolean);
     } catch (error) {
       console.error('Error filtering tree data:', error);
       return data || [];
@@ -284,7 +340,7 @@ const CategoryManagement = () => {
   // Tree title render
   const renderTreeTitle = (nodeData) => {
     try {
-      const { name, isActive, level, slug, description, iconUrl } = nodeData;
+      const { name, isActive, level, slug, description, iconUrl, productCount } = nodeData;
       
       const actionMenu = [
         {
@@ -353,6 +409,14 @@ const CategoryManagement = () => {
                 marginBottom: 4
               }}>
                 {slug && `/${slug}`}
+              </div>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#1890ff',
+                fontWeight: 500,
+                marginBottom: description ? 2 : 0
+              }}>
+                {productCount !== undefined ? `${productCount} sản phẩm` : '0 sản phẩm'}
               </div>
               {description && (
                 <div style={{ 
