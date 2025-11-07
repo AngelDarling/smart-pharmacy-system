@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client.js";
 import { getImageUrl, handleImageError } from "../utils/imageUtils";
@@ -9,8 +9,11 @@ export default function Landing() {
   const navigate = useNavigate();
   const [bestSellers, setBestSellers] = useState([]);
   const [todayFeatured, setTodayFeatured] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [healthChecks, setHealthChecks] = useState([]);
   const [page, setPage] = useState(0); // 0 or 1
   const [todayPage, setTodayPage] = useState(0); // 0 or 1 for today featured
+  const [brandScrollRef, setBrandScrollRef] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -21,6 +24,25 @@ export default function Landing() {
     }).catch((err) => {
       console.error('Error fetching today featured:', err);
       setTodayFeatured([]);
+    });
+    // Fetch brands for favorite brands section
+    api.get("/brands?isActive=true&limit=20").then((res) => {
+      const items = res.data.items || res.data || [];
+      // Sort by productCount descending to get popular brands
+      const sortedBrands = items
+        .filter(b => b.productCount > 0)
+        .sort((a, b) => (b.productCount || 0) - (a.productCount || 0));
+      setBrands(sortedBrands);
+    }).catch((err) => {
+      console.error('Error fetching brands:', err);
+      setBrands([]);
+    });
+    // Fetch health checks
+    api.get("/health-checks").then((res) => {
+      setHealthChecks(res.data.items || []);
+    }).catch((err) => {
+      console.error('Error fetching health checks:', err);
+      setHealthChecks([]);
     });
   }, []);
 
@@ -51,6 +73,11 @@ export default function Landing() {
       />
       <BannerSection />
       <FeaturedCategoriesSection />
+      <FavoriteBrandsSection 
+        brands={brands}
+        scrollRef={brandScrollRef}
+        onScrollRef={setBrandScrollRef}
+      />
       <TodayFeaturedSection 
         products={todayFeatured}
         page={todayPage}
@@ -62,7 +89,7 @@ export default function Landing() {
         onProductClick={handleProductClick}
         onBuyClick={handleBuyClick}
       />
-      <HealthCheckSection />
+      <HealthCheckSection healthChecks={healthChecks} />
       <DiseaseLookupSection />
       <HealthNewsSection />
       <BrandSection />
@@ -217,36 +244,39 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
                         e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
                       }}
                     >
-                        {p.monthQuantity > 0 && (
-                          <div style={{ 
-                            position: "absolute", 
-                            top: 0, 
-                            left: 0, 
-                            background: "#ef4444", 
-                            color: "white", 
-                            padding: "4px 8px", 
+                                                                                                {p.discount > 0 && (
+                          <div style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            background: "#ef4444",
+                            color: "white",
+                            padding: "4px 8px",
                             borderTopLeftRadius: 12,
                             borderBottomRightRadius: 12,
-                            fontSize: 12, 
+                            fontSize: 12,
                             fontWeight: 700,
                             zIndex: 1
                           }}>
-                            -{Math.min(35, Math.round((p.compareAtPrice && p.compareAtPrice > p.price) ? (1 - p.price / p.compareAtPrice) * 100 : 0))}%
+                            {p.discountType === 'amount' && p.discountValue ? 
+                              `-${(p.discountValue / 1000).toFixed(0)}K` : 
+                              `-${p.discount}%`
+                            }
                           </div>
                         )}
-                        <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-                          <img 
-                            src={getImageUrl(p.imageUrls?.[0], "/default-product.png")} 
-                            alt={p.name} 
-                            style={{ maxWidth: "100%", maxHeight: 180, objectFit: "contain" }}
-                            onError={(e) => handleImageError(e, "/default-product.png")}
+                        <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>                        
+                          <img
+                            src={getImageUrl(p.imageUrls?.[0], "/default-product.png")}                                                                         
+                            alt={p.name}
+                            style={{ maxWidth: "100%", maxHeight: 180, objectFit: "contain" }}                                                                  
+                            onError={(e) => handleImageError(e, "/default-product.png")}                                                                        
                           />
                         </div>
-                        <div style={{ fontSize: 14, fontWeight: 600, minHeight: 44, color: "#0f172a", marginBottom: 10 }}>{p.name}</div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                          <span style={{ color: "#0ea5e9", fontWeight: 800, fontSize: 16 }}>{p.price?.toLocaleString()}₫</span>
-                          {p.compareAtPrice && p.compareAtPrice > p.price && (
-                            <span style={{ color: "#9ca3af", textDecoration: "line-through", fontSize: 13 }}>{p.compareAtPrice.toLocaleString()}₫</span>
+                        <div style={{ fontSize: 14, fontWeight: 600, minHeight: 44, color: "#0f172a", marginBottom: 10 }}>{p.name}</div>                        
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>                                                       
+                          <span style={{ color: "#0ea5e9", fontWeight: 800, fontSize: 16 }}>{(p.finalPrice || p.price)?.toLocaleString()}₫</span>                                 
+                          {p.discount > 0 && p.originalPrice && p.originalPrice > (p.finalPrice || p.price) && (  
+                            <span style={{ color: "#9ca3af", textDecoration: "line-through", fontSize: 13 }}>{p.originalPrice.toLocaleString()}₫</span>        
                           )}
                         </div>
                         <button 
@@ -281,24 +311,266 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
   );
 }
 
-function HealthCheckSection() {
+function HealthCheckSection({ healthChecks }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const pageSize = 3;
+  const totalPages = Math.ceil((healthChecks?.length || 0) / pageSize);
+  const showLeftBtn = currentIndex > 0;
+  const showRightBtn = currentIndex < totalPages - 1;
+
+  const scrollLeft = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const scrollRight = () => {
+    if (currentIndex < totalPages - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  if (!healthChecks || healthChecks.length === 0) {
+    return null;
+  }
+
+  const visibleChecks = healthChecks.slice(
+    currentIndex * pageSize,
+    (currentIndex + 1) * pageSize
+  );
+
   return (
-    <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "60px 0", color: "white" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", textAlign: "center" }}>
-        <h2 style={{ margin: "0 0 20px", fontSize: 36, fontWeight: 700 }}>Kiểm tra sức khỏe</h2>
-        <p style={{ fontSize: 18, margin: "0 0 40px", opacity: 0.9 }}>Đội ngũ bác sĩ chuyên khoa tư vấn miễn phí</p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 40, flexWrap: "wrap" }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 10 }}>🩺</div>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>Tư vấn sức khỏe</div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 10 }}>💊</div>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>Kê đơn thuốc</div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 10 }}>📋</div>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>Xét nghiệm</div>
+    <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "60px 0", color: "white", position: "relative" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <h2 style={{ margin: "0 0 20px", fontSize: 36, fontWeight: 700 }}>Kiểm tra sức khỏe</h2>
+          <p style={{ fontSize: 18, margin: "0 0 20px", opacity: 0.9 }}>
+            Kết quả đánh giá sẽ cho bạn lời khuyên xử trí phù hợp!
+          </p>
+        </div>
+
+        <div style={{ position: "relative" }}>
+          {/* Left scroll button */}
+          {showLeftBtn && (
+            <button
+              onClick={scrollLeft}
+              style={{
+                position: "absolute",
+                left: -20,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "rgba(255,255,255,0.95)",
+                border: "none",
+                borderRadius: "50%",
+                width: 48,
+                height: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 10,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                transition: "all 0.3s ease",
+                color: "#2ca4ff"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "white";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.95)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+              }}
+            >
+              <span style={{ fontSize: 24, fontWeight: 700 }}>‹</span>
+            </button>
+          )}
+
+          {/* Right scroll button */}
+          {showRightBtn && (
+            <button
+              onClick={scrollRight}
+              style={{
+                position: "absolute",
+                right: -20,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "rgba(255,255,255,0.95)",
+                border: "none",
+                borderRadius: "50%",
+                width: 48,
+                height: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 10,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                transition: "all 0.3s ease",
+                color: "#2ca4ff"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "white";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.95)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+              }}
+            >
+              <span style={{ fontSize: 24, fontWeight: 700 }}>›</span>
+            </button>
+          )}
+
+          {/* Scrollable wrapper */}
+          <div
+            style={{
+              overflow: "hidden",
+              position: "relative"
+            }}
+          >
+            {/* Inner container với slide animation */}
+            <div
+              style={{
+                display: "flex",
+                gap: 0,
+                transform: `translateX(-${currentIndex * 100}%)`,
+                transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
+              }}
+            >
+              {Array.from({ length: totalPages }).map((_, pageIndex) => {
+                const pageChecks = healthChecks.slice(
+                  pageIndex * pageSize,
+                  (pageIndex + 1) * pageSize
+                );
+                return (
+                  <div
+                    key={pageIndex}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      minWidth: "100%",
+                      flexShrink: 0,
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "0 4px"
+                    }}
+                  >
+                    {pageChecks.map((check) => (
+                      <div key={check._id || check.slug} style={{ 
+                        flex: "0 0 calc(33.333% - 8px)",
+                        maxWidth: "calc(33.333% - 8px)",
+                        boxSizing: "border-box"
+                      }}>
+                        <Link
+                          to={`/health-check/${check.slug}`}
+                          style={{
+                            textDecoration: "none",
+                            background: "white",
+                            borderRadius: 10,
+                            padding: "14px 12px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            textAlign: "center",
+                            minHeight: 220,
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                            transition: "all 0.3s ease",
+                            cursor: "pointer",
+                            height: "100%",
+                            boxSizing: "border-box"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
+                            e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.15)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0) scale(1)";
+                            e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.1)";
+                          }}
+                        >
+                          {/* Icon placeholder */}
+                          <div style={{
+                            width: 50,
+                            height: 50,
+                            borderRadius: "50%",
+                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginBottom: 10,
+                            fontSize: 24,
+                            flexShrink: 0
+                          }}>
+                            🏥
+                          </div>
+
+                          {/* Title */}
+                          <h3 style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "#2c3e50",
+                            marginBottom: 6,
+                            lineHeight: 1.3,
+                            minHeight: 36,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden"
+                          }}>
+                            {check.name}
+                          </h3>
+
+                          {/* Description */}
+                          {check.shortDescription && (
+                            <p style={{
+                              fontSize: 11,
+                              color: "#6b7280",
+                              marginBottom: 10,
+                              lineHeight: 1.3,
+                              flexGrow: 1,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden"
+                            }}>
+                              {check.shortDescription}
+                            </p>
+                          )}
+
+                          {/* Start button */}
+                          <button
+                            style={{
+                              padding: "6px 16px",
+                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: 18,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              transition: "all 0.3s ease",
+                              width: "100%",
+                              marginTop: "auto"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = "linear-gradient(135deg, #764ba2 0%, #667eea 100%)";
+                              e.currentTarget.style.transform = "translateY(-2px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+                              e.currentTarget.style.transform = "translateY(0)";
+                            }}
+                          >
+                            Bắt đầu
+                          </button>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -609,6 +881,287 @@ function FeaturedCategoriesSection() {
   );
 }
 
+function FavoriteBrandsSection({ brands, scrollRef, onScrollRef }) {
+  const scrollContainerRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const pageSize = 5;
+
+  useEffect(() => {
+    if (onScrollRef) {
+      onScrollRef(scrollContainerRef.current);
+    }
+  }, [onScrollRef]);
+
+  const totalPages = Math.ceil((brands?.length || 0) / pageSize);
+  const showLeftBtn = currentIndex > 0;
+  const showRightBtn = currentIndex < totalPages - 1;
+
+  const scrollLeft = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const scrollRight = () => {
+    if (currentIndex < totalPages - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  if (!brands || brands.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{ padding: "50px 0", background: "#e6f3ff" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: 12, 
+          marginBottom: 30 
+        }}>
+          <div style={{ 
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+            color: "white", 
+            padding: "8px 16px", 
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 18,
+            fontWeight: 700
+          }}>
+            <span style={{ fontSize: 24 }}>⭐</span>
+            <span>Thương hiệu yêu thích</span>
+          </div>
+        </div>
+
+        <div style={{ position: "relative" }}>
+          {/* Left scroll button */}
+          {showLeftBtn && (
+            <button
+              onClick={scrollLeft}
+              style={{
+                position: "absolute",
+                left: -20,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "rgba(255,255,255,0.95)",
+                border: "none",
+                borderRadius: "50%",
+                width: 48,
+                height: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 10,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                transition: "all 0.3s ease",
+                color: "#2ca4ff"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "white";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.95)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+              }}
+            >
+              <span style={{ fontSize: 24, fontWeight: 700 }}>‹</span>
+            </button>
+          )}
+
+          {/* Right scroll button */}
+          {showRightBtn && (
+            <button
+              onClick={scrollRight}
+              style={{
+                position: "absolute",
+                right: -20,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "rgba(255,255,255,0.95)",
+                border: "none",
+                borderRadius: "50%",
+                width: 48,
+                height: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 10,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                transition: "all 0.3s ease",
+                color: "#2ca4ff"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "white";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.95)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+              }}
+            >
+              <span style={{ fontSize: 24, fontWeight: 700 }}>›</span>
+            </button>
+          )}
+
+          {/* Scrollable wrapper */}
+          <div
+            ref={scrollContainerRef}
+            style={{
+              overflow: "hidden",
+              position: "relative"
+            }}
+          >
+            {/* Inner container với slide animation */}
+            <div
+              style={{
+                display: "flex",
+                gap: 20,
+                transform: `translateX(-${currentIndex * 100}%)`,
+                transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
+              }}
+            >
+              {Array.from({ length: totalPages }).map((_, pageIndex) => {
+                const pageBrands = brands.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+                return (
+                  <div
+                    key={pageIndex}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(${pageBrands.length}, 1fr)`,
+                      gap: 20,
+                      minWidth: "100%",
+                      flexShrink: 0
+                    }}
+                  >
+                    {pageBrands.map((brand) => {
+              const logoSrc = brand.logoUrl 
+                ? (brand.logoUrl.startsWith('http') ? brand.logoUrl : `http://localhost:5000${brand.logoUrl}`)
+                : null;
+              
+              return (
+                <Link
+                  key={brand._id || brand.slug}
+                  to={`/catalog?brandSlug=${brand.slug}`}
+                  style={{
+                    textDecoration: "none",
+                    background: "white",
+                    borderRadius: 12,
+                    padding: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center",
+                    minWidth: 200,
+                    width: 200,
+                    minHeight: 220,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    transition: "all 0.3s ease",
+                    cursor: "pointer",
+                    position: "relative",
+                    overflow: "hidden",
+                    flexShrink: 0
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
+                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0) scale(1)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+                  }}
+                >
+                  {/* Brand Logo/Image */}
+                  <div style={{
+                    width: "100%",
+                    height: 120,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 16
+                  }}>
+                    {logoSrc ? (
+                      <img
+                        src={logoSrc}
+                        alt={brand.name}
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                          objectFit: "contain"
+                        }}
+                        onError={(e) => {
+                          console.log('Failed to load brand logo:', logoSrc);
+                          e.target.style.display = 'none';
+                          if (e.target.nextSibling) {
+                            e.target.nextSibling.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <div style={{
+                      width: "100%",
+                      height: "100%",
+                      display: logoSrc ? 'none' : 'flex',
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      borderRadius: 8,
+                      color: "white",
+                      fontSize: 32,
+                      fontWeight: 700
+                    }}>
+                      {brand.name?.charAt(0) || '?'}
+                    </div>
+                  </div>
+
+                  {/* Brand Name */}
+                  <div style={{
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "#2c3e50",
+                    marginBottom: 8,
+                    lineHeight: 1.3,
+                    minHeight: 40,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
+                  }}>
+                    {brand.name}
+                  </div>
+
+                  {/* Product Count */}
+                  {brand.productCount > 0 && (
+                    <div style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                      fontWeight: 500
+                    }}>
+                      {brand.productCount} sản phẩm
+                    </div>
+                  )}
+                </Link>
+                    );
+                  })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BrandSection() {
   const brands = ["BRAUER", "OcuMi", "Tảo Spirulina", "Viên uống collagen", "Omega 3", "Vitamin D3"];
 
@@ -747,9 +1300,9 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
                 }}
                 onClick={() => onProductClick(product)}
               >
-                <div style={{ position: "relative", height: 180, marginBottom: 12 }}>
+                                <div style={{ position: "relative", height: 180, marginBottom: 12 }}>                                                                           
                   <img
-                    src={getImageUrl(product.productImage || product.images?.[0])}
+                    src={getImageUrl(product.productImage || product.images?.[0] || product.imageUrls?.[0])}                                                                              
                     alt={product.name}
                     style={{
                       width: "100%",
@@ -759,24 +1312,44 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
                     }}
                     onError={handleImageError}
                   />
-                  {product.todaySales && (
+                  {product.discount > 0 && (
                     <div style={{
                       position: "absolute",
                       top: 8,
+                      left: 8,
+                      background: "#ef4444",
+                      color: "white",
+                      padding: "4px 8px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      zIndex: 1
+                    }}>
+                      {product.discountType === 'amount' && product.discountValue ? 
+                        `-${(product.discountValue / 1000).toFixed(0)}K` : 
+                        `-${product.discount}%`
+                      }
+                    </div>
+                  )}
+                  {product.todaySales && (
+                    <div style={{
+                      position: "absolute",
+                      top: product.discount > 0 ? 40 : 8,
                       left: 8,
                       background: "#ff4757",
                       color: "white",
                       padding: "4px 8px",
                       borderRadius: 4,
                       fontSize: 12,
-                      fontWeight: 600
+                      fontWeight: 600,
+                      zIndex: 1
                     }}>
                       Bán {product.todaySales}
                     </div>
                   )}
                 </div>
-                
-                <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+
+                <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>                                                                             
                   <h3 style={{
                     fontSize: 14,
                     fontWeight: 600,
@@ -790,19 +1363,19 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
                   }}>
                     {product.productName || product.name}
                   </h3>
-                  
+
                   <div style={{ marginTop: "auto" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                      <span style={{ color: "#ff4757", fontWeight: 700, fontSize: 16 }}>
-                        {new Intl.NumberFormat('vi-VN').format(product.productPrice || product.price)}₫
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>                                                           
+                      <span style={{ color: "#ff4757", fontWeight: 700, fontSize: 16 }}>                                                                        
+                        {new Intl.NumberFormat('vi-VN').format(product.finalPrice || product.productPrice || product.price)}₫                                                         
                       </span>
-                      {product.originalPrice && product.originalPrice > (product.productPrice || product.price) && (
-                        <span style={{ 
-                          color: "#999", 
-                          textDecoration: "line-through", 
-                          fontSize: 14 
+                      {product.discount > 0 && product.originalPrice && product.originalPrice > (product.finalPrice || product.productPrice || product.price) && (                                            
+                        <span style={{
+                          color: "#999",
+                          textDecoration: "line-through",
+                          fontSize: 14
                         }}>
-                          {new Intl.NumberFormat('vi-VN').format(product.originalPrice)}₫
+                          {new Intl.NumberFormat('vi-VN').format(product.originalPrice)}₫                                                                       
                         </span>
                       )}
                     </div>

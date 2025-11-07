@@ -132,9 +132,11 @@ const Settings = () => {
   const handleSave = async (values) => {
     setLoading(true);
     try {
-      console.log('Saving settings:', values);
-      await api.put('/settings', values);
-      setSettings({ ...settings, ...values });
+      const response = await api.put('/settings', values);
+      // Cập nhật settings từ response hoặc từ values
+      const updatedSettings = response.data?.settings || values;
+      setSettings(updatedSettings);
+      form.setFieldsValue(updatedSettings);
       message.success('Cài đặt đã được lưu thành công!');
     } catch (error) {
       console.error('Settings save error:', error);
@@ -147,10 +149,11 @@ const Settings = () => {
 
   const handleReset = async () => {
     try {
-      console.log('Resetting settings to default');
-      await api.post('/settings/reset');
-      await loadSettings();
-      message.info('Đã khôi phục cài đặt mặc định');
+      const response = await api.post('/settings/reset');
+      const resetSettings = response.data?.settings || settings;
+      setSettings(resetSettings);
+      form.setFieldsValue(resetSettings);
+      message.success('Đã khôi phục cài đặt mặc định');
     } catch (error) {
       console.error('Settings reset error:', error);
       const errorMessage = error.response?.data?.message || 'Khôi phục cài đặt thất bại!';

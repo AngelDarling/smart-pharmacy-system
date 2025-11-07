@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import Settings from "../models/Settings.js";
 
 const settingsSchema = z.object({
   general: z.object({
@@ -120,14 +121,19 @@ const defaultSettings = {
   }
 };
 
-// In-memory storage for demo (in production, use database)
-let currentSettings = { ...defaultSettings };
-
 // Get all settings
 export async function getSettings(req, res) {
   try {
-    res.json(currentSettings);
+    const settings = await Settings.getSettings();
+    // Convert to plain object and remove _id, __v, timestamps
+    const settingsObj = settings.toObject();
+    delete settingsObj._id;
+    delete settingsObj.__v;
+    delete settingsObj.createdAt;
+    delete settingsObj.updatedAt;
+    res.json(settingsObj);
   } catch (error) {
+    console.error('Error getting settings:', error);
     res.status(500).json({ message: "Lỗi khi tải cài đặt" });
   }
 }
@@ -136,11 +142,18 @@ export async function getSettings(req, res) {
 export async function updateSettings(req, res) {
   try {
     const validatedData = settingsSchema.parse(req.body);
-    currentSettings = { ...currentSettings, ...validatedData };
+    const settings = await Settings.updateSettings(validatedData);
+    
+    // Convert to plain object and remove _id, __v, timestamps
+    const settingsObj = settings.toObject();
+    delete settingsObj._id;
+    delete settingsObj.__v;
+    delete settingsObj.createdAt;
+    delete settingsObj.updatedAt;
     
     res.json({ 
       message: "Cài đặt đã được cập nhật thành công",
-      settings: currentSettings 
+      settings: settingsObj
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -149,6 +162,7 @@ export async function updateSettings(req, res) {
         errors: error.errors 
       });
     }
+    console.error('Error updating settings:', error);
     res.status(500).json({ message: "Lỗi khi cập nhật cài đặt" });
   }
 }
@@ -156,12 +170,21 @@ export async function updateSettings(req, res) {
 // Reset to default settings
 export async function resetSettings(req, res) {
   try {
-    currentSettings = { ...defaultSettings };
+    const settings = await Settings.resetSettings();
+    
+    // Convert to plain object and remove _id, __v, timestamps
+    const settingsObj = settings.toObject();
+    delete settingsObj._id;
+    delete settingsObj.__v;
+    delete settingsObj.createdAt;
+    delete settingsObj.updatedAt;
+    
     res.json({ 
       message: "Đã khôi phục cài đặt mặc định",
-      settings: currentSettings 
+      settings: settingsObj
     });
   } catch (error) {
+    console.error('Error resetting settings:', error);
     res.status(500).json({ message: "Lỗi khi khôi phục cài đặt" });
   }
 }

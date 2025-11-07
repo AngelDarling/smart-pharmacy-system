@@ -32,17 +32,29 @@ import {
   TrophyOutlined,
   BarChartOutlined,
   EyeOutlined,
-  EditOutlined
+  EditOutlined,
+  MedicineBoxOutlined,
+  ShoppingCartOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CarOutlined,
+  FileTextOutlined,
+  FireOutlined,
+  LinkOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { permissions } = usePermissions();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [userStats, setUserStats] = useState(null);
+  const [orderStats, setOrderStats] = useState(null);
+  const [recentOrders, setRecentOrders] = useState([]);
   
   // Force reload stats when component mounts
   const [reloadTrigger, setReloadTrigger] = useState(0);
@@ -75,6 +87,20 @@ export default function AdminDashboard() {
         if (permissions.canReadUsers()) {
           const userRes = await api.get("/users/stats");
           if (mounted) setUserStats(userRes.data);
+        }
+        
+        // Load order stats if user has permission
+        if (permissions.canReadOrders()) {
+          try {
+            const orderRes = await api.get("/orders/stats");
+            if (mounted) setOrderStats(orderRes.data);
+            
+            // Load recent orders
+            const recentRes = await api.get("/orders?limit=5&sort=-createdAt");
+            if (mounted) setRecentOrders(recentRes.data?.items || []);
+          } catch (error) {
+            console.error('Error loading order stats:', error);
+          }
         }
       } catch (error) {
         console.error('Error loading stats:', error);
@@ -127,29 +153,26 @@ export default function AdminDashboard() {
   return (
     <div style={{ padding: '24px' }}>
       {/* Welcome Section */}
-      <Card style={{ marginBottom: '24px' }}>
+      <Card style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none' }}>
         <Row align="middle" justify="space-between">
           <Col>
             <Space size="large">
-              <Avatar size={64} icon={roleInfo.icon} style={{ backgroundColor: roleInfo.color === 'purple' ? '#722ed1' : undefined }} />
+              <Avatar size={64} icon={<MedicineBoxOutlined />} style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }} />
               <div>
-                <Title level={2} style={{ margin: 0 }}>
-                  Xin chào, {user?.name}!
+                <Title level={2} style={{ margin: 0, color: 'white' }}>
+                  Xin chào, {user?.name || 'Quản trị viên'}!
                 </Title>
-                <Space>
-                  <Tag color={roleInfo.color} icon={roleInfo.icon}>
+                <Space style={{ marginTop: '8px' }}>
+                  <Tag color={roleInfo.color} icon={roleInfo.icon} style={{ background: 'white' }}>
                     {roleInfo.name}
                   </Tag>
                   {user?.department && (
-                    <Tag color="blue">{user.department}</Tag>
-                  )}
-                  {user?.position && (
-                    <Tag color="green">{user.position}</Tag>
+                    <Tag color="blue" style={{ background: 'white' }}>{user.department}</Tag>
                   )}
                 </Space>
-                <div style={{ marginTop: '8px' }}>
-                  <Text type="secondary">
-                    Đăng nhập cuối: {user?.lastLogin ? new Date(user.lastLogin).toLocaleString('vi-VN') : 'Chưa có'}
+                <div style={{ marginTop: '12px' }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.9)' }}>
+                    📅 {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </Text>
                 </div>
               </div>
@@ -157,64 +180,104 @@ export default function AdminDashboard() {
           </Col>
           <Col>
             <Space direction="vertical" align="end">
-              <Text strong>Số lần đăng nhập: {user?.loginCount || 0}</Text>
-              <Text type="secondary">Hôm nay: {new Date().toLocaleDateString('vi-VN')}</Text>
+              <Text strong style={{ color: 'white', fontSize: '16px' }}>
+                🏥 Smart Pharmacy System
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)' }}>
+                Hệ thống quản lý nhà thuốc
+              </Text>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      {/* Quick Stats */}
+      {/* Quick Stats - Main Metrics */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         {permissions.canReadProducts() && (
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card 
+              hoverable
+              onClick={() => navigate('/admin/products')}
+              style={{ cursor: 'pointer' }}
+            >
               <Statistic
                 title="Tổng sản phẩm"
                 value={stats?.products?.total || 0}
-                prefix={<ShoppingOutlined />}
-                valueStyle={{ color: '#3f8600' }}
+                prefix={<MedicineBoxOutlined style={{ color: '#52c41a' }} />}
+                valueStyle={{ color: '#52c41a', fontSize: '28px' }}
               />
+              <div style={{ marginTop: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Sản phẩm đang hoạt động
+                </Text>
+              </div>
             </Card>
           </Col>
         )}
         
         {permissions.canReadCategories() && (
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card 
+              hoverable
+              onClick={() => navigate('/admin/categories')}
+              style={{ cursor: 'pointer' }}
+            >
               <Statistic
-                title="Danh mục"
+                title="Danh mục sản phẩm"
                 value={stats?.categories?.total || 0}
-                prefix={<FolderOutlined />}
-                valueStyle={{ color: '#1890ff' }}
+                prefix={<FolderOutlined style={{ color: '#1890ff' }} />}
+                valueStyle={{ color: '#1890ff', fontSize: '28px' }}
               />
+              <div style={{ marginTop: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Phân loại thuốc & TPCN
+                </Text>
+              </div>
             </Card>
           </Col>
         )}
 
         {permissions.canReadInventory() && (
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card 
+              hoverable
+              onClick={() => navigate('/admin/inventory')}
+              style={{ cursor: 'pointer', borderColor: lowStock > 0 ? '#ff4d4f' : undefined }}
+            >
               <Statistic
                 title="Cảnh báo tồn kho"
                 value={lowStock}
-                prefix={<WarningOutlined />}
-                valueStyle={{ color: lowStock > 0 ? '#cf1322' : '#3f8600' }}
+                prefix={<WarningOutlined style={{ color: lowStock > 0 ? '#ff4d4f' : '#52c41a' }} />}
+                valueStyle={{ color: lowStock > 0 ? '#ff4d4f' : '#52c41a', fontSize: '28px' }}
                 suffix="sản phẩm"
               />
+              <div style={{ marginTop: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {lowStock > 0 ? 'Cần nhập hàng ngay' : 'Đủ hàng trong kho'}
+                </Text>
+              </div>
             </Card>
           </Col>
         )}
 
         {permissions.canReadUsers() && (
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card 
+              hoverable
+              onClick={() => navigate('/admin/users')}
+              style={{ cursor: 'pointer' }}
+            >
               <Statistic
-                title="Tổng người dùng"
+                title="Nhân viên"
                 value={userStats?.totalUsers || 0}
-                prefix={<TeamOutlined />}
-                valueStyle={{ color: '#722ed1' }}
+                prefix={<TeamOutlined style={{ color: '#722ed1' }} />}
+                valueStyle={{ color: '#722ed1', fontSize: '28px' }}
               />
+              <div style={{ marginTop: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {userStats?.activeUsers || 0} đang hoạt động
+                </Text>
+              </div>
             </Card>
           </Col>
         )}
@@ -224,34 +287,95 @@ export default function AdminDashboard() {
       {(permissions.canReadOrders() || permissions.canReadReports()) && (
         <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
           <Col xs={24} sm={12} lg={8}>
-            <Card>
+            <Card hoverable>
               <Statistic
                 title="Doanh số tháng này"
                 value={monthRevenue}
-                prefix={<DollarOutlined />}
+                prefix={<DollarOutlined style={{ color: '#52c41a' }} />}
                 formatter={(value) => formatMoney(value)}
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: '#52c41a', fontSize: '24px' }}
               />
+              <div style={{ marginTop: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  📊 Tổng doanh thu trong tháng
+                </Text>
+              </div>
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={8}>
-            <Card>
+            <Card hoverable>
               <Statistic
                 title="Hóa đơn hôm nay"
                 value={todayInvoices}
-                prefix={<CalendarOutlined />}
-                valueStyle={{ color: '#1890ff' }}
+                prefix={<ShoppingCartOutlined style={{ color: '#1890ff' }} />}
+                valueStyle={{ color: '#1890ff', fontSize: '24px' }}
               />
+              <div style={{ marginTop: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  🛒 Số đơn hàng đã hoàn thành
+                </Text>
+              </div>
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={8}>
-            <Card>
+            <Card hoverable>
               <Statistic
                 title="Doanh số hôm nay"
                 value={todayRevenue}
-                prefix={<DollarOutlined />}
+                prefix={<DollarOutlined style={{ color: '#722ed1' }} />}
                 formatter={(value) => formatMoney(value)}
-                valueStyle={{ color: '#722ed1' }}
+                valueStyle={{ color: '#722ed1', fontSize: '24px' }}
+              />
+              <div style={{ marginTop: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  💰 Doanh thu trong ngày
+                </Text>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Order Status Stats */}
+      {permissions.canReadOrders() && orderStats && (
+        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable onClick={() => navigate('/admin/orders?status=pending')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title="Đơn chờ xử lý"
+                value={orderStats.statusBreakdown?.find(s => s._id === 'pending')?.count || 0}
+                prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
+                valueStyle={{ color: '#faad14', fontSize: '24px' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable onClick={() => navigate('/admin/orders?status=processing')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title="Đang xử lý"
+                value={orderStats.statusBreakdown?.find(s => s._id === 'processing')?.count || 0}
+                prefix={<EditOutlined style={{ color: '#1890ff' }} />}
+                valueStyle={{ color: '#1890ff', fontSize: '24px' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable onClick={() => navigate('/admin/orders?status=shipping')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title="Đang giao hàng"
+                value={orderStats.statusBreakdown?.find(s => s._id === 'shipping')?.count || 0}
+                prefix={<CarOutlined style={{ color: '#13c2c2' }} />}
+                valueStyle={{ color: '#13c2c2', fontSize: '24px' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable onClick={() => navigate('/admin/orders?status=completed')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title="Đã hoàn thành"
+                value={orderStats.statusBreakdown?.find(s => s._id === 'completed')?.count || 0}
+                prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+                valueStyle={{ color: '#52c41a', fontSize: '24px' }}
               />
             </Card>
           </Col>
@@ -326,37 +450,81 @@ export default function AdminDashboard() {
         </Row>
       )}
 
-      {/* Charts and Tables */}
+      {/* Charts and Recent Orders */}
       <Row gutter={[16, 16]}>
         {permissions.canReadReports() && stats?.chart?.daily && (
           <Col xs={24} lg={16}>
-            <Card title="Doanh số bán hàng tháng này" extra={<BarChartOutlined />}>
+            <Card 
+              title={<><BarChartOutlined /> Doanh số bán hàng tháng này</>}
+              extra={
+                <Button type="link" icon={<LinkOutlined />} onClick={() => navigate('/admin/reports')}>
+                  Xem báo cáo
+                </Button>
+              }
+            >
               <DashboardChart data={stats.chart.daily} />
             </Card>
           </Col>
         )}
         
-        {permissions.canReadInventory() && (
-          <Col xs={24} lg={8}>
-            <Card title="Cảnh báo tồn kho" extra={<WarningOutlined />}>
-              {lowStock > 0 ? (
-                <Alert
-                  message={`${lowStock} sản phẩm sắp hết hàng`}
-                  type="warning"
-                  showIcon
-                  action={
-                    <Button size="small" type="primary">
-                      Xem chi tiết
-                    </Button>
-                  }
-                />
-              ) : (
-                <Alert
-                  message="Tất cả sản phẩm đều có đủ hàng"
-                  type="success"
-                  showIcon
-                />
-              )}
+        {permissions.canReadOrders() && recentOrders.length > 0 && (
+          <Col xs={24} lg={permissions.canReadReports() && stats?.chart?.daily ? 8 : 24}>
+            <Card 
+              title={<><ShoppingCartOutlined /> Đơn hàng gần đây</>}
+              extra={
+                <Button type="link" icon={<LinkOutlined />} onClick={() => navigate('/admin/orders')}>
+                  Xem tất cả
+                </Button>
+              }
+            >
+              <List
+                dataSource={recentOrders}
+                renderItem={(order) => {
+                  const statusColors = {
+                    pending: 'orange',
+                    processing: 'blue',
+                    shipping: 'cyan',
+                    completed: 'green',
+                    cancelled: 'red'
+                  };
+                  const statusNames = {
+                    pending: 'Chờ xử lý',
+                    processing: 'Đang xử lý',
+                    shipping: 'Đang giao',
+                    completed: 'Hoàn thành',
+                    cancelled: 'Đã hủy'
+                  };
+                  return (
+                    <List.Item 
+                      style={{ cursor: 'pointer', padding: '12px' }}
+                      onClick={() => navigate(`/admin/orders/${order._id}`)}
+                    >
+                      <List.Item.Meta
+                        avatar={<Avatar icon={<FileTextOutlined />} style={{ backgroundColor: statusColors[order.status] || 'gray' }} />}
+                        title={
+                          <Space>
+                            <Text strong>#{order.code || order._id.slice(-6)}</Text>
+                            <Tag color={statusColors[order.status]}>{statusNames[order.status] || order.status}</Tag>
+                          </Space>
+                        }
+                        description={
+                          <Space direction="vertical" size={2}>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              {order.customer?.name || order.shippingAddress?.name || 'Khách hàng'}
+                            </Text>
+                            <Text strong style={{ color: '#52c41a' }}>
+                              {formatMoney(order.totals?.grand || 0)}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: '11px' }}>
+                              {new Date(order.createdAt).toLocaleString('vi-VN')}
+                            </Text>
+                          </Space>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
             </Card>
           </Col>
         )}

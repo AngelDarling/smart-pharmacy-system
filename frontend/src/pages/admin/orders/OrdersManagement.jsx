@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions } from 'antd';
-import { SearchOutlined, ReloadOutlined, ClearOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined, ClearOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import api from '../../../api/client';
@@ -88,9 +88,9 @@ export default function OrdersManagement() {
     ) },
     { title: 'Thời gian', dataIndex: 'createdAt', width: 160, render: (v)=> dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
-      title: 'Thao tác', fixed: 'right', width: 120,
+      title: 'Thao tác', fixed: 'right', width: 180,
       render: (_, r) => (
-        <Space>
+        <Space wrap>
           <Button 
             type="primary" 
             size="small" 
@@ -106,6 +106,27 @@ export default function OrdersManagement() {
             }}
           >
             Chi tiết
+          </Button>
+          <Button 
+            danger
+            size="small"
+            onClick={async () => {
+              Modal.confirm({
+                title: 'Xóa đơn hàng?',
+                content: 'Thao tác này sẽ xóa đơn hàng vĩnh viễn. Nếu đơn hàng đã được xử lý, tồn kho sẽ được hoàn lại. Bạn có chắc chắn?',
+                onOk: async () => {
+                  try {
+                    await api.delete(`/orders/${r._id}`);
+                    message.success('Đã xóa đơn hàng');
+                    load();
+                  } catch (e) {
+                    message.error('Không thể xóa đơn hàng');
+                  }
+                }
+              });
+            }}
+          >
+            Xóa
           </Button>
         </Space>
       )

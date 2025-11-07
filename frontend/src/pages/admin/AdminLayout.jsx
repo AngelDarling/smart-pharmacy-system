@@ -28,7 +28,8 @@ import {
   BellOutlined,
   SettingOutlined,
   TeamOutlined,
-  UsergroupAddOutlined
+  UsergroupAddOutlined,
+  HeartOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -132,6 +133,10 @@ const AdminLayout = () => {
         {
           key: '/admin/reviews',
           label: 'Đánh giá sản phẩm',
+        },
+        {
+          key: '/admin/health-checks',
+          label: 'Kiểm tra sức khỏe',
         },
       ].filter(Boolean),
     }] : []),

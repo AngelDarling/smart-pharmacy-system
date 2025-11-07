@@ -22,6 +22,9 @@ export default function Cart() {
   // State để lưu direct coupons cho mỗi sản phẩm
   const [directCoupons, setDirectCoupons] = useState({});
 
+  // State để track các sản phẩm đang được kiểm tra stock
+  const [checkingStock, setCheckingStock] = useState(new Set());
+
   // Cập nhật selectedItems khi items thay đổi
   useEffect(() => {
     setSelectedItems(items.map(item => item.id));
@@ -74,13 +77,88 @@ export default function Cart() {
   }, [items, selectedItems]);
 
   // Xử lý thay đổi số lượng
-  function handleQtyChange(id, newQty) {
+  async function handleQtyChange(id, newQty) {
     if (newQty <= 0) {
       remove(id);
       // selectedItems sẽ được cập nhật tự động qua useEffect
-    } else {
-      updateQty(id, newQty);
+      return;
     }
+
+    // Tìm item trong giỏ hàng
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    // Nếu đang tăng số lượng, kiểm tra stock từ database
+    if (newQty > item.qty) {
+      // Kiểm tra nếu đang kiểm tra stock cho sản phẩm này
+      if (checkingStock.has(id)) {
+        return; // Đang kiểm tra, không cho phép click thêm
+      }
+
+      // Chỉ kiểm tra stock nếu có slug
+      if (!item.slug) {
+        // Nếu không có slug, không thể kiểm tra stock, cho phép tăng (fallback)
+        updateQty(id, newQty);
+        return;
+      }
+
+      // Đánh dấu đang kiểm tra stock
+      setCheckingStock(prev => new Set(prev).add(id));
+
+      try {
+        // Lấy thông tin stock mới nhất từ database bằng slug
+        const res = await api.get(`/products/slug/${item.slug}`);
+        const stock = res.data.totalStock || 0;
+
+        // Kiểm tra nếu số lượng mới vượt quá stock
+        if (newQty > stock) {
+          Swal.fire({
+            title: 'Không đủ hàng',
+            text: `Sản phẩm "${item.name}" chỉ còn ${stock} sản phẩm trong kho.`,
+            icon: 'warning',
+            confirmButtonColor: '#3b82f6',
+            confirmButtonText: 'Đóng'
+          });
+          // Giới hạn số lượng ở mức stock hiện có
+          if (stock > 0) {
+            updateQty(id, stock);
+          }
+          setCheckingStock(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+          return;
+        }
+
+        // Xóa khỏi set checkingStock
+        setCheckingStock(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      } catch (error) {
+        console.error('Error fetching product stock:', error);
+        // Nếu lỗi khi fetch stock, hiển thị thông báo và không cho phép tăng
+        Swal.fire({
+          title: 'Lỗi',
+          text: 'Không thể kiểm tra số lượng tồn kho. Vui lòng thử lại sau.',
+          icon: 'error',
+          confirmButtonColor: '#3b82f6',
+          confirmButtonText: 'Đóng'
+        });
+        // Xóa khỏi set checkingStock
+        setCheckingStock(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+        return;
+      }
+    }
+
+    // Nếu giảm số lượng hoặc tăng nhưng không vượt quá stock, cập nhật bình thường
+    updateQty(id, newQty);
   }
 
   // Xử lý xóa sản phẩm
@@ -145,6 +223,13 @@ export default function Cart() {
   };
 
   const isAllSelected = selectedItems.length === items.length && items.length > 0;
+
+  // Xử lý khi click vào ảnh hoặc tên sản phẩm để chuyển đến trang chi tiết
+  const handleProductClick = (item) => {
+    if (item.slug) {
+      navigate(`/p/${item.slug}`);
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -249,11 +334,17 @@ export default function Cart() {
                   <img 
                     src={getImageUrl(item.image, "/default-product.svg")} 
                     alt={item.name} 
-                    style={styles.productImage}
+                    style={{...styles.productImage, cursor: 'pointer'}}
                     onError={(e) => handleImageError(e, "/default-product.svg")}
+                    onClick={() => handleProductClick(item)}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={styles.productName}>{item.name}</div>
+                    <div 
+                      style={{...styles.productName, cursor: 'pointer'}}
+                      onClick={() => handleProductClick(item)}
+                    >
+                      {item.name}
+                    </div>
                     {/* Hiển thị thông tin mã giảm giá trực tiếp nếu có */}
                     {directCoupons[item.id] && (() => {
                       const coupon = directCoupons[item.id];
@@ -337,9 +428,25 @@ export default function Cart() {
                 {/* Số lượng */}
                 <div style={styles.cellCenter}>
                   <div style={styles.quantityControl}>
-                    <button onClick={() => handleQtyChange(item.id, item.qty - 1)} style={styles.quantityButton}>-</button>
+                    <button 
+                      onClick={() => handleQtyChange(item.id, item.qty - 1)} 
+                      style={styles.quantityButton}
+                      disabled={checkingStock.has(item.id)}
+                    >
+                      -
+                    </button>
                     <input value={item.qty} style={styles.quantityInput} readOnly/>
-                    <button onClick={() => handleQtyChange(item.id, item.qty + 1)} style={styles.quantityButton}>+</button>
+                    <button 
+                      onClick={() => handleQtyChange(item.id, item.qty + 1)} 
+                      style={{
+                        ...styles.quantityButton,
+                        cursor: checkingStock.has(item.id) ? 'not-allowed' : 'pointer',
+                        opacity: checkingStock.has(item.id) ? 0.6 : 1
+                      }}
+                      disabled={checkingStock.has(item.id)}
+                    >
+                      {checkingStock.has(item.id) ? '...' : '+'}
+                    </button>
                   </div>
                 </div>
                 {/* Thành tiền */}

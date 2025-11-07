@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import Chatbot from './Chatbot.jsx';
 
 export default function Footer() {
+  const [showChatbot, setShowChatbot] = useState(false);
   const handleLinkClick = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -273,7 +275,7 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Floating Contact Button */}
+      {/* Floating Chatbot Button */}
       <div style={{
         position: 'fixed',
         bottom: 20,
@@ -284,34 +286,47 @@ export default function Footer() {
           width: 60,
           height: 60,
           borderRadius: '50%',
-          background: '#3b82f6',
+          background: showChatbot 
+            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            : '#3b82f6',
           border: 'none',
           color: 'white',
           fontSize: 12,
           fontWeight: 600,
           cursor: 'pointer',
-          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+          boxShadow: showChatbot
+            ? '0 6px 20px rgba(102, 126, 234, 0.5)'
+            : '0 4px 12px rgba(59, 130, 246, 0.3)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 2,
-          transition: 'all 0.3s ease'
+          transition: 'all 0.3s ease',
+          transform: showChatbot ? 'scale(1.1)' : 'scale(1)'
         }}
         onMouseEnter={(e) => {
-          e.target.style.transform = 'scale(1.1)';
-          e.target.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+          if (!showChatbot) {
+            e.target.style.transform = 'scale(1.1)';
+            e.target.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+          }
         }}
         onMouseLeave={(e) => {
-          e.target.style.transform = 'scale(1)';
-          e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+          if (!showChatbot) {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+          }
         }}
-        onClick={() => window.open('tel:18006928')}
+        onClick={() => setShowChatbot(!showChatbot)}
+        title={showChatbot ? 'Đóng chatbot' : 'Mở AI tư vấn'}
         >
-          <div style={{ fontSize: 20 }}>📞</div>
-          <div style={{ fontSize: 8 }}>HOTLINE</div>
+          <div style={{ fontSize: 20 }}>{showChatbot ? '🤖' : '💬'}</div>
+          <div style={{ fontSize: 8 }}>{showChatbot ? 'ĐÓNG' : 'AI TƯ VẤN'}</div>
         </button>
       </div>
+
+      {/* Chatbot Component */}
+      <Chatbot isOpen={showChatbot} onClose={() => setShowChatbot(false)} />
     </footer>
   );
 }

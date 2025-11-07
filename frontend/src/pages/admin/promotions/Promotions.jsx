@@ -86,17 +86,17 @@ export default function Promotions() {
         return formatCurrency(value);
       }
     },
-    { title: 'HĐ tối thiểu', dataIndex: 'minOrder', render: formatCurrency },
-    { title: 'Giảm tối đa', dataIndex: 'maxDiscount', render: (v) => v ? formatCurrency(v) : '—' },
-    { 
-      title: 'Hiệu lực', 
+        { title: 'HĐ tối thiểu', dataIndex: 'minOrder', render: formatCurrency },   
+    { title: 'Giảm tối đa', dataIndex: 'maxDiscount', render: (v) => v ? formatCurrency(v) : 'không có' },                                                             
+    {
+      title: 'Hiệu lực',
       render: (_, r) => {
         const start = formatDate(r.startDate);
         const end = formatDate(r.endDate);
         if (start || end) {
           return `${start || '—'} → ${end || '—'}`;
         }
-        return '—';
+        return 'không giới hạn';
       }
     },
     { title: 'Sử dụng', render: (_, r) => `${r.usedCount || 0}/${r.usageLimit || '∞'}` },

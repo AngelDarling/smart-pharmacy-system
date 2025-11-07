@@ -396,34 +396,122 @@ export async function remove(req, res) {
 // Best sellers in current month
 export async function bestSellers(req, res, next) {
   try {
-    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit || "12", 10)));
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit || "12", 10)));                                                                             
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);        
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);      
 
     const agg = await ProductSalesDaily.aggregate([
       { $match: { date: { $gte: startOfMonth, $lt: endOfMonth } } },
-      { $group: { _id: "$productId", qty: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } },
+      { $group: { _id: "$productId", qty: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } },                                                             
       { $sort: { qty: -1, revenue: -1 } },
       { $limit: limit },
     ]);
 
     const productIds = agg.map(a => a._id);
-    const products = await Product.find({ _id: { $in: productIds }, isActive: true })
+    const products = await Product.find({ _id: { $in: productIds }, isActive: true })                                                                           
       .populate('brandId', 'name slug')
       .populate('categoryId', 'name slug');
 
+    // Fetch all active direct apply coupons
+    const allDirectCoupons = await Coupon.find({
+      isDirectApply: true,
+      isActive: true
+    }).lean();
+    
+    // Filter valid coupons (check dates and usage limit)
+    const directCoupons = allDirectCoupons.filter(coupon => {
+      // Check start date
+      if (coupon.startDate && new Date(coupon.startDate) > now) return false;
+      // Check end date
+      if (coupon.endDate && new Date(coupon.endDate) < now) return false;
+      // Check usage limit
+      if (coupon.usageLimit && coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) return false;
+      return true;
+    });
+
+    // Create a map of productSlug -> coupon for quick lookup
+    const couponMap = new Map();
+    directCoupons.forEach(coupon => {
+      if (coupon.productSlug) {
+        couponMap.set(coupon.productSlug, coupon);
+      }
+    });
+
     // Keep order same as ranking
-    const orderMap = new Map(productIds.map((id, idx) => [String(id), idx]));
+    const orderMap = new Map(productIds.map((id, idx) => [String(id), idx]));   
     const items = products
       .map(p => p.toObject())
-      .map(p => ({
-        ...p,
-        imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"],
-        monthQuantity: agg.find(a => String(a._id) === String(p._id))?.qty || 0,
-        monthRevenue: agg.find(a => String(a._id) === String(p._id))?.revenue || 0
-      }))
-      .sort((a, b) => (orderMap.get(String(a._id)) ?? 0) - (orderMap.get(String(b._id)) ?? 0));
+      .map(p => {
+        // Calculate discount and final price: only if there's a valid promotion or direct coupon
+        let discount = 0;
+        let discountType = 'percent'; // 'percent' or 'amount'
+        let discountValue = 0; // The actual discount value (percentage or amount)
+        let finalPrice = p.price; // Default final price is original price
+        let originalPrice = p.price; // Default original price
+
+        const directCoupon = couponMap.get(p.slug);
+
+        if (directCoupon) {
+          // Calculate discount from direct coupon
+          originalPrice = p.price; // Keep original price
+          let discountAmount = 0;
+          discountType = directCoupon.discountType; // 'percent' or 'amount'
+          discountValue = directCoupon.discountValue;
+
+          if (directCoupon.discountType === 'percent') {
+            discount = directCoupon.discountValue;
+            discountAmount = Math.round(p.price * discount / 100);
+            // Apply maxDiscount if exists
+            if (directCoupon.maxDiscount && discountAmount > directCoupon.maxDiscount) {
+              discountAmount = directCoupon.maxDiscount;
+              discount = Math.round((discountAmount / p.price) * 100);
+              discountValue = discount; // Update discountValue to reflect actual discount percentage
+            }
+          } else {
+            // If discount is amount
+            discountAmount = directCoupon.discountValue;
+            // Calculate percentage for display
+            if (p.price > 0) {
+              discount = Math.round((discountAmount / p.price) * 100);
+            }
+          }
+
+          finalPrice = Math.max(0, p.price - discountAmount);
+        } else if (p.promotionInfo?.isOnSale && p.promotionInfo?.discountPercentage) {
+          // Only use promotionInfo discount if isOnSale is true
+          // Check if sale is currently active (check dates if provided)
+          const saleStartDate = p.promotionInfo.saleStartDate ? new Date(p.promotionInfo.saleStartDate) : null;
+          const saleEndDate = p.promotionInfo.saleEndDate ? new Date(p.promotionInfo.saleEndDate) : null;
+
+          // Check if sale is active
+          const isSaleActive = (!saleStartDate || saleStartDate <= now) && (!saleEndDate || saleEndDate >= now);
+
+          if (isSaleActive && p.promotionInfo.discountPercentage > 0) {
+            discount = p.promotionInfo.discountPercentage;
+            discountType = 'percent';
+            discountValue = discount;
+            originalPrice = p.price;
+            finalPrice = Math.round(p.price * (1 - discount / 100));
+          }
+        }
+        
+        // Ensure discount is between 0 and 100
+        discount = Math.max(0, Math.min(100, discount));
+
+        return {
+          ...p,
+          imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"],                                                            
+          monthQuantity: agg.find(a => String(a._id) === String(p._id))?.qty || 0,
+          monthRevenue: agg.find(a => String(a._id) === String(p._id))?.revenue || 0,
+          discount: discount,
+          discountType: discount > 0 ? discountType : null,
+          discountValue: discount > 0 ? discountValue : 0,
+          originalPrice: originalPrice,
+          finalPrice: discount > 0 ? finalPrice : p.price
+        };
+      })
+      .sort((a, b) => (orderMap.get(String(a._id)) ?? 0) - (orderMap.get(String(b._id)) ?? 0));                                                                 
 
     res.json({ items });
   } catch (err) {
@@ -595,22 +683,112 @@ export async function getTodayFeatured(req, res, next) {
       }
     ]);
 
-    // Lấy thông tin chi tiết sản phẩm từ Product collection
+        // Lấy thông tin chi tiết sản phẩm từ Product collection
     const productIds = todaySales.map(sale => sale._id);
-    const products = await Product.find({ 
+    const products = await Product.find({
       _id: { $in: productIds },
-      isActive: true 
-    }).populate('categoryId', 'name slug').populate('brandId', 'name slug');
+      isActive: true
+    }).populate('categoryId', 'name slug').populate('brandId', 'name slug');    
+
+    // Fetch all active direct apply coupons
+    const allDirectCoupons = await Coupon.find({
+      isDirectApply: true,
+      isActive: true
+    }).lean();
+    
+    // Filter valid coupons (check dates and usage limit)
+    const directCoupons = allDirectCoupons.filter(coupon => {
+      // Check start date
+      if (coupon.startDate && new Date(coupon.startDate) > today) return false;
+      // Check end date
+      if (coupon.endDate && new Date(coupon.endDate) < today) return false;
+      // Check usage limit
+      if (coupon.usageLimit && coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) return false;
+      return true;
+    });
+
+    // Create a map of productSlug -> coupon for quick lookup
+    const couponMap = new Map();
+    directCoupons.forEach(coupon => {
+      if (coupon.productSlug) {
+        couponMap.set(coupon.productSlug, coupon);
+      }
+    });
 
     // Kết hợp dữ liệu bán hàng với thông tin sản phẩm
     const featuredProducts = todaySales.map(sale => {
       const product = products.find(p => p._id.toString() === sale._id.toString());
+      if (!product) return null;
+      
+      const p = product.toObject();
+      
+      // Calculate discount and final price: only if there's a valid promotion or direct coupon
+      let discount = 0;
+      let discountType = 'percent'; // 'percent' or 'amount'
+      let discountValue = 0; // The actual discount value (percentage or amount)
+      let finalPrice = p.price; // Default final price is original price
+      let originalPrice = p.price; // Default original price
+
+      const directCoupon = couponMap.get(p.slug);
+
+      if (directCoupon) {
+        // Calculate discount from direct coupon
+        originalPrice = p.price; // Keep original price
+        let discountAmount = 0;
+        discountType = directCoupon.discountType; // 'percent' or 'amount'
+        discountValue = directCoupon.discountValue;
+
+        if (directCoupon.discountType === 'percent') {
+          discount = directCoupon.discountValue;
+          discountAmount = Math.round(p.price * discount / 100);
+          // Apply maxDiscount if exists
+          if (directCoupon.maxDiscount && discountAmount > directCoupon.maxDiscount) {
+            discountAmount = directCoupon.maxDiscount;
+            discount = Math.round((discountAmount / p.price) * 100);
+            discountValue = discount; // Update discountValue to reflect actual discount percentage
+          }
+        } else {
+          // If discount is amount
+          discountAmount = directCoupon.discountValue;
+          // Calculate percentage for display
+          if (p.price > 0) {
+            discount = Math.round((discountAmount / p.price) * 100);
+          }
+        }
+
+        finalPrice = Math.max(0, p.price - discountAmount);
+      } else if (p.promotionInfo?.isOnSale && p.promotionInfo?.discountPercentage) {
+        // Only use promotionInfo discount if isOnSale is true
+        // Check if sale is currently active (check dates if provided)
+        const saleStartDate = p.promotionInfo.saleStartDate ? new Date(p.promotionInfo.saleStartDate) : null;
+        const saleEndDate = p.promotionInfo.saleEndDate ? new Date(p.promotionInfo.saleEndDate) : null;
+
+        // Check if sale is active
+        const isSaleActive = (!saleStartDate || saleStartDate <= today) && (!saleEndDate || saleEndDate >= today);
+
+        if (isSaleActive && p.promotionInfo.discountPercentage > 0) {
+          discount = p.promotionInfo.discountPercentage;
+          discountType = 'percent';
+          discountValue = discount;
+          originalPrice = p.price;
+          finalPrice = Math.round(p.price * (1 - discount / 100));
+        }
+      }
+      
+      // Ensure discount is between 0 and 100
+      discount = Math.max(0, Math.min(100, discount));
+      
       return {
-        ...product?.toObject(),
+        ...p,
         todaySales: sale.totalQuantity,
-        productName: sale.productName || product?.name,
-        productPrice: sale.productPrice || product?.price,
-        productImage: sale.productImage || product?.images?.[0]
+        productName: sale.productName || p.name,
+        productPrice: sale.productPrice || p.price,
+        productImage: sale.productImage || p.images?.[0],
+        discount: discount,
+        discountType: discount > 0 ? discountType : null,
+        discountValue: discount > 0 ? discountValue : 0,
+        originalPrice: originalPrice,
+        finalPrice: discount > 0 ? finalPrice : p.price
       };
     }).filter(Boolean);
 

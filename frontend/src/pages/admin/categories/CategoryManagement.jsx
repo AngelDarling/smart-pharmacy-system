@@ -1,11 +1,11 @@
 /**
  * Category Management Page
- * Modern tree-based interface for managing product categories
+ * Table-based interface for managing product categories with hierarchical display
  */
 
 import React, { useState, useEffect } from 'react';
 import {
-  Tree,
+  Table,
   Button,
   Space,
   Modal,
@@ -59,8 +59,7 @@ const CategoryManagement = () => {
   } = useCategories();
 
   const [treeData, setTreeData] = useState([]);
-  const [expandedKeys, setExpandedKeys] = useState([]);
-  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [flatData, setFlatData] = useState([]);
   const [searchValue, setSearchValue] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -72,24 +71,51 @@ const CategoryManagement = () => {
   const [deletingCategory, setDeletingCategory] = useState(null);
 
 
-  // Build tree data when categories change
+  // Flatten tree data to flat list for table display
+  const flattenTree = (nodes, level = 0, parentPath = []) => {
+    let result = [];
+    if (!nodes || !Array.isArray(nodes)) return result;
+    
+    nodes.forEach((node) => {
+      if (!node) return;
+      
+      const flatNode = {
+        ...node,
+        key: node.key || node._id || node.id,
+        level: level,
+        parentPath: parentPath,
+        indent: level * 24 // 24px per level for indentation
+      };
+      
+      result.push(flatNode);
+      
+      if (node.children && node.children.length > 0) {
+        const childNodes = flattenTree(node.children, level + 1, [...parentPath, node.name]);
+        result = result.concat(childNodes);
+      }
+    });
+    
+    return result;
+  };
+
+  // Build tree data and flat data when categories change
   useEffect(() => {
     try {
       if (categories && Array.isArray(categories) && categories.length > 0) {
-        // API tree already returns tree structure, no need to rebuild
+        // API tree already returns tree structure
         setTreeData(categories);
         
-        // Auto expand all nodes
-        const allKeys = getAllKeys(categories);
-        setExpandedKeys(allKeys);
+        // Flatten tree for table display
+        const flattened = flattenTree(categories);
+        setFlatData(flattened);
       } else {
         setTreeData([]);
-        setExpandedKeys([]);
+        setFlatData([]);
       }
     } catch (error) {
       console.error('Error building tree data:', error);
       setTreeData([]);
-      setExpandedKeys([]);
+      setFlatData([]);
     }
   }, [categories]);
 
@@ -114,25 +140,9 @@ const CategoryManagement = () => {
     }
   };
 
-  // Count all categories including children
-  const getAllCategoriesCount = (data) => {
-    try {
-      let count = 0;
-      if (data && Array.isArray(data)) {
-        data.forEach(item => {
-          if (item) {
-            count++;
-            if (item.children && item.children.length > 0) {
-              count += getAllCategoriesCount(item.children);
-            }
-          }
-        });
-      }
-      return count;
-    } catch (error) {
-      console.error('Error counting categories:', error);
-      return 0;
-    }
+  // Count all categories - use flatData for simplicity
+  const getAllCategoriesCount = () => {
+    return flatData.length;
   };
 
   // Helper function to find a node and its path (ancestors) in the tree
@@ -213,55 +223,40 @@ const CategoryManagement = () => {
     }
   };
 
-  // Filter tree data based on level
-  const filterTreeDataByLevel = (data, level) => {
-    try {
-      if (level === 'all' || !data || !Array.isArray(data)) return data || [];
-
-      const targetLevel = parseInt(level, 10);
-      const includeChildren = false; // Luôn chỉ hiển thị đúng level được chọn
-      const result = [];
-
-      const traverse = (nodes) => {
-        if (!nodes) return;
-        nodes.forEach((node) => {
-          if (!node) return;
-          if ((node.level || 0) === targetLevel) {
-            result.push({
-              ...node,
-              // nếu level 0 thì ẩn children; level > 0 có thể giữ subtree để có ngữ cảnh
-              children: includeChildren ? (node.children || []) : []
-            });
-          }
-          if (node.children && node.children.length > 0) {
-            traverse(node.children);
-          }
-        });
-      };
-
-      traverse(data);
-      return result;
-    } catch (error) {
-      console.error('Error filtering tree data by level:', error);
-      return data || [];
-    }
+  // Filter flat data based on search
+  const filterFlatData = (data, searchText) => {
+    if (!searchText || !data || !Array.isArray(data)) return data || [];
+    
+    const searchLower = searchText.toLowerCase();
+    return data.filter(item => {
+      if (!item) return false;
+      const nameMatch = item.name && item.name.toLowerCase().includes(searchLower);
+      const slugMatch = item.slug && item.slug.toLowerCase().includes(searchLower);
+      return nameMatch || slugMatch;
+    });
   };
 
-  // Filter tree data based on status
-  const filterTreeDataByStatus = (data, status) => {
-    try {
-      if (status === 'all' || !data || !Array.isArray(data)) return data || [];
-      
-      return data.filter(item => {
-        if (!item) return false;
-        if (status === 'active') return item.isActive === true;
-        if (status === 'inactive') return item.isActive === false;
-        return true;
-      });
-    } catch (error) {
-      console.error('Error filtering tree data by status:', error);
-      return data || [];
-    }
+  // Filter flat data based on level
+  const filterFlatDataByLevel = (data, level) => {
+    if (level === 'all' || !data || !Array.isArray(data)) return data || [];
+    
+    const targetLevel = parseInt(level, 10);
+    return data.filter(item => {
+      if (!item) return false;
+      return (item.level || 0) === targetLevel;
+    });
+  };
+
+  // Filter flat data based on status
+  const filterFlatDataByStatus = (data, status) => {
+    if (status === 'all' || !data || !Array.isArray(data)) return data || [];
+    
+    return data.filter(item => {
+      if (!item) return false;
+      if (status === 'active') return item.isActive === true;
+      if (status === 'inactive') return item.isActive === false;
+      return true;
+    });
   };
 
   // Handle search
@@ -337,60 +332,93 @@ const CategoryManagement = () => {
     setParentCategory(null);
   };
 
-  // Tree title render
-  const renderTreeTitle = (nodeData) => {
-    try {
-      const { name, isActive, level, slug, description, iconUrl, productCount } = nodeData;
-      
-      const actionMenu = [
-        {
-          key: 'add',
-          icon: <PlusOutlined />,
-          label: 'Thêm danh mục con',
-          onClick: () => handleAddCategory(nodeData)
-        },
-        {
-          key: 'edit',
-          icon: <EditOutlined />,
-          label: 'Chỉnh sửa',
-          onClick: () => handleEditCategory(nodeData)
-        },
-        {
-          key: 'view',
-          icon: <EyeOutlined />,
-          label: 'Xem chi tiết',
-          onClick: () => console.log('View category:', nodeData)
-        },
-        {
-          type: 'divider'
-        },
-        {
-          key: 'delete',
-          icon: <DeleteOutlined />,
-          label: 'Xóa danh mục',
-          danger: true,
-          onClick: () => handleDeleteCategory(nodeData)
-        }
-      ];
-      
-      return (
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          width: '100%',
-          padding: '8px 12px',
-          borderRadius: '6px',
-          background: isActive ? '#f6ffed' : '#fff2f0',
-          border: `1px solid ${isActive ? '#b7eb8f' : '#ffccc7'}`,
-          transition: 'all 0.3s ease'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+  // Apply filters to flat data
+  let filteredFlatData = flatData;
+  
+  if (levelFilter !== 'all') {
+    filteredFlatData = filterFlatDataByLevel(filteredFlatData, levelFilter);
+  }
+  
+  if (statusFilter !== 'all') {
+    filteredFlatData = filterFlatDataByStatus(filteredFlatData, statusFilter);
+  }
+  
+  if (searchValue) {
+    filteredFlatData = filterFlatData(filteredFlatData, searchValue);
+  }
+
+  // Get row background color based on level
+  const getRowStyle = (record) => {
+    const level = record.level || 0;
+    // Màu nền khác nhau cho mỗi level
+    const colors = {
+      0: '#f0f7ff', // Xanh nhạt cho level 0 (gốc)
+      1: '#f6ffed', // Xanh lá nhạt cho level 1
+      2: '#fff7e6', // Vàng nhạt cho level 2
+      3: '#fff1f0', // Đỏ nhạt cho level 3
+    };
+    return {
+      backgroundColor: colors[level] || '#fafafa', // Màu mặc định cho level cao hơn
+      transition: 'background-color 0.2s'
+    };
+  };
+
+  // Get hover color based on level
+  const getHoverColor = (level) => {
+    const hoverColors = {
+      0: '#d6e7ff', // Xanh đậm hơn khi hover
+      1: '#d9f7be', // Xanh lá đậm hơn khi hover
+      2: '#ffe7ba', // Vàng đậm hơn khi hover
+      3: '#ffccc7', // Đỏ đậm hơn khi hover
+    };
+    return hoverColors[level] || '#f0f0f0';
+  };
+
+  // Table columns definition
+  const columns = [
+    {
+      title: 'Tên danh mục',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text, record) => {
+        const actionMenu = [
+          {
+            key: 'add',
+            icon: <PlusOutlined />,
+            label: 'Thêm danh mục con',
+            onClick: () => handleAddCategory(record)
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined />,
+            label: 'Chỉnh sửa',
+            onClick: () => handleEditCategory(record)
+          },
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: 'Xem chi tiết',
+            onClick: () => console.log('View category:', record)
+          },
+          {
+            type: 'divider'
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined />,
+            label: 'Xóa danh mục',
+            danger: true,
+            onClick: () => handleDeleteCategory(record)
+          }
+        ];
+
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', paddingLeft: record.indent || 0 }}>
             <Avatar 
               size="small" 
-              icon={level === 0 ? <FolderOpenOutlined /> : <FolderOutlined />}
+              icon={record.level === 0 ? <FolderOpenOutlined /> : <FolderOutlined />}
               style={{ 
-                backgroundColor: isActive ? '#52c41a' : '#ff4d4f',
+                backgroundColor: record.isActive ? '#52c41a' : '#ff4d4f',
                 marginRight: 12
               }}
             />
@@ -399,156 +427,139 @@ const CategoryManagement = () => {
                 fontSize: '14px', 
                 fontWeight: 500, 
                 color: '#262626',
-                marginBottom: 2
-              }}>
-                {name || 'Unknown'}
-              </div>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#8c8c8c',
                 marginBottom: 4
               }}>
-                {slug && `/${slug}`}
+                {text || 'Unknown'}
               </div>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#1890ff',
-                fontWeight: 500,
-                marginBottom: description ? 2 : 0
-              }}>
-                {productCount !== undefined ? `${productCount} sản phẩm` : '0 sản phẩm'}
-              </div>
-              {description && (
+              {record.description && (
                 <div style={{ 
-                  fontSize: '11px', 
+                  fontSize: '12px', 
                   color: '#8c8c8c',
                   fontStyle: 'italic'
                 }}>
-                  {description.length > 50 ? `${description.substring(0, 50)}...` : description}
+                  {record.description.length > 60 ? `${record.description.substring(0, 60)}...` : record.description}
                 </div>
               )}
             </div>
-            <Space size={4}>
-              <Badge 
-                status={isActive ? 'success' : 'error'} 
-                text={
-                  <Tag 
-                    color={isActive ? 'green' : 'red'} 
-                    size="small"
-                    style={{ margin: 0 }}
-                  >
-                    {isActive ? 'Hoạt động' : 'Tạm dừng'}
-                  </Tag>
-                } 
-              />
-              <Tag color="blue" size="small">
-                Level {level || 0}
-              </Tag>
-            </Space>
           </div>
-          <Space size={4} onClick={(e) => e.stopPropagation()}>
+        );
+      },
+      width: '30%'
+    },
+    {
+      title: 'Slug',
+      dataIndex: 'slug',
+      key: 'slug',
+      render: (slug) => (
+        <span style={{ color: '#8c8c8c', fontSize: '13px' }}>
+          {slug ? `/${slug}` : '-'}
+        </span>
+      ),
+      width: '20%'
+    },
+    {
+      title: 'Level',
+      dataIndex: 'level',
+      key: 'level',
+      render: (level) => (
+        <Tag color="blue">{level || 0}</Tag>
+      ),
+      width: '8%',
+      align: 'center'
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (isActive) => (
+        <Tag color={isActive ? 'green' : 'red'}>
+          {isActive ? 'Hoạt động' : 'Tạm dừng'}
+        </Tag>
+      ),
+      width: '12%',
+      align: 'center'
+    },
+    {
+      title: 'Số sản phẩm',
+      dataIndex: 'productCount',
+      key: 'productCount',
+      render: (count) => (
+        <span style={{ color: '#1890ff', fontWeight: 500 }}>
+          {count !== undefined ? count : 0}
+        </span>
+      ),
+      width: '12%',
+      align: 'center'
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => {
+        const actionMenu = [
+          {
+            key: 'add',
+            icon: <PlusOutlined />,
+            label: 'Thêm danh mục con',
+            onClick: () => handleAddCategory(record)
+          },
+          {
+            key: 'edit',
+            icon: <EditOutlined />,
+            label: 'Chỉnh sửa',
+            onClick: () => handleEditCategory(record)
+          },
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: 'Xem chi tiết',
+            onClick: () => console.log('View category:', record)
+          },
+          {
+            type: 'divider'
+          },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined />,
+            label: 'Xóa danh mục',
+            danger: true,
+            onClick: () => handleDeleteCategory(record)
+          }
+        ];
+
+        return (
+          <Space size="small">
             <Tooltip title="Thêm danh mục con">
               <Button
                 type="text"
                 size="small"
-                shape="circle"
                 icon={<PlusOutlined />}
-                onClick={() => handleAddCategory(nodeData)}
-                style={{ 
-                  color: '#52c41a',
-                  border: '1px solid #b7eb8f'
-                }}
+                onClick={() => handleAddCategory(record)}
+                style={{ color: '#52c41a' }}
               />
             </Tooltip>
             <Tooltip title="Chỉnh sửa">
               <Button
                 type="text"
                 size="small"
-                shape="circle"
                 icon={<EditOutlined />}
-                onClick={() => handleEditCategory(nodeData)}
-                style={{ 
-                  color: '#1890ff',
-                  border: '1px solid #91d5ff'
-                }}
+                onClick={() => handleEditCategory(record)}
+                style={{ color: '#1890ff' }}
               />
             </Tooltip>
             <Dropdown menu={{ items: actionMenu }} trigger={['click']}>
               <Button
                 type="text"
                 size="small"
-                shape="circle"
                 icon={<MoreOutlined />}
-                style={{ 
-                  color: '#8c8c8c',
-                  border: '1px solid #d9d9d9'
-                }}
               />
             </Dropdown>
           </Space>
-        </div>
-      );
-    } catch (error) {
-      console.error('Error rendering tree title:', error, nodeData);
-      return <span>Error: {nodeData?.name || 'Unknown'}</span>;
+        );
+      },
+      width: '18%',
+      align: 'center'
     }
-  };
-
-  // Process tree data for display
-  const processedTreeData = (treeData || []).map(item => {
-    try {
-      if (!item) return null;
-      return {
-        ...item,
-        key: item.key || item._id || item.id,
-        title: renderTreeTitle(item),
-        children: item.children ? item.children.map(child => ({
-          ...child,
-          key: child.key || child._id || child.id,
-          title: renderTreeTitle(child),
-          children: child.children ? child.children.map(grandChild => ({
-            ...grandChild,
-            key: grandChild.key || grandChild._id || grandChild.id,
-            title: renderTreeTitle(grandChild)
-          })) : []
-        })) : []
-      };
-    } catch (error) {
-      console.error('Error processing tree item:', error, item);
-      return {
-        ...item,
-        title: <span>Error: {item?.name || 'Unknown'}</span>,
-        children: []
-      };
-    }
-  }).filter(Boolean);
-
-  // Auto expand all nodes when showing all levels
-  useEffect(() => {
-    try {
-      if (levelFilter === 'all') {
-        const all = getAllKeys(treeData);
-        setExpandedKeys(all);
-      }
-    } catch (e) {
-      // noop
-    }
-  }, [levelFilter, treeData]);
-
-  // Apply filters in order: level -> status -> search
-  let filteredTreeData = processedTreeData;
-  
-  if (levelFilter !== 'all') {
-    filteredTreeData = filterTreeDataByLevel(filteredTreeData, levelFilter);
-  }
-  
-  if (statusFilter !== 'all') {
-    filteredTreeData = filterTreeDataByStatus(filteredTreeData, statusFilter);
-  }
-  
-  if (searchValue) {
-    filteredTreeData = filterTreeData(filteredTreeData, searchValue);
-  }
+  ];
 
   try {
     return (
@@ -657,7 +668,7 @@ const CategoryManagement = () => {
           }}>
             <FileTextOutlined style={{ marginRight: '8px' }} />
             Tổng cộng: <strong style={{ color: '#262626', marginLeft: '4px' }}>
-              {getAllCategoriesCount(categories)} danh mục
+              {getAllCategoriesCount()} danh mục
             </strong>
           </div>
         </div>
@@ -697,7 +708,7 @@ const CategoryManagement = () => {
                 Thử lại
               </Button>
             </div>
-          ) : !filteredTreeData || filteredTreeData.length === 0 ? (
+          ) : !filteredFlatData || filteredFlatData.length === 0 ? (
             <div style={{ 
               textAlign: 'center', 
               padding: '80px 20px',
@@ -717,17 +728,32 @@ const CategoryManagement = () => {
               </Button>
             </div>
           ) : (
-            <Tree
-              treeData={filteredTreeData}
-              expandedKeys={expandedKeys || []}
-              selectedKeys={selectedKeys || []}
-              onExpand={setExpandedKeys}
-              onSelect={setSelectedKeys}
-              showLine={{ showLeafIcon: false }}
-              showIcon={false}
-              defaultExpandAll
+            <Table
+              columns={columns}
+              dataSource={filteredFlatData}
+              loading={loading}
+              pagination={{
+                pageSize: 20,
+                showSizeChanger: true,
+                showTotal: (total) => `Tổng ${total} danh mục`,
+                pageSizeOptions: ['10', '20', '50', '100']
+              }}
+              rowKey={(record) => record.key || record._id || record.id}
+              rowClassName={(record, index) => {
+                // Thêm hover effect
+                return '';
+              }}
+              onRow={(record) => ({
+                style: getRowStyle(record),
+                onMouseEnter: (e) => {
+                  e.currentTarget.style.backgroundColor = getHoverColor(record.level || 0);
+                },
+                onMouseLeave: (e) => {
+                  e.currentTarget.style.backgroundColor = getRowStyle(record).backgroundColor;
+                }
+              })}
               style={{
-                background: 'transparent'
+                background: 'white'
               }}
             />
           )}

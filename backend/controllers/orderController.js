@@ -35,9 +35,18 @@ export async function create(req, res) {
         return res.status(400).json({ message: `Product ${item.productId} not found` });
       }
 
-      if (product.stock < item.quantity) {
+      // Check stock from variants or totalStock
+      let availableStock = 0;
+      if (product.variants && product.variants.length > 0) {
+        const activeVariant = product.variants.find(v => v.isActive);
+        availableStock = activeVariant ? activeVariant.stockOnHand : 0;
+      } else {
+        availableStock = product.totalStock || 0;
+      }
+
+      if (availableStock < item.quantity) {
         return res.status(400).json({ 
-          message: `Insufficient stock for product ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
+          message: `Insufficient stock for product ${product.name}. Available: ${availableStock}, Requested: ${item.quantity}` 
         });
       }
     }
@@ -62,35 +71,8 @@ export async function create(req, res) {
 
     await order.save();
 
-    // Update product stock, create inventory transactions and record daily sales
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      
-      // Update stock
-      product.stock -= item.quantity;
-      await product.save();
-
-      // Create inventory transaction
-      const transaction = new InventoryTransaction({
-        productId: item.productId,
-        type: "sale",
-        quantity: -item.quantity, // Negative for sales
-        reason: "Order sale",
-        orderId: order._id,
-        userId: userId || null
-      });
-
-      await transaction.save();
-
-      // Upsert daily sales counter for current day (based on order creation date)
-      const day = new Date();
-      day.setHours(0, 0, 0, 0);
-      await ProductSalesDaily.updateOne(
-        { productId: item.productId, date: day },
-        { $inc: { quantity: item.quantity, revenue: item.quantity * (item.priceSnapshot || item.price || product.price || 0) } },
-        { upsert: true }
-      );
-    }
+    // Note: Stock will be reduced when order status changes from pending to processing/shipping/completed
+    // This allows cancellation of pending orders without affecting inventory
 
     // Update coupon usedCount if coupon was applied
     if (couponId) {
@@ -178,6 +160,80 @@ export async function updateStatus(req, res) {
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
+    }
+
+    const oldStatus = order.status;
+    const newStatus = status;
+
+    // If switching from pending to processing/shipping/completed, reduce inventory
+    if (oldStatus === "pending" && ["processing", "shipping", "completed"].includes(newStatus)) {
+      for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          // Reduce stock from variants or totalStock
+          if (product.variants && product.variants.length > 0) {
+            // If product has variants, reduce from first active variant
+            const activeVariant = product.variants.find(v => v.isActive);
+            if (activeVariant && activeVariant.stockOnHand >= item.quantity) {
+              activeVariant.stockOnHand -= item.quantity;
+              // Update totalStock
+              product.totalStock = product.variants.reduce((total, v) => {
+                return total + (v.isActive ? v.stockOnHand : 0);
+              }, 0);
+            }
+          } else {
+            // If no variants, reduce from totalStock
+            if (product.totalStock >= item.quantity) {
+              product.totalStock -= item.quantity;
+            }
+          }
+          await product.save();
+
+          // Create inventory transaction
+          const transaction = new InventoryTransaction({
+            productId: item.productId,
+            type: "sale",
+            quantity: -item.quantity,
+            reason: `Order ${order.code} status change: ${oldStatus} → ${newStatus}`,
+            orderId: order._id,
+            performedBy: req.user?.id || null
+          });
+          await transaction.save();
+        }
+      }
+    }
+
+    // If switching to cancelled from processing/shipping/completed, restore inventory
+    if (newStatus === "cancelled" && ["processing", "shipping", "completed"].includes(oldStatus)) {
+      for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          // Restore stock
+          if (product.variants && product.variants.length > 0) {
+            const activeVariant = product.variants.find(v => v.isActive);
+            if (activeVariant) {
+              activeVariant.stockOnHand += item.quantity;
+              product.totalStock = product.variants.reduce((total, v) => {
+                return total + (v.isActive ? v.stockOnHand : 0);
+              }, 0);
+            }
+          } else {
+            product.totalStock += item.quantity;
+          }
+          await product.save();
+
+          // Create inventory transaction for restoration
+          const transaction = new InventoryTransaction({
+            productId: item.productId,
+            type: "return",
+            quantity: item.quantity,
+            reason: `Order ${order.code} cancelled - stock restoration`,
+            orderId: order._id,
+            performedBy: req.user?.id || null
+          });
+          await transaction.save();
+        }
+      }
     }
 
     // If switching to shipping and shipment not yet created, create simulated shipment
@@ -269,26 +325,8 @@ export async function cancel(req, res) {
       return res.status(400).json({ message: "Order cannot be cancelled" });
     }
 
-    // Restore product stock
-    for (const item of order.items) {
-      const product = await Product.findById(item.productId);
-      if (product) {
-        product.stock += item.quantity;
-        await product.save();
-
-        // Create inventory transaction for stock restoration
-        const transaction = new InventoryTransaction({
-          productId: item.productId,
-          type: "adjustment",
-          quantity: item.quantity,
-          reason: "Order cancellation - stock restoration",
-          orderId: order._id,
-          userId: userId || null
-        });
-
-        await transaction.save();
-      }
-    }
+    // Note: No need to restore stock for pending orders since stock hasn't been reduced yet
+    // Stock is only reduced when status changes from pending to processing/shipping/completed
 
     order.status = "cancelled";
     await order.save();
@@ -390,6 +428,67 @@ export async function getByCodePublic(req, res) {
     res.json(order);
   } catch (error) {
     console.error("Error fetching order by code:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Delete order (admin only)
+export async function deleteOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // If order status is processing/shipping/completed, restore inventory
+    if (["processing", "shipping", "completed"].includes(order.status)) {
+      for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          // Restore stock
+          if (product.variants && product.variants.length > 0) {
+            const activeVariant = product.variants.find(v => v.isActive);
+            if (activeVariant) {
+              activeVariant.stockOnHand += item.quantity;
+              product.totalStock = product.variants.reduce((total, v) => {
+                return total + (v.isActive ? v.stockOnHand : 0);
+              }, 0);
+            }
+          } else {
+            product.totalStock += item.quantity;
+          }
+          await product.save();
+
+          // Create inventory transaction for restoration
+          const transaction = new InventoryTransaction({
+            productId: item.productId,
+            type: "return",
+            quantity: item.quantity,
+            reason: `Order ${order.code} deleted - stock restoration`,
+            orderId: order._id,
+            performedBy: req.user?.id || null
+          });
+          await transaction.save();
+        }
+      }
+    }
+
+    // Delete associated shipment if exists
+    if (order.shipment) {
+      await Shipment.findByIdAndDelete(order.shipment);
+    }
+
+    // Delete inventory transactions related to this order
+    await InventoryTransaction.deleteMany({ orderId: order._id });
+
+    // Delete the order
+    await Order.findByIdAndDelete(orderId);
+
+    res.json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting order:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }

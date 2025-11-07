@@ -9,7 +9,8 @@ import {
   getStats,
   adminList,
   getByCodePublic,
-  shipOrder
+  shipOrder,
+  deleteOrder
 } from "../controllers/orderController.js";
 
 const router = Router();
@@ -26,5 +27,6 @@ router.get("/:orderId", authRequired, getById);
 router.patch("/:orderId/status", authRequired, requireRole("admin"), updateStatus);
 router.post("/:orderId/ship", authRequired, requireRole("admin"), shipOrder);
 router.patch("/:orderId/cancel", authRequired, cancel);
+router.delete("/:orderId", authRequired, requireRole("admin"), deleteOrder);
 
 export default router;

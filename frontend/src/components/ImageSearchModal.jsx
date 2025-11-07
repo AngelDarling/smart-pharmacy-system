@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../api/client.js';
 
 export default function ImageSearchModal({ isOpen, onClose, onSearch }) {
+  const navigate = useNavigate();
   const [selectedImages, setSelectedImages] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -77,97 +79,54 @@ export default function ImageSearchModal({ isOpen, onClose, onSearch }) {
     try {
       setIsSearching(true);
 
-      // Use the first image for search
-      const formData = new FormData();
-      formData.append('image', selectedImages[0]);
+      // Gọi API cho tất cả các ảnh (tối đa 5)
+      const searchResults = await Promise.all(
+        selectedImages.map(async (imageFile, index) => {
+          try {
+            const formData = new FormData();
+            formData.append('image', imageFile);
 
-      // Call image search API
-      const response = await api.post('/search/image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+            const response = await api.post('/search/image', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            });
+
+            const { success, keywords, products, message } = response.data;
+
+            if (!success) {
+              throw new Error(message || 'Tìm kiếm thất bại');
+            }
+
+            return {
+              imageFile,
+              imageIndex: index + 1,
+              keywords: keywords || '',
+              products: products || [],
+              success: true
+            };
+          } catch (error) {
+            console.error(`Lỗi tìm kiếm ảnh ${index + 1}:`, error);
+            return {
+              imageFile,
+              imageIndex: index + 1,
+              keywords: '',
+              products: [],
+              success: false,
+              error: error.response?.data?.message || error.message || 'Lỗi tìm kiếm'
+            };
+          }
+        })
+      );
+
+      // Chuyển đến trang kết quả tìm kiếm bằng ảnh với tất cả kết quả
+      navigate('/image-search-results', {
+        state: {
+          searchResults: searchResults
         }
       });
 
-      const { success, detectedText, products, message, fallbackMode, suggestion, note } = response.data;
-
-      if (!success) {
-        throw new Error(message || 'Tìm kiếm thất bại');
-      }
-
-      // Check if in fallback mode (Vision API not available)
-      if (fallbackMode && suggestion) {
-        const result = await Swal.fire({
-          title: '⚠️ Vision API chưa kích hoạt',
-          html: `
-            <div style="text-align: left; padding: 10px;">
-              <p style="margin-bottom: 12px; color: #6b7280; font-size: 14px;">
-                ${message}
-              </p>
-              <div style="background: #fef3c7; padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #f59e0b;">
-                <p style="margin: 0 0 8px; color: #92400e; font-weight: 600; font-size: 14px;">
-                  💡 Gợi ý tìm kiếm:
-                </p>
-                <p style="margin: 0; color: #78350f; font-size: 16px; font-weight: 700;">
-                  "${suggestion}"
-                </p>
-              </div>
-              <div style="background: #dbeafe; padding: 12px; border-radius: 8px; font-size: 13px; color: #1e40af;">
-                <strong>Lưu ý:</strong> ${note}
-                <br/><br/>
-                Hoặc bạn có thể tìm kiếm bằng văn bản thông thường.
-              </div>
-            </div>
-          `,
-          icon: 'info',
-          showCancelButton: true,
-          confirmButtonText: `Tìm "${suggestion}"`,
-          cancelButtonText: 'Thử ảnh khác',
-          confirmButtonColor: '#3b82f6',
-          cancelButtonColor: '#6b7280'
-        });
-
-        if (result.isConfirmed && suggestion) {
-          onSearch(suggestion);
-          handleClose();
-        }
-        return;
-      }
-
-      // Show detected text (normal mode with Vision API)
-      if (detectedText && detectedText.trim()) {
-        await Swal.fire({
-          title: '✅ Phát hiện văn bản',
-          html: `
-            <div style="text-align: left; padding: 10px;">
-              <p style="margin-bottom: 10px; color: #6b7280;">Văn bản đọc được từ ảnh:</p>
-              <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-family: monospace; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
-                ${detectedText}
-              </div>
-              <p style="margin-top: 12px; color: #059669; font-weight: 600;">
-                Tìm thấy ${products?.length || 0} sản phẩm liên quan
-              </p>
-            </div>
-          `,
-          icon: 'success',
-          confirmButtonText: 'Xem kết quả',
-          confirmButtonColor: '#3b82f6'
-        });
-
-        // Navigate to search results with the detected text
-        if (detectedText.trim()) {
-          onSearch(detectedText);
-          handleClose();
-        }
-      } else {
-        // No text detected
-        Swal.fire({
-          title: 'Không tìm thấy văn bản',
-          text: message || 'Không thể đọc được text từ ảnh. Vui lòng chụp ảnh rõ hơn hoặc thử ảnh khác.',
-          icon: 'warning',
-          confirmButtonText: 'Thử lại',
-          confirmButtonColor: '#3b82f6'
-        });
-      }
+      handleClose();
 
     } catch (error) {
       console.error('Image search error:', error);

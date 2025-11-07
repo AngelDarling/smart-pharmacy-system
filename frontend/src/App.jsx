@@ -49,6 +49,10 @@ import UserProfile from "./pages/Profile.jsx";
 import UserOrders from "./pages/Orders.jsx";
 import Promotions from "./pages/admin/promotions/Promotions.jsx";
 import ReviewManagement from "./pages/admin/reviews";
+import HealthCheckPage from "./pages/HealthCheckPage.jsx";
+import HealthCheckResultPage from "./pages/HealthCheckResultPage.jsx";
+import ImageSearchResults from "./pages/ImageSearchResults.jsx";
+import { HealthChecks, HealthCheckDetail, QuestionManagement, ResultManagement } from "./pages/admin/healthChecks";
 
 // Landing move to its own file with full storefront sections
 
@@ -134,6 +138,20 @@ function Register() {
     </div>
   );
 }
+
+const formatDiscountAmount = (amount) => {
+  if (amount >= 1000) {
+    const thousands = amount / 1000;
+    // Nếu là số nguyên thì không hiển thị phần thập phân
+    if (thousands % 1 === 0) {
+      return `${thousands}K`;
+    } else {
+      // Hiển thị 1 chữ số thập phân
+      return `${thousands.toFixed(1)}K`;
+    }
+  }
+  return amount.toString();
+};
 
 function App() {
   const location = useLocation();
@@ -569,7 +587,7 @@ function App() {
                                   <path fill="currentColor" d="M4.63316 9C4.64345 9.00021 4.65373 9.00021 4.66399 9H8.24962C8.66383 9 8.99962 8.66421 8.99962 8.25C8.99962 7.83579 8.66383 7.5 8.24962 7.5H5.99893C7.36789 5.67743 9.54671 4.5 11.9996 4.5C16.1418 4.5 19.4996 7.85786 19.4996 12C19.4996 16.1421 16.1418 19.5 11.9996 19.5C8.08773 19.5 4.87463 16.5045 4.53022 12.6827C4.49305 12.2701 4.12848 11.9659 3.71594 12.003C3.3034 12.0402 2.9991 12.4048 3.03628 12.8173C3.44972 17.4052 7.30445 21 11.9996 21C16.9702 21 20.9996 16.9706 20.9996 12C20.9996 7.02944 16.9702 3 11.9996 3C9.31082 3 6.8982 4.17919 5.24962 6.04707V4.5C5.24962 4.08579 4.91383 3.75 4.49962 3.75C4.0854 3.75 3.74962 4.08579 3.74962 4.5V8.25C3.74962 8.66421 4.0854 9 4.49962 9H4.63316ZM11.2496 7.5C11.6638 7.5 11.9996 7.83579 11.9996 8.25V12H14.2496C14.6638 12 14.9996 12.3358 14.9996 12.75C14.9996 13.1642 14.6638 13.5 14.2496 13.5H11.2496C10.8354 13.5 10.4996 13.1642 10.4996 12.75V8.25C10.4996 7.83579 10.8354 7.5 11.2496 7.5Z"/>
                                 </svg>
                                 <span 
-                                  style={{ flex: 1, fontSize: 16, color: "#374151", cursor: "pointer" }}
+                                  style={{ flex: 1, fontSize: 16, color: "#3b82f6", cursor: "pointer" }}
                                   onClick={() => {
                                     setSearchTerm(term);
                                     saveToHistory(term);
@@ -697,7 +715,9 @@ function App() {
                                               fontSize: 12,
                                               fontWeight: 600
                                             }}>
-                                              -{product.discount}%
+                                              {product.discountType === 'amount' && product.discountValue
+                                                ? `-${formatDiscountAmount(product.discountValue)}`
+                                                : `-${product.discount}%`}
                                             </span>
                                           )}
                                         </div>
@@ -1279,7 +1299,10 @@ function App() {
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/test-checkout" element={<TestCheckout />} />
         <Route path="/search" element={<Products />} />
+        <Route path="/image-search-results" element={<ImageSearchResults />} />
         <Route path="/tra-cuu/dia-chinh-moi" element={<AddressLookup />} />
+        <Route path="/health-check/:slug" element={<HealthCheckPage />} />
+        <Route path="/health-check/:slug/result" element={<HealthCheckResultPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -1365,6 +1388,11 @@ function App() {
               <ReviewManagement />
             </ProtectedRoute>
           } />
+          <Route path="health-checks" element={<HealthChecks />} />
+          <Route path="health-checks/new" element={<HealthCheckDetail />} />
+          <Route path="health-checks/:id" element={<HealthCheckDetail />} />
+          <Route path="health-checks/:id/questions" element={<QuestionManagement />} />
+          <Route path="health-checks/:id/results" element={<ResultManagement />} />
           <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Settings />} />
         </Route>

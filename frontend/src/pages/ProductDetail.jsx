@@ -456,9 +456,9 @@ export default function ProductDetail() {
                               fontSize: 14,
                               fontWeight: 600
                             }}>
-                              {directCoupon.discountType === 'percent' 
-                                ? `-${directCoupon.discountValue}%` 
-                                : `-${formatPrice(directCoupon.discountValue)}₫`}
+                                                            {directCoupon.discountType === 'percent'
+                                ? `-${directCoupon.discountValue}%`
+                                : `-${formatDiscountAmount(directCoupon.discountValue)}`}
                             </span>
                           </div>
                           <span style={{ 
@@ -495,15 +495,17 @@ export default function ProductDetail() {
                               }}>
                                 {formatPrice(Math.round(product.price / (1 - product.discount / 100)))}₫
                               </span>
-                              <span style={{ 
-                                background: '#dc2626', 
-                                color: 'white', 
-                                padding: '6px 14px', 
+                                                            <span style={{
+                                background: '#dc2626',
+                                color: 'white',
+                                padding: '6px 14px',
                                 borderRadius: 20,
                                 fontSize: 14,
                                 fontWeight: 600
                               }}>
-                                -{product.discount}%
+                                {product.discountType === 'amount' && product.discountValue
+                                  ? `-${formatDiscountAmount(product.discountValue)}`
+                                  : `-${product.discount}%`}
                               </span>
                             </div>
                           )}
