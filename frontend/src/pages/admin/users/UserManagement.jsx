@@ -21,7 +21,11 @@ import {
   Badge,
   Statistic,
   Dropdown,
-  Menu
+  Menu,
+  Modal,
+  Descriptions,
+  Empty,
+  Spin
 } from 'antd';
 import {
   PlusOutlined,
@@ -43,6 +47,7 @@ import {
 } from '@ant-design/icons';
 import { useUsers } from '../../../hooks/admin/useUsers';
 import UserForm from '../../../components/admin/UserForm';
+import api from '../../../api/client.js';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -64,7 +69,7 @@ const UserManagement = () => {
 
   const [filters, setFilters] = useState({
     search: '',
-    role: '',
+    role: 'customer', // Mặc định chỉ hiển thị customers
     isActive: undefined,
     department: ''
   });
@@ -72,6 +77,10 @@ const UserManagement = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isUserFormVisible, setIsUserFormVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
+  const [pointHistory, setPointHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
 
   // Role options
   const roleOptions = [
@@ -107,11 +116,11 @@ const UserManagement = () => {
   const resetFilters = () => {
     setFilters({
       search: '',
-      role: '',
+      role: 'customer', // Mặc định chỉ hiển thị customers
       isActive: undefined,
       department: ''
     });
-    fetchUsers({});
+    fetchUsers({ role: 'customer' });
   };
 
   // Handle search
@@ -170,6 +179,23 @@ const UserManagement = () => {
     setIsUserFormVisible(true);
   };
 
+  // Handle view user point history
+  const handleViewPointHistory = async (user) => {
+    setViewingUser(user);
+    setIsHistoryModalVisible(true);
+    setHistoryLoading(true);
+    setPointHistory([]);
+    try {
+      const response = await api.get(`/users/${user._id}/point-history`);
+      setPointHistory(response.data || []);
+    } catch (error) {
+      console.error('Error fetching point history:', error);
+      setPointHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // Handle user form submit
   const handleUserFormSubmit = async (values) => {
     try {
@@ -192,6 +218,11 @@ const UserManagement = () => {
     setEditingUser(null);
   };
 
+  // Load users with customer filter on mount
+  useEffect(() => {
+    fetchUsers({ role: 'customer' });
+  }, []);
+
   // Table columns
   const columns = [
     {
@@ -211,7 +242,7 @@ const UserManagement = () => {
       )
     },
     {
-      title: 'Thông tin người dùng',
+      title: 'Thông tin khách hàng',
       dataIndex: 'name',
       key: 'name',
       width: 250,
@@ -232,55 +263,15 @@ const UserManagement = () => {
             marginBottom: '6px',
             fontFamily: 'monospace'
           }}>
-            {record.email}
+            {record.email || 'Chưa có email'}
           </div>
-          {record.employeeId && (
-            <div style={{ 
-              fontSize: '11px', 
-              color: '#8c8c8c',
-              fontStyle: 'italic'
-            }}>
-              Mã NV: {record.employeeId}
-            </div>
-          )}
-        </div>
-      )
-    },
-    {
-      title: 'Vai trò & Phòng ban',
-      key: 'roleDepartment',
-      width: 200,
-      render: (_, record) => (
-        <div>
-          <div style={{ marginBottom: '4px' }}>
-            <Tag 
-              color={roleOptions.find(r => r.value === record.role)?.color || 'default'}
-              style={{ marginBottom: '2px' }}
-            >
-              {roleOptions.find(r => r.value === record.role)?.label || record.role}
-            </Tag>
-          </div>
-          {record.department && (
-            <div style={{ marginBottom: '4px' }}>
-              <Tag color="blue" style={{ marginBottom: '2px' }}>
-                {record.department}
-              </Tag>
-            </div>
-          )}
-          {record.position && (
-            <div>
-              <Tag color="green" style={{ marginBottom: '2px' }}>
-                {record.position}
-              </Tag>
-            </div>
-          )}
         </div>
       )
     },
     {
       title: 'Thông tin liên hệ',
       key: 'contact',
-      width: 180,
+      width: 220,
       render: (_, record) => (
         <div>
           {record.phone && (
@@ -299,8 +290,8 @@ const UserManagement = () => {
               fontStyle: 'italic',
               lineHeight: '1.3'
             }}>
-              📍 {record.address.length > 30 
-                ? `${record.address.substring(0, 30)}...` 
+              📍 {record.address.length > 40 
+                ? `${record.address.substring(0, 40)}...` 
                 : record.address
               }
             </div>
@@ -316,6 +307,32 @@ const UserManagement = () => {
           )}
         </div>
       )
+    },
+    {
+      title: 'Điểm tích lũy',
+      dataIndex: 'loyaltyPoints',
+      key: 'loyaltyPoints',
+      width: 120,
+      align: 'center',
+      render: (points) => (
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            fontSize: '16px', 
+            fontWeight: 700, 
+            color: '#4f46e5'
+          }}>
+            {points || 0}
+          </div>
+          <div style={{ 
+            fontSize: '11px', 
+            color: '#8c8c8c',
+            marginTop: '2px'
+          }}>
+            điểm
+          </div>
+        </div>
+      ),
+      sorter: true
     },
     {
       title: 'Trạng thái',
@@ -350,8 +367,8 @@ const UserManagement = () => {
           {
             key: 'view',
             icon: <EyeOutlined />,
-            label: 'Xem chi tiết',
-            onClick: () => console.log('View user:', record._id)
+            label: 'Xem lịch sử tích điểm',
+            onClick: () => handleViewPointHistory(record)
           },
           {
             key: 'edit',
@@ -373,13 +390,13 @@ const UserManagement = () => {
 
         return (
           <Space size="small">
-            <Tooltip title="Xem chi tiết">
+            <Tooltip title="Xem lịch sử tích điểm">
               <Button
                 type="text"
                 size="small"
                 shape="circle"
                 icon={<EyeOutlined />}
-                onClick={() => console.log('View user:', record._id, record.name)}
+                onClick={() => handleViewPointHistory(record)}
                 style={{ 
                   color: '#1890ff',
                   border: '1px solid #91d5ff'
@@ -431,7 +448,7 @@ const UserManagement = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý Người dùng</h2>
+        <h2 style={{ margin: 0 }}>Quản lý Khách hàng</h2>
         <Space>
           <Tooltip title="Làm mới dữ liệu">
             <Button
@@ -454,7 +471,7 @@ const UserManagement = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={12}>
           <Search
-            placeholder="Tìm kiếm theo tên, email, mã nhân viên..."
+            placeholder="Tìm kiếm theo tên, email, số điện thoại..."
             allowClear
             onSearch={handleSearch}
             style={{ width: '100%' }}
@@ -466,8 +483,8 @@ const UserManagement = () => {
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
-                  title="Tổng người dùng"
-                  value={stats?.totalUsers || 0}
+                  title="Tổng khách hàng"
+                  value={stats?.customers || users.length || 0}
                   prefix={<UserOutlined />}
                   valueStyle={{ color: '#1890ff', fontSize: '18px' }}
                 />
@@ -477,7 +494,7 @@ const UserManagement = () => {
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
                   title="Đang hoạt động"
-                  value={stats?.activeUsers || 0}
+                  value={stats?.activeUsers || users.filter(u => u.isActive).length || 0}
                   prefix={<SafetyOutlined />}
                   valueStyle={{ color: '#52c41a', fontSize: '18px' }}
                 />
@@ -486,20 +503,20 @@ const UserManagement = () => {
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
-                  title="Nhân viên"
-                  value={(stats?.staff || 0) + (stats?.managers || 0) + (stats?.pharmacists || 0)}
-                  prefix={<TeamOutlined />}
-                  valueStyle={{ color: '#faad14', fontSize: '18px' }}
+                  title="Tổng điểm tích lũy"
+                  value={users.reduce((sum, u) => sum + (u.loyaltyPoints || 0), 0)}
+                  prefix={<CrownOutlined />}
+                  valueStyle={{ color: '#722ed1', fontSize: '18px' }}
                 />
               </div>
             </Col>
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
-                  title="Khách hàng"
-                  value={stats?.customers || 0}
+                  title="Đăng nhập gần nhất"
+                  value={stats?.recentLogins || users.filter(u => u.lastLogin).length || 0}
                   prefix={<UserOutlined />}
-                  valueStyle={{ color: '#722ed1', fontSize: '18px' }}
+                  valueStyle={{ color: '#faad14', fontSize: '18px' }}
                 />
               </div>
             </Col>
@@ -514,26 +531,9 @@ const UserManagement = () => {
           allowClear
           style={{ width: 150 }}
           value={filters.role || undefined}
-          onChange={(value) => handleFilterChange('role', value)}
+          onChange={(value) => handleFilterChange('role', value || 'customer')}
         >
-          {roleOptions.map(option => (
-            <Option key={option.value} value={option.value}>
-              {option.label}
-            </Option>
-          ))}
-        </Select>
-        <Select
-          placeholder="Phòng ban"
-          allowClear
-          style={{ width: 150 }}
-          value={filters.department || undefined}
-          onChange={(value) => handleFilterChange('department', value)}
-        >
-          {departmentOptions.map(dept => (
-            <Option key={dept} value={dept}>
-              {dept}
-            </Option>
-          ))}
+          <Option value="customer">Khách hàng</Option>
         </Select>
         <Select
           placeholder="Trạng thái"
@@ -582,7 +582,7 @@ const UserManagement = () => {
               <UserOutlined />
               <span>
                 Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
-                {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> người dùng
+                {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> khách hàng
               </span>
             </div>
           ),
@@ -654,6 +654,80 @@ const UserManagement = () => {
         initialValues={editingUser}
         isEditing={!!editingUser}
       />
+
+      {/* Point History Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CrownOutlined style={{ color: '#722ed1' }} />
+            <span>Lịch sử tích điểm - {viewingUser?.name || ''}</span>
+          </div>
+        }
+        open={isHistoryModalVisible}
+        onCancel={() => {
+          setIsHistoryModalVisible(false);
+          setViewingUser(null);
+          setPointHistory([]);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setIsHistoryModalVisible(false);
+            setViewingUser(null);
+            setPointHistory([]);
+          }}>
+            Đóng
+          </Button>
+        ]}
+        width={700}
+      >
+        <Spin spinning={historyLoading}>
+          {viewingUser && (
+            <Descriptions bordered column={2} size="small" style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Khách hàng">{viewingUser.name}</Descriptions.Item>
+              <Descriptions.Item label="Tổng điểm tích lũy">
+                <span style={{ fontSize: '18px', fontWeight: 700, color: '#4f46e5' }}>
+                  {viewingUser.loyaltyPoints || 0} điểm
+                </span>
+              </Descriptions.Item>
+            </Descriptions>
+          )}
+          
+          {pointHistory.length === 0 && !historyLoading ? (
+            <Empty description="Khách hàng chưa có lịch sử tích điểm" />
+          ) : (
+            <Table
+              columns={[
+                {
+                  title: 'Mã đơn hàng',
+                  dataIndex: 'orderCode',
+                  key: 'orderCode',
+                  width: 150
+                },
+                {
+                  title: 'Số điểm nhận',
+                  dataIndex: 'points',
+                  key: 'points',
+                  width: 120,
+                  align: 'center',
+                  render: (points) => (
+                    <span style={{ fontWeight: 600, color: '#4f46e5' }}>+{points} điểm</span>
+                  )
+                },
+                {
+                  title: 'Ngày nhận',
+                  dataIndex: 'createdAt',
+                  key: 'createdAt',
+                  render: (date) => new Date(date).toLocaleString('vi-VN')
+                }
+              ]}
+              dataSource={pointHistory}
+              rowKey={(record) => record._id || record.orderCode}
+              pagination={pointHistory.length > 10 ? { pageSize: 10 } : false}
+              size="small"
+            />
+          )}
+        </Spin>
+      </Modal>
     </div>
   );
 };

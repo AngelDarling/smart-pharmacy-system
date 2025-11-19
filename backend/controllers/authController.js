@@ -115,7 +115,8 @@ export async function login(req, res, next) {
         salary: user.salary,
         hireDate: user.hireDate,
         lastLogin: user.lastLogin,
-        loginCount: user.loginCount
+        loginCount: user.loginCount,
+        loyaltyPoints: user.loyaltyPoints || 0
       }
     });
   } catch (err) {
@@ -146,7 +147,8 @@ export async function me(req, res) {
     salary: user.salary,
     hireDate: user.hireDate,
     lastLogin: user.lastLogin,
-    loginCount: user.loginCount
+    loginCount: user.loginCount,
+    loyaltyPoints: user.loyaltyPoints || 0
   });
 }
 
@@ -173,6 +175,17 @@ export async function updateProfile(req, res, next) {
     });
   } catch (err) {
     next(err);
+  }
+}
+
+export async function getPointHistory(req, res) {
+  try {
+    const userId = req.user._id;
+    const { PointHistory } = await import("../models/User.js");
+    const logs = await PointHistory.find({ userId }).sort({ createdAt: -1 });
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ message: "Không lấy được lịch sử nhận điểm", error: err.message });
   }
 }
 

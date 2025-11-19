@@ -267,17 +267,25 @@ const productBaseSchema = new mongoose.Schema(
       type: String,
       maxlength: 2000
     },
-    contraindications: { 
-      type: String,
-      maxlength: 1000
+    contraindications: {
+      type: [String],
+      default: [],
+      validate: [
+        arr => arr.every(item => typeof item === 'string' && item.length <= 1000),
+        'Mỗi chống chỉ định tối đa 1000 ký tự'
+      ]
     },
     sideEffects: {
       type: String,
       maxlength: 1000
     },
     warnings: {
-      type: String,
-      maxlength: 1000
+      type: [String],
+      default: [],
+      validate: [
+        arr => arr.every(item => typeof item === 'string' && item.length <= 1000),
+        'Mỗi cảnh báo tối đa 1000 ký tự'
+      ]
     },
     storage: { 
       type: String,

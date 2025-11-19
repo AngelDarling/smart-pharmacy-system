@@ -255,6 +255,29 @@ export async function updateStatus(req, res) {
     order.status = status;
     await order.save();
 
+    // Tích điểm thành viên khi hoàn thành đơn hàng
+    if (newStatus === "completed" && order.userId) {
+      try {
+        const User = (await import("../models/User.js")).default;
+        // Tính điểm chỉ dựa trên tổng tiền hàng, không tính phí vận chuyển
+        const points = Math.floor(order.totals.items / 1000);
+        if (points > 0) {
+          await User.findByIdAndUpdate(order.userId, { $inc: { loyaltyPoints: points } });
+          // Lưu lịch sử nhận điểm
+          const { PointHistory } = await import("../models/User.js");
+          await PointHistory.create({
+            userId: order.userId,
+            orderId: order._id,
+            orderCode: order.code,
+            points,
+            createdAt: new Date()
+          });
+        }
+      } catch (pointErr) {
+        console.error("Error updating loyalty points:", pointErr);
+      }
+    }
+
     const populated = await Order.findById(order._id)
       .populate("items.productId", "name imageUrls")
       .populate("shipment", "shippingCode status timeline")

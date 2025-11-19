@@ -2,6 +2,53 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import api from "../api/client.js";
 
+function PointHistoryTable() {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/auth/me/point-history");
+        setHistory(res.data);
+      } catch {} // lỗi mạng/API -> giữ history=[]
+      setLoading(false);
+    })();
+  }, []);
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <h3 style={{ margin: 0, color: "#4f46e5", fontWeight: 600, marginBottom: 16 }}>Lịch sử nhận điểm</h3>
+      {loading ? (
+        <div>Đang tải...</div>
+      ) : history.length === 0 ? (
+        <div>Bạn chưa có lịch sử nhận điểm.</div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400, background: "#f9fafb", borderRadius: 8 }}>
+          <thead>
+            <tr style={{ background: "#e0e7ff" }}>
+              <th style={{ padding: 12, textAlign: "left", fontWeight: 500 }}>Mã đơn hàng</th>
+              <th style={{ padding: 12, textAlign: "center", fontWeight: 500 }}>Số điểm nhận</th>
+              <th style={{ padding: 12, textAlign: "center", fontWeight: 500 }}>Ngày nhận</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map(log => (
+              <tr key={log._id || log.orderCode}>
+                <td style={{ padding: 12 }}>{log.orderCode || "-"}</td>
+                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>{log.points}</td>
+                <td style={{ padding: 12, textAlign: "center" }}>{new Date(log.createdAt).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -12,6 +59,7 @@ export default function Profile() {
     address: ""
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -50,17 +98,19 @@ export default function Profile() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: "40px auto", padding: 20 }}>
+    <div style={{ maxWidth: 960, width: "100%", margin: "40px auto 0", padding: 20 }}>
       <h1 style={{ marginBottom: 32, color: "#1f2937" }}>Thông tin cá nhân</h1>
       
       <div style={{ 
         background: "white", 
         borderRadius: 12, 
-        padding: 24, 
+        padding: 32, 
         boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-        border: "1px solid #e5e7eb"
+        border: "1px solid #e5e7eb",
+        maxWidth: 900, width: "100%",
+        margin: "0 auto"
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 24, justifyContent: "space-between", gap: 10 }}>
           <h2 style={{ margin: 0, color: "#374151" }}>Thông tin tài khoản</h2>
           {!isEditing && (
             <button
@@ -78,6 +128,41 @@ export default function Profile() {
             </button>
           )}
         </div>
+        <div style={{
+          marginBottom: 24,
+          background: "#eef2ff",
+          padding: "16px 16px 16px 24px",
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          gap: 20,
+          justifyContent: "space-between"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontWeight: 500, color: "#4f46e5", fontSize: 18 }}>
+              Điểm tích lũy:
+            </span>
+            <span style={{ color: "#1e293b", fontSize: 22, fontWeight: 700 }}>
+              {user.loyaltyPoints || 0} điểm
+            </span>
+          </div>
+          <button
+            style={{
+              padding: "8px 18px",
+              background: showHistory ? "#6366f1" : "#e5e7eb",
+              color: showHistory ? "white" : "#374151",
+              border: "none",
+              borderRadius: 7,
+              cursor: "pointer",
+              fontWeight: 500,
+              fontSize: 15
+            }}
+            onClick={() => setShowHistory(v => !v)}
+          >
+            {showHistory ? "Đóng lịch sử" : "Lịch sử điểm"}
+          </button>
+        </div>
+        {showHistory && <PointHistoryTable />}
 
         <div style={{ display: "grid", gap: 16 }}>
           <div>
@@ -92,10 +177,10 @@ export default function Profile() {
                 onChange={handleInputChange}
                 style={{
                   width: "100%",
-                  padding: "12px 16px",
+                  padding: "16px 20px",
                   border: "1px solid #d1d5db",
                   borderRadius: 8,
-                  fontSize: 14,
+                  fontSize: 16,
                   boxSizing: "border-box"
                 }}
               />
@@ -127,10 +212,10 @@ export default function Profile() {
                 onChange={handleInputChange}
                 style={{
                   width: "100%",
-                  padding: "12px 16px",
+                  padding: "16px 20px",
                   border: "1px solid #d1d5db",
                   borderRadius: 8,
-                  fontSize: 14,
+                  fontSize: 16,
                   boxSizing: "border-box"
                 }}
               />
@@ -153,10 +238,10 @@ export default function Profile() {
                 rows={3}
                 style={{
                   width: "100%",
-                  padding: "12px 16px",
+                  padding: "16px 20px",
                   border: "1px solid #d1d5db",
                   borderRadius: 8,
-                  fontSize: 14,
+                  fontSize: 16,
                   boxSizing: "border-box",
                   resize: "vertical"
                 }}

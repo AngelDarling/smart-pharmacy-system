@@ -368,3 +368,15 @@ export async function changePassword(req, res) {
     res.status(500).json({ message: "Lỗi khi đổi mật khẩu" });
   }
 }
+
+// Get point history for a user (admin function)
+export async function getPointHistory(req, res) {
+  try {
+    const userId = req.params.id;
+    const { PointHistory } = await import("../models/User.js");
+    const logs = await PointHistory.find({ userId }).sort({ createdAt: -1 });
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ message: "Không lấy được lịch sử nhận điểm", error: err.message });
+  }
+}

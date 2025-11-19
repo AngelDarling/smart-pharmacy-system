@@ -10,7 +10,8 @@ import {
   toggleStatus, 
   getStats, 
   bulkUpdate,
-  changePassword
+  changePassword,
+  getPointHistory
 } from "../controllers/userController.js";
 
 const router = Router();
@@ -28,5 +29,6 @@ router.delete("/:id", authRequired, requirePermission("delete_users"), remove);
 router.patch("/:id/toggle-status", authRequired, requirePermission("write_users"), toggleStatus);
 router.put("/bulk-update", authRequired, requirePermission("write_users"), bulkUpdate);
 router.put("/:id/password", authRequired, changePassword);
+router.get("/:id/point-history", authRequired, requirePermission("read_users"), getPointHistory);
 
 export default router;

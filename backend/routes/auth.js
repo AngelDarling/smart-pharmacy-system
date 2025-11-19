@@ -12,6 +12,7 @@ router.post("/register", register);
 router.post("/login", login);
 router.get("/me", authRequired, me);
 router.put("/profile", authRequired, updateProfile);
+router.get("/me/point-history", authRequired, (await import("../controllers/authController.js")).getPointHistory);
 
 export default router;
 
