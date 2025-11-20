@@ -78,8 +78,8 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
         categoryId: initialValues.categoryId?._id || initialValues.categoryId,
         brandId: initialValues.brandId?._id || initialValues.brandId,
         // Convert imageUrls array to textarea string
-        imageUrls: initialValues.imageUrls 
-          ? Array.isArray(initialValues.imageUrls) 
+        imageUrls: initialValues.imageUrls
+          ? Array.isArray(initialValues.imageUrls)
             ? initialValues.imageUrls.join('\n')
             : initialValues.imageUrls
           : ''
@@ -94,7 +94,7 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
     try {
       setLoading(true);
       const values = await form.validateFields();
-      
+
       // Convert string IDs to ObjectIds if needed
       const productData = {
         ...values,
@@ -102,7 +102,9 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
         brandId: values.brandId || null,
         price: Number(values.price) || 0,
         costPrice: Number(values.costPrice) || 0,
-        totalStock: Number(values.totalStock) || 0,
+        // totalStock is managed via inventory transactions only
+        // When creating new product, it starts at 0
+        ...(isEditing ? {} : { totalStock: 0 }),
         minStockLevel: Number(values.minStockLevel) || 0,
         maxStockLevel: Number(values.maxStockLevel) || 0,
         safetyStock: Number(values.safetyStock) || 0,
@@ -110,7 +112,7 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
         expiryThresholdDays: Number(values.expiryThresholdDays) || 0,
         isActive: values.isActive !== false,
         // Convert imageUrls from textarea to array
-        imageUrls: values.imageUrls 
+        imageUrls: values.imageUrls
           ? values.imageUrls.split('\n').filter(url => url.trim() !== '')
           : []
       };
@@ -147,7 +149,6 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
           isActive: true,
           price: 0,
           costPrice: 0,
-          totalStock: 0,
           minStockLevel: 0,
           maxStockLevel: 0,
           safetyStock: 0,
@@ -240,8 +241,8 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
             label="URL ảnh sản phẩm"
             help="Nhập URL ảnh sản phẩm (có thể nhập nhiều URL, mỗi URL một dòng)"
           >
-            <TextArea 
-              rows={3} 
+            <TextArea
+              rows={3}
               placeholder="Nhập URL ảnh sản phẩm&#10;Ví dụ:&#10;https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
             />
           </Form.Item>
@@ -302,14 +303,22 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
-                name="totalStock"
-                label="Tồn kho"
-                rules={[{ required: true, message: 'Vui lòng nhập số lượng tồn kho' }]}
+                label="Tồn kho hiện tại"
+                tooltip="Số lượng tồn kho chỉ có thể thay đổi thông qua Nhập/Xuất kho"
               >
-                <InputNumber
+                <Input
+                  value={isEditing ? (initialValues?.totalStock || 0) : 0}
+                  disabled
                   style={{ width: '100%' }}
-                  placeholder="Số lượng tồn kho"
-                  min={0}
+                  suffix={
+                    <a
+                      href="/admin/inventory"
+                      target="_blank"
+                      style={{ fontSize: '12px' }}
+                    >
+                      Quản lý kho
+                    </a>
+                  }
                 />
               </Form.Item>
             </Col>

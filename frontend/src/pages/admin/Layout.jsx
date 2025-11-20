@@ -25,9 +25,8 @@ export default function AdminLayout() {
     {
       title: "QUẢN LÝ TỒN KHO",
       items: [
-        { to: "/admin/inventory", label: "Nhập/Xuất kho", icon: "📈" },
-        { to: "/admin/suppliers", label: "Nhà cung cấp", icon: "🏭" },
-        { to: "/admin/goods-receipts", label: "Phiếu nhập", icon: "🧾" }
+        { to: "/admin/inventory", label: "Quản lý tồn kho", icon: "📈" },
+        { to: "/admin/suppliers", label: "Nhà cung cấp", icon: "🏭" }
       ]
     }
   ];

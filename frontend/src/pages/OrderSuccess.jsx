@@ -39,6 +39,15 @@ export default function OrderSuccess() {
 
         // If we have orderId, fetch full order details
         if (orderId) {
+          // If returning from MoMo, check payment status first to ensure DB is updated
+          if (searchParams.get('partnerCode') || searchParams.get('resultCode')) {
+            try {
+              await api.get(`/payment/momo/status/${orderId}`);
+            } catch (err) {
+              console.error('Error checking payment status:', err);
+            }
+          }
+
           const res = await api.get(`/orders/${orderId}`);
           setOrder(res.data);
         } else {
@@ -73,6 +82,7 @@ export default function OrderSuccess() {
 
   const isMoMoPayment = order?.paymentMethod === 'momo';
   const isPaymentSuccess = searchParams.get('status') === 'success' || order?.paymentStatus === 'paid';
+  const isCancelled = order?.status === 'cancelled' || order?.paymentStatus === 'failed';
 
   return (
     <div style={styles.container}>
@@ -80,18 +90,24 @@ export default function OrderSuccess() {
         {/* Success Icon */}
         <div style={{
           ...styles.iconContainer,
-          backgroundColor: isPaymentSuccess ? '#dcfce7' : '#fef3c7'
+          backgroundColor: isPaymentSuccess ? '#dcfce7' : isCancelled ? '#fee2e2' : '#fef3c7'
         }}>
           <div style={{
-            color: isPaymentSuccess ? '#16a34a' : '#f59e0b'
+            color: isPaymentSuccess ? '#16a34a' : isCancelled ? '#dc2626' : '#f59e0b'
           }}>
-            {isPaymentSuccess ? <CheckCircleIcon /> : <PackageIcon />}
+            {isPaymentSuccess ? <CheckCircleIcon /> : isCancelled ? (
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+            ) : <PackageIcon />}
           </div>
         </div>
 
         {/* Title */}
         <h1 style={styles.title}>
-          {isPaymentSuccess ? 'Đặt hàng thành công!' : 'Đơn hàng đã được tạo!'}
+          {isPaymentSuccess ? 'Đặt hàng thành công!' : isCancelled ? 'Thanh toán thất bại' : 'Đơn hàng đã được tạo!'}
         </h1>
 
         {/* Description */}
@@ -99,7 +115,10 @@ export default function OrderSuccess() {
           {isMoMoPayment && isPaymentSuccess && (
             <>Thanh toán MoMo thành công. Đơn hàng của bạn đang được xử lý.</>
           )}
-          {isMoMoPayment && !isPaymentSuccess && (
+          {isMoMoPayment && isCancelled && (
+            <>Giao dịch thanh toán đã bị hủy hoặc thất bại. Đơn hàng đã được cập nhật trạng thái hủy.</>
+          )}
+          {isMoMoPayment && !isPaymentSuccess && !isCancelled && (
             <>Đơn hàng đã được tạo. Vui lòng hoàn tất thanh toán để chúng tôi xử lý đơn hàng.</>
           )}
           {!isMoMoPayment && (
@@ -149,10 +168,10 @@ export default function OrderSuccess() {
                 <span style={styles.infoLabel}>Trạng thái thanh toán:</span>
                 <span style={{
                   ...styles.badge,
-                  backgroundColor: isPaymentSuccess ? '#dcfce7' : '#fef3c7',
-                  color: isPaymentSuccess ? '#16a34a' : '#f59e0b'
+                  backgroundColor: isPaymentSuccess ? '#dcfce7' : isCancelled ? '#fee2e2' : '#fef3c7',
+                  color: isPaymentSuccess ? '#16a34a' : isCancelled ? '#dc2626' : '#f59e0b'
                 }}>
-                  {isPaymentSuccess ? 'Đã thanh toán' : 'Chờ thanh toán'}
+                  {isPaymentSuccess ? 'Đã thanh toán' : isCancelled ? 'Đã hủy' : 'Chờ thanh toán'}
                 </span>
               </div>
             )}
@@ -178,7 +197,7 @@ export default function OrderSuccess() {
         </div>
 
         {/* Additional Info */}
-        {order?.shippingAddress && (
+        {order?.shippingAddress && !isCancelled && (
           <div style={styles.infoBox}>
             {order.shippingAddress.email && (
               <p style={styles.infoBoxText}>

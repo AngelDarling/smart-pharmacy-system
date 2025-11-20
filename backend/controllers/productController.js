@@ -136,19 +136,32 @@ export async function list(req, res) {
   if (req.query.isActive !== undefined) q.isActive = req.query.isActive === "true";
 
   const text = req.query.q?.trim();
-  const filter = text ? { $and: [q, { $text: { $search: text } }] } : q;
+  if (text) {
+    // Escape special regex characters to prevent injection
+    const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Search across multiple fields with case-insensitive regex
+    q.$or = [
+      { name: { $regex: escapedText, $options: 'i' } },
+      { description: { $regex: escapedText, $options: 'i' } },
+      { sku: { $regex: escapedText, $options: 'i' } },
+      { barcode: { $regex: escapedText, $options: 'i' } }
+    ];
+  }
+  const filter = q;
 
   console.log(`[ProductController] Query filter:`, JSON.stringify(filter, null, 2));
   console.log(`[ProductController] Pagination: skip=${skip}, limit=${limit}`);
   
-  const [items, total] = await Promise.all([
+  const [items, total, totalActive, totalOutOfStock] = await Promise.all([
     Product.find(filter)
       .populate('categoryId', 'name slug')
       .populate('brandId', 'name slug')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
-    Product.countDocuments(filter)
+    Product.countDocuments(filter),
+    Product.countDocuments({ isActive: true }),
+    Product.countDocuments({ totalStock: 0 })
   ]);
   
   console.log(`[ProductController] Found ${items.length} products (skip=${skip}, limit=${limit}), total=${total}`);
@@ -269,7 +282,7 @@ export async function list(req, res) {
 
   // Calculate page for response (for compatibility)
   const responsePage = Math.floor(skip / limit) + 1;
-  res.json({ items: withImage, page: responsePage, limit, total });
+  res.json({ items: withImage, page: responsePage, limit, total, totalActive, totalOutOfStock });
 }
 
 export async function getBySlug(req, res) {

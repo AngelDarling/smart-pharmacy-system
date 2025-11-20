@@ -82,11 +82,11 @@ const AdminLayout = () => {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
       }}>
         Đang kiểm tra quyền...
       </div>
@@ -95,7 +95,7 @@ const AdminLayout = () => {
 
   // Allow admin, manager, pharmacist, and staff to access admin panel
   const allowedRoles = ['admin', 'manager', 'pharmacist', 'staff'];
-  
+
   if (!user || !allowedRoles.includes(user.role)) {
     navigate('/admin/login');
     return null;
@@ -186,15 +186,7 @@ const AdminLayout = () => {
       children: [
         {
           key: '/admin/inventory',
-          label: 'Nhập/Xuất kho',
-        },
-        {
-          key: '/admin/goods-receipts',
-          label: 'Phiếu nhập',
-        },
-        {
-          key: '/admin/inventory-alerts',
-          label: 'Cảnh báo tồn kho',
+          label: 'Quản lý tồn kho',
         },
         {
           key: '/admin/suppliers',
@@ -277,7 +269,7 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/orders')) {
       return ['orders'];
     }
-    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/goods-receipts') || path.startsWith('/admin/inventory-alerts') || path.startsWith('/admin/sales-report')) {
+    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/sales-report')) {
       return ['inventory'];
     }
     if (path.startsWith('/admin/users') || path.startsWith('/admin/staff')) {
@@ -295,7 +287,7 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/orders')) {
       return ['orders'];
     }
-    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/goods-receipts') || path.startsWith('/admin/inventory-alerts') || path.startsWith('/admin/sales-report')) {
+    if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/sales-report')) {
       return ['inventory'];
     }
     if (path.startsWith('/admin/users') || path.startsWith('/admin/staff')) {
@@ -306,9 +298,9 @@ const AdminLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider 
-        trigger={null} 
-        collapsible 
+      <Sider
+        trigger={null}
+        collapsible
         collapsed={collapsed}
         style={{
           background: colorBgContainer,
@@ -327,7 +319,7 @@ const AdminLayout = () => {
             {collapsed ? 'SP' : 'Smart Pharmacy'}
           </Text>
         </div>
-        
+
         <Menu
           mode="inline"
           selectedKeys={getSelectedKeys()}
@@ -340,7 +332,7 @@ const AdminLayout = () => {
           }}
         />
       </Sider>
-      
+
       <Layout>
         <Header style={{
           padding: '0 24px',
@@ -360,7 +352,7 @@ const AdminLayout = () => {
               height: 64,
             }}
           />
-          
+
           <Space size="middle">
             <Dropdown
               trigger={["click"]}
@@ -400,7 +392,7 @@ const AdminLayout = () => {
                 <Button type="text" icon={<BellOutlined />} />
               </Badge>
             </Dropdown>
-            
+
             <Dropdown
               menu={{
                 items: userMenuItems,
@@ -410,8 +402,8 @@ const AdminLayout = () => {
               arrow
             >
               <Space style={{ cursor: 'pointer' }}>
-                <Avatar 
-                  size="small" 
+                <Avatar
+                  size="small"
                   icon={<UserOutlined />}
                   style={{ backgroundColor: '#1890ff' }}
                 />
@@ -420,7 +412,7 @@ const AdminLayout = () => {
             </Dropdown>
           </Space>
         </Header>
-        
+
         <Content style={{
           margin: '24px 16px',
           padding: 24,

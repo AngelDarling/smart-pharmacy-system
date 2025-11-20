@@ -305,6 +305,28 @@ export async function checkPaymentStatus(req, res) {
           payment.status = 'success';
           payment.transId = momoStatus.transId;
           await payment.save();
+
+          // Update order status if needed
+          const order = await Order.findById(orderId);
+          if (order && order.status === 'pending') {
+            order.status = 'processing';
+            order.paymentStatus = 'paid';
+            await order.save();
+          }
+        } else {
+          // Payment failed or cancelled
+          payment.status = 'failed';
+          payment.errorCode = momoStatus.resultCode?.toString();
+          payment.errorMessage = momoStatus.message;
+          await payment.save();
+
+          // Update order status to cancelled
+          const order = await Order.findById(orderId);
+          if (order && order.status === 'pending') {
+            order.status = 'cancelled';
+            order.paymentStatus = 'failed';
+            await order.save();
+          }
         }
       } catch (error) {
         console.error('Error checking MoMo status:', error);

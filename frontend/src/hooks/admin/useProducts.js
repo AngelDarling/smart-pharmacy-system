@@ -19,6 +19,10 @@ export const useProducts = () => {
     pageSize: 10,
     total: 0
   });
+  const [stats, setStats] = useState({
+    totalActive: 0,
+    totalOutOfStock: 0
+  });
 
   // Fetch products with filters
   const fetchProducts = useCallback(async (filters = {}) => {
@@ -57,6 +61,10 @@ export const useProducts = () => {
         current: data.page || 1,
         total: data.total || 0
       }));
+      setStats({
+        totalActive: data.totalActive || 0,
+        totalOutOfStock: data.totalOutOfStock || 0
+      });
     } catch (err) {
       setError(err.message);
       message.error('Lỗi khi tải danh sách sản phẩm');
@@ -376,6 +384,7 @@ export const useProducts = () => {
     loading,
     error,
     pagination,
+    stats,
     fetchProducts,
     createProduct,
     updateProduct,

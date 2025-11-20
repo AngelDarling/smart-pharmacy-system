@@ -58,9 +58,9 @@ export default function Landing() {
   };
 
   return (
-  <div style={{ background: '#e6f3ff', marginTop: 'auto' }}>
+    <div style={{ background: '#e6f3ff', marginTop: 'auto' }}>
       <Hero />
-      <BestSellingSection 
+      <BestSellingSection
         products={bestSellers}
         page={page}
         onPrev={() => setPage((p) => Math.max(0, p - 1))}
@@ -73,12 +73,12 @@ export default function Landing() {
       />
       <BannerSection />
       <FeaturedCategoriesSection />
-      <FavoriteBrandsSection 
+      <FavoriteBrandsSection
         brands={brands}
         scrollRef={brandScrollRef}
         onScrollRef={setBrandScrollRef}
       />
-      <TodayFeaturedSection 
+      <TodayFeaturedSection
         products={todayFeatured}
         page={todayPage}
         onPrev={() => setTodayPage((p) => Math.max(0, p - 1))}
@@ -92,7 +92,6 @@ export default function Landing() {
       <HealthCheckSection healthChecks={healthChecks} />
       <DiseaseLookupSection />
       <HealthNewsSection />
-      <BrandSection />
       {selectedProduct && (
         <SelectPurchaseModal
           product={selectedProduct}
@@ -114,13 +113,13 @@ function Hero() {
         <h1 style={{ margin: "0 0 20px", fontSize: 48, fontWeight: 700 }}>Mừng Ngày Quốc Tế Người Cao Tuổi</h1>
         <h2 style={{ margin: "0 0 30px", fontSize: 32, fontWeight: 500 }}>TẶNG GÓI TẦM SOÁT MIỄN PHÍ</h2>
         <p style={{ fontSize: 18, margin: "0 0 30px", opacity: 0.9 }}>Chăm sóc sức khỏe toàn diện cho người cao tuổi</p>
-        <button style={{ 
-          background: "#ff6b6b", 
-          color: "white", 
-          border: "none", 
-          padding: "15px 30px", 
-          borderRadius: 25, 
-          fontSize: 18, 
+        <button style={{
+          background: "#ff6b6b",
+          color: "white",
+          border: "none",
+          padding: "15px 30px",
+          borderRadius: 25,
+          fontSize: 18,
           fontWeight: 600,
           cursor: "pointer"
         }}>
@@ -148,26 +147,26 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
               Sản phẩm bán chạy nhất
             </div>
           </div>
-          <button 
-            onClick={onPrev} 
-            disabled={page === 0} 
-            style={{ 
-              position: "absolute", 
-              left: 8, 
-              top: "50%", 
-              transform: "translateY(-50%)", 
-              background: "white", 
-              border: "none", 
-              boxShadow: "0 6px 16px rgba(0,0,0,0.2)", 
-              borderRadius: "50%", 
-              width: 52, 
-              height: 52, 
+          <button
+            onClick={onPrev}
+            disabled={page === 0}
+            style={{
+              position: "absolute",
+              left: 8,
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "white",
+              border: "none",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+              borderRadius: "50%",
+              width: 52,
+              height: 52,
               padding: 0,
               lineHeight: "52px",
-              cursor: page === 0 ? "not-allowed" : "pointer", 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center", 
+              cursor: page === 0 ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               zIndex: 2,
               fontSize: 22,
               fontWeight: 700,
@@ -177,26 +176,26 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
           >
             ‹
           </button>
-          <button 
-            onClick={onNext} 
-            disabled={page >= totalPages - 1} 
-            style={{ 
-              position: "absolute", 
-              right: 8, 
-              top: "50%", 
-              transform: "translateY(-50%)", 
-              background: "white", 
-              border: "none", 
-              boxShadow: "0 6px 16px rgba(0,0,0,0.2)", 
-              borderRadius: "50%", 
-              width: 52, 
-              height: 52, 
+          <button
+            onClick={onNext}
+            disabled={page >= totalPages - 1}
+            style={{
+              position: "absolute",
+              right: 8,
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "white",
+              border: "none",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+              borderRadius: "50%",
+              width: 52,
+              height: 52,
               padding: 0,
               lineHeight: "52px",
-              cursor: page >= totalPages - 1 ? "not-allowed" : "pointer", 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center", 
+              cursor: page >= totalPages - 1 ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               zIndex: 2,
               fontSize: 22,
               fontWeight: 700,
@@ -207,44 +206,44 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
             ›
           </button>
 
-        {/* Slider viewport */}
-        <div style={{ overflow: "hidden" }}>
-          {/* Slider track */}
-          <div 
-            style={{ 
-              display: "flex", 
-              width: `${totalPages * 100}%`, 
-              transform: `translateX(-${page * (100 / totalPages)}%)`, 
-              transition: "transform 400ms ease",
-              gap: 0
-            }}
-          >
-            {pages.map((items, idx) => (
-              <div key={idx} style={{ flex: `0 0 ${100/totalPages}%`, padding: "0 2px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 20 }}>
-                  {items.map((p) => (
-                    <div 
-                      key={p._id} 
-                      onClick={() => onProductClick(p)}
-                      style={{ 
-                        background: "white", 
-                        borderRadius: 16, 
-                        padding: 16, 
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.08)", 
-                        position: "relative", 
-                        cursor: "pointer", 
-                        transition: "all 0.3s ease" 
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-4px)";
-                        e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.15)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
-                      }}
-                    >
-                                                                                                {p.discount > 0 && (
+          {/* Slider viewport */}
+          <div style={{ overflow: "hidden" }}>
+            {/* Slider track */}
+            <div
+              style={{
+                display: "flex",
+                width: `${totalPages * 100}%`,
+                transform: `translateX(-${page * (100 / totalPages)}%)`,
+                transition: "transform 400ms ease",
+                gap: 0
+              }}
+            >
+              {pages.map((items, idx) => (
+                <div key={idx} style={{ flex: `0 0 ${100 / totalPages}%`, padding: "0 2px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 20 }}>
+                    {items.map((p) => (
+                      <div
+                        key={p._id}
+                        onClick={() => onProductClick(p)}
+                        style={{
+                          background: "white",
+                          borderRadius: 16,
+                          padding: 16,
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+                          position: "relative",
+                          cursor: "pointer",
+                          transition: "all 0.3s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-4px)";
+                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.15)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
+                        }}
+                      >
+                        {p.discount > 0 && (
                           <div style={{
                             position: "absolute",
                             top: 0,
@@ -258,38 +257,38 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
                             fontWeight: 700,
                             zIndex: 1
                           }}>
-                            {p.discountType === 'amount' && p.discountValue ? 
-                              `-${(p.discountValue / 1000).toFixed(0)}K` : 
+                            {p.discountType === 'amount' && p.discountValue ?
+                              `-${(p.discountValue / 1000).toFixed(0)}K` :
                               `-${p.discount}%`
                             }
                           </div>
                         )}
-                        <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>                        
+                        <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
                           <img
-                            src={getImageUrl(p.imageUrls?.[0], "/default-product.png")}                                                                         
+                            src={getImageUrl(p.imageUrls?.[0], "/default-product.png")}
                             alt={p.name}
-                            style={{ maxWidth: "100%", maxHeight: 180, objectFit: "contain" }}                                                                  
-                            onError={(e) => handleImageError(e, "/default-product.png")}                                                                        
+                            style={{ maxWidth: "100%", maxHeight: 180, objectFit: "contain" }}
+                            onError={(e) => handleImageError(e, "/default-product.png")}
                           />
                         </div>
-                        <div style={{ fontSize: 14, fontWeight: 600, minHeight: 44, color: "#0f172a", marginBottom: 10 }}>{p.name}</div>                        
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>                                                       
-                          <span style={{ color: "#0ea5e9", fontWeight: 800, fontSize: 16 }}>{(p.finalPrice || p.price)?.toLocaleString()}₫</span>                                 
-                          {p.discount > 0 && p.originalPrice && p.originalPrice > (p.finalPrice || p.price) && (  
-                            <span style={{ color: "#9ca3af", textDecoration: "line-through", fontSize: 13 }}>{p.originalPrice.toLocaleString()}₫</span>        
+                        <div style={{ fontSize: 14, fontWeight: 600, minHeight: 44, color: "#0f172a", marginBottom: 10 }}>{p.name}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                          <span style={{ color: "#0ea5e9", fontWeight: 800, fontSize: 16 }}>{(p.finalPrice || p.price)?.toLocaleString()}₫</span>
+                          {p.discount > 0 && p.originalPrice && p.originalPrice > (p.finalPrice || p.price) && (
+                            <span style={{ color: "#9ca3af", textDecoration: "line-through", fontSize: 13 }}>{p.originalPrice.toLocaleString()}₫</span>
                           )}
                         </div>
-                        <button 
+                        <button
                           onClick={(e) => onBuyClick(e, p)}
-                          style={{ 
-                            marginTop: 10, 
-                            width: "100%", 
-                            background: "#2563eb", 
-                            color: "white", 
-                            border: "none", 
-                            padding: "10px 12px", 
-                            borderRadius: 8, 
-                            cursor: "pointer", 
+                          style={{
+                            marginTop: 10,
+                            width: "100%",
+                            background: "#2563eb",
+                            color: "white",
+                            border: "none",
+                            padding: "10px 12px",
+                            borderRadius: 8,
+                            cursor: "pointer",
                             fontWeight: 600,
                             transition: "background-color 0.2s"
                           }}
@@ -298,13 +297,13 @@ function BestSellingSection({ products, page = 0, onPrev, onNext, onProductClick
                         >
                           Chọn mua
                         </button>
-                    </div>
-                  ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
@@ -457,7 +456,7 @@ function HealthCheckSection({ healthChecks }) {
                     }}
                   >
                     {pageChecks.map((check) => (
-                      <div key={check._id || check.slug} style={{ 
+                      <div key={check._id || check.slug} style={{
                         flex: "0 0 calc(33.333% - 8px)",
                         maxWidth: "calc(33.333% - 8px)",
                         boxSizing: "border-box"
@@ -649,16 +648,16 @@ function BannerSection() {
   return (
     <div style={{ padding: "40px 0", background: "#e6f3ff" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 12, 
-          marginBottom: 30 
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 30
         }}>
-          <div style={{ 
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
-            color: "white", 
-            padding: "8px 16px", 
+          <div style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            padding: "8px 16px",
             borderRadius: 8,
             display: "flex",
             alignItems: "center",
@@ -673,7 +672,7 @@ function BannerSection() {
 
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
           {/* Large Banner - Left */}
-          <div style={{ 
+          <div style={{
             gridRow: "span 2",
             borderRadius: 16,
             overflow: "hidden",
@@ -682,15 +681,15 @@ function BannerSection() {
             transition: "transform 0.3s",
             position: "relative"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
-          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
           >
-            <img 
-              src={banners[0].image} 
+            <img
+              src={banners[0].image}
               alt={banners[0].alt}
-              style={{ 
-                width: "100%", 
-                height: "100%", 
+              style={{
+                width: "100%",
+                height: "100%",
                 objectFit: "cover",
                 display: "block"
               }}
@@ -702,9 +701,9 @@ function BannerSection() {
 
           {/* Small Banners - Right */}
           {banners.slice(1, 3).map((banner) => (
-            <div 
+            <div
               key={banner.id}
-              style={{ 
+              style={{
                 borderRadius: 16,
                 overflow: "hidden",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
@@ -714,12 +713,12 @@ function BannerSection() {
               onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
               onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
             >
-              <img 
-                src={banner.image} 
+              <img
+                src={banner.image}
                 alt={banner.alt}
-                style={{ 
-                  width: "100%", 
-                  height: "100%", 
+                style={{
+                  width: "100%",
+                  height: "100%",
                   objectFit: "cover",
                   display: "block"
                 }}
@@ -758,7 +757,7 @@ function FeaturedCategoriesSection() {
         .filter(cat => cat.productCount > 0) // Only show categories with products
         .sort((a, b) => (b.productCount || 0) - (a.productCount || 0))
         .slice(0, 10);
-      
+
       console.log('Featured categories:', sorted); // Debug log
       setCategories(sorted);
     }).catch((err) => {
@@ -770,16 +769,16 @@ function FeaturedCategoriesSection() {
   return (
     <div style={{ padding: "50px 0", background: "#e6f3ff" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 12, 
-          marginBottom: 30 
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 30
         }}>
-          <div style={{ 
-            background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", 
-            color: "white", 
-            padding: "8px 16px", 
+          <div style={{
+            background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+            color: "white",
+            padding: "8px 16px",
             borderRadius: 8,
             display: "flex",
             alignItems: "center",
@@ -797,22 +796,22 @@ function FeaturedCategoriesSection() {
             Đang tải danh mục...
           </div>
         ) : (
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(5, 1fr)", 
-            gap: 20 
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: 20
           }}>
             {categories.map((category) => {
               // Ensure iconUrl is properly formatted
-              const iconSrc = category.iconUrl 
+              const iconSrc = category.iconUrl
                 ? (category.iconUrl.startsWith('http') ? category.iconUrl : `http://localhost:5000${category.iconUrl}`)
                 : null;
-              
+
               return (
-                <Link 
+                <Link
                   key={category._id}
                   to={`/catalog?category=${category.slug}`}
-                  style={{ 
+                  style={{
                     textDecoration: "none",
                     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                     borderRadius: 12,
@@ -839,7 +838,7 @@ function FeaturedCategoriesSection() {
                   }}
                 >
                   {iconSrc && (
-                    <img 
+                    <img
                       src={iconSrc}
                       alt={category.name}
                       style={{
@@ -855,17 +854,17 @@ function FeaturedCategoriesSection() {
                       }}
                     />
                   )}
-                  <div style={{ 
-                    fontSize: 15, 
-                    fontWeight: 600, 
+                  <div style={{
+                    fontSize: 15,
+                    fontWeight: 600,
                     color: "white",
                     marginBottom: 6,
                     lineHeight: 1.3
                   }}>
                     {category.name}
                   </div>
-                  <div style={{ 
-                    fontSize: 13, 
+                  <div style={{
+                    fontSize: 13,
                     color: "rgba(255,255,255,0.9)",
                     fontWeight: 500
                   }}>
@@ -915,16 +914,16 @@ function FavoriteBrandsSection({ brands, scrollRef, onScrollRef }) {
   return (
     <div style={{ padding: "50px 0", background: "#e6f3ff" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 12, 
-          marginBottom: 30 
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 30
         }}>
-          <div style={{ 
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
-            color: "white", 
-            padding: "8px 16px", 
+          <div style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            padding: "8px 16px",
             borderRadius: 8,
             display: "flex",
             alignItems: "center",
@@ -1041,116 +1040,116 @@ function FavoriteBrandsSection({ brands, scrollRef, onScrollRef }) {
                     }}
                   >
                     {pageBrands.map((brand) => {
-              const logoSrc = brand.logoUrl 
-                ? (brand.logoUrl.startsWith('http') ? brand.logoUrl : `http://localhost:5000${brand.logoUrl}`)
-                : null;
-              
-              return (
-                <Link
-                  key={brand._id || brand.slug}
-                  to={`/catalog?brandSlug=${brand.slug}`}
-                  style={{
-                    textDecoration: "none",
-                    background: "white",
-                    borderRadius: 12,
-                    padding: 20,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textAlign: "center",
-                    minWidth: 200,
-                    width: 200,
-                    minHeight: 220,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    transition: "all 0.3s ease",
-                    cursor: "pointer",
-                    position: "relative",
-                    overflow: "hidden",
-                    flexShrink: 0
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
-                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.15)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0) scale(1)";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
-                  }}
-                >
-                  {/* Brand Logo/Image */}
-                  <div style={{
-                    width: "100%",
-                    height: 120,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 16
-                  }}>
-                    {logoSrc ? (
-                      <img
-                        src={logoSrc}
-                        alt={brand.name}
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "100%",
-                          objectFit: "contain"
-                        }}
-                        onError={(e) => {
-                          console.log('Failed to load brand logo:', logoSrc);
-                          e.target.style.display = 'none';
-                          if (e.target.nextSibling) {
-                            e.target.nextSibling.style.display = 'flex';
-                          }
-                        }}
-                      />
-                    ) : null}
-                    <div style={{
-                      width: "100%",
-                      height: "100%",
-                      display: logoSrc ? 'none' : 'flex',
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      borderRadius: 8,
-                      color: "white",
-                      fontSize: 32,
-                      fontWeight: 700
-                    }}>
-                      {brand.name?.charAt(0) || '?'}
-                    </div>
-                  </div>
+                      const logoSrc = brand.logoUrl
+                        ? (brand.logoUrl.startsWith('http') ? brand.logoUrl : `http://localhost:5000${brand.logoUrl}`)
+                        : null;
 
-                  {/* Brand Name */}
-                  <div style={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: "#2c3e50",
-                    marginBottom: 8,
-                    lineHeight: 1.3,
-                    minHeight: 40,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                  }}>
-                    {brand.name}
-                  </div>
+                      return (
+                        <Link
+                          key={brand._id || brand.slug}
+                          to={`/catalog?brandSlug=${brand.slug}`}
+                          style={{
+                            textDecoration: "none",
+                            background: "white",
+                            borderRadius: 12,
+                            padding: 20,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textAlign: "center",
+                            minWidth: 200,
+                            width: 200,
+                            minHeight: 220,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                            transition: "all 0.3s ease",
+                            cursor: "pointer",
+                            position: "relative",
+                            overflow: "hidden",
+                            flexShrink: 0
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
+                            e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.15)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0) scale(1)";
+                            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+                          }}
+                        >
+                          {/* Brand Logo/Image */}
+                          <div style={{
+                            width: "100%",
+                            height: 120,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginBottom: 16
+                          }}>
+                            {logoSrc ? (
+                              <img
+                                src={logoSrc}
+                                alt={brand.name}
+                                style={{
+                                  maxWidth: "100%",
+                                  maxHeight: "100%",
+                                  objectFit: "contain"
+                                }}
+                                onError={(e) => {
+                                  console.log('Failed to load brand logo:', logoSrc);
+                                  e.target.style.display = 'none';
+                                  if (e.target.nextSibling) {
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <div style={{
+                              width: "100%",
+                              height: "100%",
+                              display: logoSrc ? 'none' : 'flex',
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              borderRadius: 8,
+                              color: "white",
+                              fontSize: 32,
+                              fontWeight: 700
+                            }}>
+                              {brand.name?.charAt(0) || '?'}
+                            </div>
+                          </div>
 
-                  {/* Product Count */}
-                  {brand.productCount > 0 && (
-                    <div style={{
-                      fontSize: 12,
-                      color: "#6b7280",
-                      fontWeight: 500
-                    }}>
-                      {brand.productCount} sản phẩm
-                    </div>
-                  )}
-                </Link>
-                    );
-                  })}
+                          {/* Brand Name */}
+                          <div style={{
+                            fontSize: 15,
+                            fontWeight: 600,
+                            color: "#2c3e50",
+                            marginBottom: 8,
+                            lineHeight: 1.3,
+                            minHeight: 40,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                          }}>
+                            {brand.name}
+                          </div>
+
+                          {/* Product Count */}
+                          {brand.productCount > 0 && (
+                            <div style={{
+                              fontSize: 12,
+                              color: "#6b7280",
+                              fontWeight: 500
+                            }}>
+                              {brand.productCount} sản phẩm
+                            </div>
+                          )}
+                        </Link>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -1162,33 +1161,7 @@ function FavoriteBrandsSection({ brands, scrollRef, onScrollRef }) {
   );
 }
 
-function BrandSection() {
-  const brands = ["BRAUER", "OcuMi", "Tảo Spirulina", "Viên uống collagen", "Omega 3", "Vitamin D3"];
 
-  return (
-    <div style={{ background: "#e6f3ff", padding: "40px 0" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 700, margin: "0 0 30px", textAlign: "center", color: "#2c3e50" }}>Thương hiệu nổi bật</h2>
-        <div style={{ display: "flex", gap: 30, overflowX: "auto", paddingBottom: 10 }}>
-          {brands.map((brand, i) => (
-            <div key={i} style={{ 
-              minWidth: 150, 
-              height: 80, 
-              background: "white", 
-              borderRadius: 8, 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-            }}>
-              <span style={{ fontSize: 16, fontWeight: 600, color: "#2c3e50" }}>{brand}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductClick, onBuyClick }) {
   const pageSize = 6;
@@ -1204,16 +1177,16 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
   return (
     <div style={{ padding: "50px 0", background: "#e6f3ff" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
-        <h2 style={{ 
-          fontSize: 28, 
-          fontWeight: 700, 
-          margin: "0 0 30px", 
-          textAlign: "center", 
-          color: "#2c3e50" 
+        <h2 style={{
+          fontSize: 28,
+          fontWeight: 700,
+          margin: "0 0 30px",
+          textAlign: "center",
+          color: "#2c3e50"
         }}>
           Sản phẩm nổi bật hôm nay
         </h2>
-        
+
         <div style={{ position: "relative" }}>
           {/* Navigation buttons */}
           {totalPages > 1 && (
@@ -1270,9 +1243,9 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
           )}
 
           {/* Product grid */}
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(6, 1fr)", 
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(6, 1fr)",
             gap: 20,
             overflow: "hidden"
           }}>
@@ -1300,9 +1273,9 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
                 }}
                 onClick={() => onProductClick(product)}
               >
-                                <div style={{ position: "relative", height: 180, marginBottom: 12 }}>                                                                           
+                <div style={{ position: "relative", height: 180, marginBottom: 12 }}>
                   <img
-                    src={getImageUrl(product.productImage || product.images?.[0] || product.imageUrls?.[0])}                                                                              
+                    src={getImageUrl(product.productImage || product.images?.[0] || product.imageUrls?.[0])}
                     alt={product.name}
                     style={{
                       width: "100%",
@@ -1325,8 +1298,8 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
                       fontWeight: 700,
                       zIndex: 1
                     }}>
-                      {product.discountType === 'amount' && product.discountValue ? 
-                        `-${(product.discountValue / 1000).toFixed(0)}K` : 
+                      {product.discountType === 'amount' && product.discountValue ?
+                        `-${(product.discountValue / 1000).toFixed(0)}K` :
                         `-${product.discount}%`
                       }
                     </div>
@@ -1349,7 +1322,7 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
                   )}
                 </div>
 
-                <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>                                                                             
+                <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
                   <h3 style={{
                     fontSize: 14,
                     fontWeight: 600,
@@ -1365,21 +1338,21 @@ function TodayFeaturedSection({ products, page = 0, onPrev, onNext, onProductCli
                   </h3>
 
                   <div style={{ marginTop: "auto" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>                                                           
-                      <span style={{ color: "#ff4757", fontWeight: 700, fontSize: 16 }}>                                                                        
-                        {new Intl.NumberFormat('vi-VN').format(product.finalPrice || product.productPrice || product.price)}₫                                                         
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <span style={{ color: "#ff4757", fontWeight: 700, fontSize: 16 }}>
+                        {new Intl.NumberFormat('vi-VN').format(product.finalPrice || product.productPrice || product.price)}₫
                       </span>
-                      {product.discount > 0 && product.originalPrice && product.originalPrice > (product.finalPrice || product.productPrice || product.price) && (                                            
+                      {product.discount > 0 && product.originalPrice && product.originalPrice > (product.finalPrice || product.productPrice || product.price) && (
                         <span style={{
                           color: "#999",
                           textDecoration: "line-through",
                           fontSize: 14
                         }}>
-                          {new Intl.NumberFormat('vi-VN').format(product.originalPrice)}₫                                                                       
+                          {new Intl.NumberFormat('vi-VN').format(product.originalPrice)}₫
                         </span>
                       )}
                     </div>
-                    
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

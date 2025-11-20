@@ -19,11 +19,7 @@ import ProductManagement from "./pages/admin/products/ProductManagement.jsx";
 import BrandManagement from "./pages/admin/products/BrandManagement.jsx";
 import UserManagement from "./pages/admin/users/UserManagement.jsx";
 import StaffManagement from "./pages/admin/staff/StaffManagement.jsx";
-import { 
-  InventoryManagement, 
-  GoodsReceiptManagement, 
-  InventoryAlertsManagement 
-} from "./pages/admin/inventory";
+import { InventoryManagement } from "./pages/admin/inventory";
 import AdminLogin from "./pages/admin/Login.jsx";
 import AdminDashboard from "./pages/admin/Dashboard.jsx";
 import AdminSuppliers from "./pages/admin/Suppliers.jsx";
@@ -158,9 +154,9 @@ function App() {
   const isAdminRoute = location.pathname.startsWith("/admin");
   const { items: cartItems, remove: removeFromCart } = useCart();
   const { user, logout } = useAuth();
-  
+
   // Production: remove noisy console logs
-  
+
   // Debug log để kiểm tra cartItems (đã tắt)
   // console.log('App.jsx cartItems updated:', cartItems.length, cartItems.map(i => ({ 
   //   id: i.id, 
@@ -185,7 +181,7 @@ function App() {
   const [activeRootCategory, setActiveRootCategory] = useState(null);
   const [activeLevel1Id, setActiveLevel1Id] = useState(null);
   const [categoryDropdownTimeout, setCategoryDropdownTimeout] = useState(null);
-  
+
   // Search functionality
   const {
     searchTerm,
@@ -405,63 +401,63 @@ function App() {
                   <div>NHÀ THUỐC</div>
                   <div>SMART PHARMACY</div>
                 </Link>
-                
+
                 {/* Search bar - centered */}
                 <div ref={searchDropdownRef} style={{ flex: 1, display: "flex", justifyContent: "center", position: "relative", maxWidth: 1000 }}>
-                  <div style={{ 
-                    display: "flex", 
-                    alignItems: "stretch", 
-                    gap: 8, 
-                    borderRadius: 30, 
-                    height: 52, 
-                    padding: 6, 
-                    paddingLeft: 16, 
-                    background: "white", 
-                    position: "relative", 
+                  <div style={{
+                    display: "flex",
+                    alignItems: "stretch",
+                    gap: 8,
+                    borderRadius: 30,
+                    height: 52,
+                    padding: 6,
+                    paddingLeft: 16,
+                    background: "white",
+                    position: "relative",
                     zIndex: 10,
                     boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
                     width: "100%"
                   }}>
-                        <form style={{ display: "flex", width: "100%", alignItems: "center", position: "relative" }}>
-                          <input 
-                            type="text" 
-                            name="search"
-                            autoComplete="off"
-                            placeholder="Tìm tên thuốc, bệnh lý, TPCN..." 
-                            value={searchTerm}
-                            onChange={(e) => handleSearchChange(e.target.value)}
-                            onFocus={() => setShowSearchModal(true)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                if (searchTerm.trim()) {
-                                  saveToHistory(searchTerm);
-                                  window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
-                                }
-                              }
-                            }}
-                            style={{ 
-                              width: "100%", 
-                              background: "transparent", 
-                              border: "none",
-                              outline: "none",
-                              fontSize: 16,
-                              color: "#374151",
-                              paddingRight: 100
-                            }} 
-                          />
-                        </form>
-                    
-                    <div style={{ 
-                      display: "inline-flex", 
-                      gap: 8, 
-                      alignItems: "center", 
-                      paddingRight: 8 
+                    <form style={{ display: "flex", width: "100%", alignItems: "center", position: "relative" }}>
+                      <input
+                        type="text"
+                        name="search"
+                        autoComplete="off"
+                        placeholder="Tìm tên thuốc, bệnh lý, TPCN..."
+                        value={searchTerm}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onFocus={() => setShowSearchModal(true)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (searchTerm.trim()) {
+                              saveToHistory(searchTerm);
+                              window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
+                            }
+                          }
+                        }}
+                        style={{
+                          width: "100%",
+                          background: "transparent",
+                          border: "none",
+                          outline: "none",
+                          fontSize: 16,
+                          color: "#374151",
+                          paddingRight: 100
+                        }}
+                      />
+                    </form>
+
+                    <div style={{
+                      display: "inline-flex",
+                      gap: 8,
+                      alignItems: "center",
+                      paddingRight: 8
                     }}>
-                      <button 
+                      <button
                         type="button"
                         onClick={handleVoiceSearchClick}
-                        style={{ 
+                        style={{
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -484,21 +480,21 @@ function App() {
                         }}
                       >
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                          <path 
-                            d="M12 2C10.34 2 9 3.34 9 5V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V5C15 3.34 13.66 2 12 2Z" 
+                          <path
+                            d="M12 2C10.34 2 9 3.34 9 5V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V5C15 3.34 13.66 2 12 2Z"
                             fill="currentColor"
                           />
-                          <path 
-                            d="M12 17C9.24 17 7 14.76 7 12H5C5 15.53 7.61 18.43 11 18.92V22H13V18.92C16.39 18.43 19 15.53 19 12H17C17 14.76 14.76 17 12 17Z" 
+                          <path
+                            d="M12 17C9.24 17 7 14.76 7 12H5C5 15.53 7.61 18.43 11 18.92V22H13V18.92C16.39 18.43 19 15.53 19 12H17C17 14.76 14.76 17 12 17Z"
                             fill="currentColor"
                           />
                         </svg>
                       </button>
-                      
-                      <button 
+
+                      <button
                         type="button"
                         onClick={handleImageSearchClick}
-                        style={{ 
+                        style={{
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -527,283 +523,283 @@ function App() {
                     </div>
                   </div>
 
-                   {/* Search Dropdown */}
-                   {showSearchModal && (
-                     <>
-                       {/* Dark Overlay */}
-                       <div 
-                         onClick={() => setShowSearchModal(false)}
-                         style={{
-                           position: "fixed",
-                           top: "200px", // Start from below navigation categories
-                           left: 0,
-                           right: 0,
-                           bottom: 0,
-                           background: "rgba(0, 0, 0, 0.5)",
-                           zIndex: 999
-                         }} 
-                       />
-                       
-                          {/* Search Dropdown */}
-                          <div style={{
-                            position: "absolute",
-                            top: "100%",
-                            left: 0,
-                            right: 0,
-                            background: "white",
-                            borderRadius: 12,
-                            maxHeight: "85vh",
-                            overflow: "hidden",
-                            boxShadow: "0 20px 25px rgba(0,0,0,0.1)",
-                            zIndex: 1000,
-                            marginTop: 8,
-                            minHeight: "400px"
-                          }}>
-                      {/* Search Content */}
-                      <div style={{ padding: 24, maxHeight: "70vh", overflowY: "auto" }}>
-                        {/* Search History */}
-                        {searchHistory.length > 0 && (
-                          <div style={{ marginBottom: 24 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "#374151" }}>
-                                Lịch sử tìm kiếm
-                              </h3>
-                              <button 
-                                onClick={clearHistory}
-                                style={{ 
-                                  background: "none", 
-                                  border: "none", 
-                                  color: "#6b7280", 
-                                  cursor: "pointer",
-                                  fontSize: 16
-                                }}
-                              >
-                                Xóa tất cả
-                              </button>
-                            </div>
-                            {searchHistory.slice(0, 3).map((term, index) => (
-                              <div key={index} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#f8f9fa", borderRadius: 8, marginBottom: 8 }}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: "#6b7280" }}>
-                                  <path fill="currentColor" d="M4.63316 9C4.64345 9.00021 4.65373 9.00021 4.66399 9H8.24962C8.66383 9 8.99962 8.66421 8.99962 8.25C8.99962 7.83579 8.66383 7.5 8.24962 7.5H5.99893C7.36789 5.67743 9.54671 4.5 11.9996 4.5C16.1418 4.5 19.4996 7.85786 19.4996 12C19.4996 16.1421 16.1418 19.5 11.9996 19.5C8.08773 19.5 4.87463 16.5045 4.53022 12.6827C4.49305 12.2701 4.12848 11.9659 3.71594 12.003C3.3034 12.0402 2.9991 12.4048 3.03628 12.8173C3.44972 17.4052 7.30445 21 11.9996 21C16.9702 21 20.9996 16.9706 20.9996 12C20.9996 7.02944 16.9702 3 11.9996 3C9.31082 3 6.8982 4.17919 5.24962 6.04707V4.5C5.24962 4.08579 4.91383 3.75 4.49962 3.75C4.0854 3.75 3.74962 4.08579 3.74962 4.5V8.25C3.74962 8.66421 4.0854 9 4.49962 9H4.63316ZM11.2496 7.5C11.6638 7.5 11.9996 7.83579 11.9996 8.25V12H14.2496C14.6638 12 14.9996 12.3358 14.9996 12.75C14.9996 13.1642 14.6638 13.5 14.2496 13.5H11.2496C10.8354 13.5 10.4996 13.1642 10.4996 12.75V8.25C10.4996 7.83579 10.8354 7.5 11.2496 7.5Z"/>
-                                </svg>
-                                <span 
-                                  style={{ flex: 1, fontSize: 16, color: "#3b82f6", cursor: "pointer" }}
-                                  onClick={() => {
-                                    setSearchTerm(term);
-                                    saveToHistory(term);
-                                    setShowSearchModal(false);
-                                    window.location.href = `/search?q=${encodeURIComponent(term)}`;
-                                  }}
-                                >
-                                  {term}
-                                </span>
-                                <button 
-                                  onClick={() => removeFromHistory(term)}
-                                  style={{ 
-                                    background: "none", 
-                                    border: "none", 
-                                    color: "#6b7280", 
+                  {/* Search Dropdown */}
+                  {showSearchModal && (
+                    <>
+                      {/* Dark Overlay */}
+                      <div
+                        onClick={() => setShowSearchModal(false)}
+                        style={{
+                          position: "fixed",
+                          top: "200px", // Start from below navigation categories
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: "rgba(0, 0, 0, 0.5)",
+                          zIndex: 999
+                        }}
+                      />
+
+                      {/* Search Dropdown */}
+                      <div style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        background: "white",
+                        borderRadius: 12,
+                        maxHeight: "85vh",
+                        overflow: "hidden",
+                        boxShadow: "0 20px 25px rgba(0,0,0,0.1)",
+                        zIndex: 1000,
+                        marginTop: 8,
+                        minHeight: "400px"
+                      }}>
+                        {/* Search Content */}
+                        <div style={{ padding: 24, maxHeight: "70vh", overflowY: "auto" }}>
+                          {/* Search History */}
+                          {searchHistory.length > 0 && (
+                            <div style={{ marginBottom: 24 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "#374151" }}>
+                                  Lịch sử tìm kiếm
+                                </h3>
+                                <button
+                                  onClick={clearHistory}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#6b7280",
                                     cursor: "pointer",
-                                    fontSize: 14
+                                    fontSize: 16
                                   }}
                                 >
-                                  ×
+                                  Xóa tất cả
                                 </button>
                               </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Loading State */}
-                        {isLoading && (
-                          <div style={{ textAlign: "center", padding: "20px", color: "#6b7280" }}>
-                            <div style={{ fontSize: 16 }}>Đang tìm kiếm...</div>
-                          </div>
-                        )}
-
-                        {/* Search Results */}
-                        {!isLoading && searchTerm && (
-                          <>
-                            {/* Keywords */}
-                            {suggestions.keywords.length > 0 && (
-                              <div style={{ marginBottom: 24 }}>
-                                <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
-                                  Từ khóa liên quan
-                                </h3>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                  {suggestions.keywords.map((keyword, index) => (
-                                    <button 
-                                      key={index}
-                                      onClick={() => {
-                                        setSearchTerm(keyword);
-                                        saveToHistory(keyword);
-                                        setShowSearchModal(false);
-                                        window.location.href = `/search?q=${encodeURIComponent(keyword)}`;
-                                      }}
-                                      style={{ 
-                                        background: "white",
-                                        border: "1px solid #e5e7eb",
-                                        borderRadius: 20,
-                                        padding: "10px 18px",
-                                        fontSize: 16,
-                                        color: "#6b7280",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s"
-                                      }}
-                                    >
-                                      {keyword}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Products */}
-                            {suggestions.products.length > 0 && (
-                              <div style={{ marginBottom: 24 }}>
-                                <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
-                                  Sản phẩm gợi ý
-                                </h3>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                  {suggestions.products.slice(0, 3).map((product) => (
-                                    <div 
-                                      key={product.id}
-                                      onClick={() => {
-                                        setShowSearchModal(false);
-                                        window.location.href = `/p/${product.slug || product.id}`;
-                                      }}
-                                      style={{ 
-                                        display: "flex", 
-                                        gap: 14, 
-                                        padding: 14, 
-                                        borderRadius: 8, 
-                                        background: "#f8f9fa", 
-                                        cursor: "pointer",
-                                        transition: "background 0.2s"
-                                      }}
-                                    >
-                                      <img 
-                                        src={getImageUrl(product.image, "/default-product.svg")} 
-                                        alt={product.name} 
-                                        style={{ 
-                                          width: 60, 
-                                          height: 60, 
-                                          borderRadius: 8, 
-                                          objectFit: "cover" 
-                                        }}
-                                        onError={(e) => handleImageError(e, "/default-product.svg")}
-                                      />
-                                      <div style={{ flex: 1 }}>
-                                        <h4 style={{ 
-                                          margin: "0 0 4px", 
-                                          fontSize: 14, 
-                                          fontWeight: 600, 
-                                          color: "#374151" 
-                                        }}>
-                                          {product.name}
-                                        </h4>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#dc2626" }}>
-                                            {product.price.toLocaleString()}₫
-                                          </p>
-                                          {product.discount > 0 && (
-                                            <span style={{
-                                              background: "#dc2626",
-                                              color: "white",
-                                              padding: "2px 6px",
-                                              borderRadius: 4,
-                                              fontSize: 12,
-                                              fontWeight: 600
-                                            }}>
-                                              {product.discountType === 'amount' && product.discountValue
-                                                ? `-${formatDiscountAmount(product.discountValue)}`
-                                                : `-${product.discount}%`}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Categories */}
-                            {suggestions.categories.length > 0 && (
-                              <div style={{ marginBottom: 24 }}>
-                                <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
-                                  Danh mục liên quan
-                                </h3>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                  {suggestions.categories.map((category) => (
-                                    <button 
-                                      key={category.id}
-                                      onClick={() => {
-                                        setShowSearchModal(false);
-                                        window.location.href = `/catalog?category=${category.slug}`;
-                                      }}
-                                      style={{ 
-                                        background: "white",
-                                        border: "1px solid #e5e7eb",
-                                        borderRadius: 20,
-                                        padding: "10px 18px",
-                                        fontSize: 16,
-                                        color: "#6b7280",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s"
-                                      }}
-                                    >
-                                      {category.name}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
-
-                        {/* Default Content when no search term */}
-                        {!isLoading && !searchTerm && (
-                          <>
-                            {/* Top Searches */}
-                            <div style={{ marginBottom: 24 }}>
-                              <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
-                                Tra cứu hàng đầu
-                              </h3>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                {topSearches.map((term) => (
-                                  <button 
-                                    key={term}
+                              {searchHistory.slice(0, 3).map((term, index) => (
+                                <div key={index} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#f8f9fa", borderRadius: 8, marginBottom: 8 }}>
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: "#6b7280" }}>
+                                    <path fill="currentColor" d="M4.63316 9C4.64345 9.00021 4.65373 9.00021 4.66399 9H8.24962C8.66383 9 8.99962 8.66421 8.99962 8.25C8.99962 7.83579 8.66383 7.5 8.24962 7.5H5.99893C7.36789 5.67743 9.54671 4.5 11.9996 4.5C16.1418 4.5 19.4996 7.85786 19.4996 12C19.4996 16.1421 16.1418 19.5 11.9996 19.5C8.08773 19.5 4.87463 16.5045 4.53022 12.6827C4.49305 12.2701 4.12848 11.9659 3.71594 12.003C3.3034 12.0402 2.9991 12.4048 3.03628 12.8173C3.44972 17.4052 7.30445 21 11.9996 21C16.9702 21 20.9996 16.9706 20.9996 12C20.9996 7.02944 16.9702 3 11.9996 3C9.31082 3 6.8982 4.17919 5.24962 6.04707V4.5C5.24962 4.08579 4.91383 3.75 4.49962 3.75C4.0854 3.75 3.74962 4.08579 3.74962 4.5V8.25C3.74962 8.66421 4.0854 9 4.49962 9H4.63316ZM11.2496 7.5C11.6638 7.5 11.9996 7.83579 11.9996 8.25V12H14.2496C14.6638 12 14.9996 12.3358 14.9996 12.75C14.9996 13.1642 14.6638 13.5 14.2496 13.5H11.2496C10.8354 13.5 10.4996 13.1642 10.4996 12.75V8.25C10.4996 7.83579 10.8354 7.5 11.2496 7.5Z" />
+                                  </svg>
+                                  <span
+                                    style={{ flex: 1, fontSize: 16, color: "#3b82f6", cursor: "pointer" }}
                                     onClick={() => {
                                       setSearchTerm(term);
                                       saveToHistory(term);
                                       setShowSearchModal(false);
                                       window.location.href = `/search?q=${encodeURIComponent(term)}`;
                                     }}
-                                    style={{ 
-                                      background: "white",
-                                      border: "1px solid #e5e7eb",
-                                      borderRadius: 20,
-                                      padding: "10px 18px",
-                                      fontSize: 16,
-                                      color: "#6b7280",
-                                      cursor: "pointer",
-                                      transition: "all 0.2s"
-                                    }}
                                   >
                                     {term}
+                                  </span>
+                                  <button
+                                    onClick={() => removeFromHistory(term)}
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      color: "#6b7280",
+                                      cursor: "pointer",
+                                      fontSize: 14
+                                    }}
+                                  >
+                                    ×
                                   </button>
-                                ))}
-                              </div>
+                                </div>
+                              ))}
                             </div>
-                          </>
-                        )}
+                          )}
+
+                          {/* Loading State */}
+                          {isLoading && (
+                            <div style={{ textAlign: "center", padding: "20px", color: "#6b7280" }}>
+                              <div style={{ fontSize: 16 }}>Đang tìm kiếm...</div>
+                            </div>
+                          )}
+
+                          {/* Search Results */}
+                          {!isLoading && searchTerm && (
+                            <>
+                              {/* Keywords */}
+                              {suggestions.keywords.length > 0 && (
+                                <div style={{ marginBottom: 24 }}>
+                                  <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
+                                    Từ khóa liên quan
+                                  </h3>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {suggestions.keywords.map((keyword, index) => (
+                                      <button
+                                        key={index}
+                                        onClick={() => {
+                                          setSearchTerm(keyword);
+                                          saveToHistory(keyword);
+                                          setShowSearchModal(false);
+                                          window.location.href = `/search?q=${encodeURIComponent(keyword)}`;
+                                        }}
+                                        style={{
+                                          background: "white",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: 20,
+                                          padding: "10px 18px",
+                                          fontSize: 16,
+                                          color: "#6b7280",
+                                          cursor: "pointer",
+                                          transition: "all 0.2s"
+                                        }}
+                                      >
+                                        {keyword}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Products */}
+                              {suggestions.products.length > 0 && (
+                                <div style={{ marginBottom: 24 }}>
+                                  <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
+                                    Sản phẩm gợi ý
+                                  </h3>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                    {suggestions.products.slice(0, 3).map((product) => (
+                                      <div
+                                        key={product.id}
+                                        onClick={() => {
+                                          setShowSearchModal(false);
+                                          window.location.href = `/p/${product.slug || product.id}`;
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          gap: 14,
+                                          padding: 14,
+                                          borderRadius: 8,
+                                          background: "#f8f9fa",
+                                          cursor: "pointer",
+                                          transition: "background 0.2s"
+                                        }}
+                                      >
+                                        <img
+                                          src={getImageUrl(product.image, "/default-product.svg")}
+                                          alt={product.name}
+                                          style={{
+                                            width: 60,
+                                            height: 60,
+                                            borderRadius: 8,
+                                            objectFit: "cover"
+                                          }}
+                                          onError={(e) => handleImageError(e, "/default-product.svg")}
+                                        />
+                                        <div style={{ flex: 1 }}>
+                                          <h4 style={{
+                                            margin: "0 0 4px",
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            color: "#374151"
+                                          }}>
+                                            {product.name}
+                                          </h4>
+                                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#dc2626" }}>
+                                              {product.price.toLocaleString()}₫
+                                            </p>
+                                            {product.discount > 0 && (
+                                              <span style={{
+                                                background: "#dc2626",
+                                                color: "white",
+                                                padding: "2px 6px",
+                                                borderRadius: 4,
+                                                fontSize: 12,
+                                                fontWeight: 600
+                                              }}>
+                                                {product.discountType === 'amount' && product.discountValue
+                                                  ? `-${formatDiscountAmount(product.discountValue)}`
+                                                  : `-${product.discount}%`}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Categories */}
+                              {suggestions.categories.length > 0 && (
+                                <div style={{ marginBottom: 24 }}>
+                                  <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
+                                    Danh mục liên quan
+                                  </h3>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {suggestions.categories.map((category) => (
+                                      <button
+                                        key={category.id}
+                                        onClick={() => {
+                                          setShowSearchModal(false);
+                                          window.location.href = `/catalog?category=${category.slug}`;
+                                        }}
+                                        style={{
+                                          background: "white",
+                                          border: "1px solid #e5e7eb",
+                                          borderRadius: 20,
+                                          padding: "10px 18px",
+                                          fontSize: 16,
+                                          color: "#6b7280",
+                                          cursor: "pointer",
+                                          transition: "all 0.2s"
+                                        }}
+                                      >
+                                        {category.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {/* Default Content when no search term */}
+                          {!isLoading && !searchTerm && (
+                            <>
+                              {/* Top Searches */}
+                              <div style={{ marginBottom: 24 }}>
+                                <h3 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 600, color: "#374151" }}>
+                                  Tra cứu hàng đầu
+                                </h3>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                  {topSearches.map((term) => (
+                                    <button
+                                      key={term}
+                                      onClick={() => {
+                                        setSearchTerm(term);
+                                        saveToHistory(term);
+                                        setShowSearchModal(false);
+                                        window.location.href = `/search?q=${encodeURIComponent(term)}`;
+                                      }}
+                                      style={{
+                                        background: "white",
+                                        border: "1px solid #e5e7eb",
+                                        borderRadius: 20,
+                                        padding: "10px 18px",
+                                        fontSize: 16,
+                                        color: "#6b7280",
+                                        cursor: "pointer",
+                                        transition: "all 0.2s"
+                                      }}
+                                    >
+                                      {term}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
                     </>
                   )}
                 </div>
-                
+
                 <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 180, flexShrink: 0 }}>
                   {user ? (
                     <div style={{ position: "relative" }}>
@@ -828,10 +824,10 @@ function App() {
                         <span style={{ fontSize: 16 }}>👤</span>
                         <span>{user.fullName || user.phone}</span>
                       </div>
-                      
+
                       {/* User Dropdown */}
                       {showUserDropdown && (
-                        <div 
+                        <div
                           onMouseEnter={handleUserMouseEnter}
                           onMouseLeave={handleUserMouseLeave}
                           style={{
@@ -852,10 +848,10 @@ function App() {
                             <span style={{ fontSize: 18 }}>👤</span>
                             <span style={{ fontWeight: 600, color: "#374151" }}>Tài khoản</span>
                           </div>
-                          
+
                           <div style={{ padding: 8 }}>
-                            <Link 
-                              to="/profile" 
+                            <Link
+                              to="/profile"
                               style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -872,9 +868,9 @@ function App() {
                               <span>👤</span>
                               <span>Thông tin cá nhân</span>
                             </Link>
-                            
-                            <Link 
-                              to="/orders" 
+
+                            <Link
+                              to="/orders"
                               style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -891,7 +887,7 @@ function App() {
                               <span>📋</span>
                               <span>Đơn hàng của tôi</span>
                             </Link>
-                            
+
                             <button
                               onClick={handleLogout}
                               style={{
@@ -921,11 +917,11 @@ function App() {
                   ) : (
                     <button
                       onClick={() => setShowAuthModal(true)}
-                      style={{ 
-                        color: "white", 
-                        textDecoration: "none", 
-                        display: "flex", 
-                        alignItems: "center", 
+                      style={{
+                        color: "white",
+                        textDecoration: "none",
+                        display: "flex",
+                        alignItems: "center",
                         gap: 6,
                         padding: "8px 16px",
                         borderRadius: 20,
@@ -945,11 +941,11 @@ function App() {
                       to="/cart"
                       onMouseEnter={handleCartMouseEnter}
                       onMouseLeave={handleCartMouseLeave}
-                      style={{ 
-                        color: "white", 
-                        textDecoration: "none", 
-                        display: "flex", 
-                        alignItems: "center", 
+                      style={{
+                        color: "white",
+                        textDecoration: "none",
+                        display: "flex",
+                        alignItems: "center",
                         gap: 6,
                         padding: "8px 16px",
                         borderRadius: 20,
@@ -961,28 +957,28 @@ function App() {
                       <span style={{ fontSize: 16 }}>🛒</span>
                       <span>Giỏ hàng</span>
                       {cartItems.length > 0 && (
-                        <span 
+                        <span
                           key={`cart-badge-${cartItems.length}`}
-                          style={{ 
-                            background: "#ef4444", 
-                            color: "white", 
-                            borderRadius: "50%", 
-                            width: 20, 
-                            height: 20, 
-                            fontSize: 12, 
-                            display: "flex", 
-                            alignItems: "center", 
-                            justifyContent: "center" 
+                          style={{
+                            background: "#ef4444",
+                            color: "white",
+                            borderRadius: "50%",
+                            width: 20,
+                            height: 20,
+                            fontSize: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
                           }}
                         >
                           {cartItems.length}
                         </span>
                       )}
                     </Link>
-                    
+
                     {/* Cart Dropdown */}
                     {showCartDropdown && (
-                      <div 
+                      <div
                         onMouseEnter={handleCartMouseEnter}
                         onMouseLeave={handleCartMouseLeave}
                         style={{
@@ -1005,7 +1001,7 @@ function App() {
                           <span style={{ fontSize: 18 }}>🛒</span>
                           <span style={{ fontWeight: 600, color: "#374151" }}>Giỏ hàng</span>
                         </div>
-                        
+
                         {cartItems.length === 0 ? (
                           <div style={{ padding: 20, textAlign: "center", color: "#6b7280" }}>
                             Giỏ hàng trống
@@ -1022,96 +1018,96 @@ function App() {
                                 //   image: item.image
                                 // });
                                 return (
-                                <div key={item.id} style={{ 
-                                  display: "flex", 
-                                  alignItems: "center", 
-                                  padding: 12, 
-                                  borderBottom: "1px solid #f3f4f6",
-                                  backgroundColor: "#ffffff",
-                                  minHeight: "60px"
-                                }}>
-                                  <img 
-                                    src={getImageUrl(item.image, "/vite.svg")} 
-                                    alt={item.name} 
-                                    style={{ 
-                                      width: 50, 
-                                      height: 50, 
-                                      objectFit: "cover", 
-                                      borderRadius: 6, 
-                                      marginRight: 12 
-                                    }}
-                                    onError={(e) => handleImageError(e, "/vite.svg")}
-                                  />
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ 
-                                      fontSize: 14, 
-                                      fontWeight: 600, 
-                                      marginBottom: 4,
-                                      color: "#1f2937",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                      lineHeight: "1.2"
-                                    }}>
-                                      {item.name || "Tên sản phẩm không xác định"}
-                                    </div>
-                                    {item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice) ? (
-                                      <div style={{ marginBottom: 4 }}>
-                                        <div style={{ 
-                                          color: "#3b82f6", 
-                                          fontWeight: 600, 
-                                          fontSize: 14 
-                                        }}>
-                                          {item.finalPrice.toLocaleString()}₫
-                                        </div>
-                                        <div style={{ 
-                                          color: "#9ca3af", 
-                                          fontSize: 11,
-                                          textDecoration: "line-through"
-                                        }}>
-                                          {(item.originalPrice || item.price).toLocaleString()}₫
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div style={{ 
-                                        color: "#2e7d32", 
-                                        fontWeight: 600, 
+                                  <div key={item.id} style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    padding: 12,
+                                    borderBottom: "1px solid #f3f4f6",
+                                    backgroundColor: "#ffffff",
+                                    minHeight: "60px"
+                                  }}>
+                                    <img
+                                      src={getImageUrl(item.image, "/vite.svg")}
+                                      alt={item.name}
+                                      style={{
+                                        width: 50,
+                                        height: 50,
+                                        objectFit: "cover",
+                                        borderRadius: 6,
+                                        marginRight: 12
+                                      }}
+                                      onError={(e) => handleImageError(e, "/vite.svg")}
+                                    />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{
                                         fontSize: 14,
-                                        marginBottom: 4
+                                        fontWeight: 600,
+                                        marginBottom: 4,
+                                        color: "#1f2937",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                        lineHeight: "1.2"
                                       }}>
-                                        {item.price.toLocaleString()}₫
+                                        {item.name || "Tên sản phẩm không xác định"}
                                       </div>
-                                    )}
-                                    <div style={{ 
-                                      color: "#6b7280", 
-                                      fontSize: 12 
-                                    }}>
-                                      x{item.qty} Hộp
+                                      {item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice) ? (
+                                        <div style={{ marginBottom: 4 }}>
+                                          <div style={{
+                                            color: "#3b82f6",
+                                            fontWeight: 600,
+                                            fontSize: 14
+                                          }}>
+                                            {item.finalPrice.toLocaleString()}₫
+                                          </div>
+                                          <div style={{
+                                            color: "#9ca3af",
+                                            fontSize: 11,
+                                            textDecoration: "line-through"
+                                          }}>
+                                            {(item.originalPrice || item.price).toLocaleString()}₫
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div style={{
+                                          color: "#2e7d32",
+                                          fontWeight: 600,
+                                          fontSize: 14,
+                                          marginBottom: 4
+                                        }}>
+                                          {item.price.toLocaleString()}₫
+                                        </div>
+                                      )}
+                                      <div style={{
+                                        color: "#6b7280",
+                                        fontSize: 12
+                                      }}>
+                                        x{item.qty} Hộp
+                                      </div>
                                     </div>
+                                    <button
+                                      onClick={() => {
+                                        removeFromCart(item.id);
+                                        setShowCartDropdown(false);
+                                      }}
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        color: "#ef4444",
+                                        cursor: "pointer",
+                                        padding: 4,
+                                        fontSize: 16
+                                      }}
+                                    >
+                                      🗑️
+                                    </button>
                                   </div>
-                                  <button 
-                                    onClick={() => {
-                                      removeFromCart(item.id);
-                                      setShowCartDropdown(false);
-                                    }}
-                                    style={{ 
-                                      background: "none", 
-                                      border: "none", 
-                                      color: "#ef4444", 
-                                      cursor: "pointer", 
-                                      padding: 4,
-                                      fontSize: 16
-                                    }}
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
                                 );
                               })}
                             </div>
-                            
-                            <div style={{ 
-                              padding: 16, 
+
+                            <div style={{
+                              padding: 16,
                               borderTop: "1px solid #e5e7eb",
                               display: "flex",
                               justifyContent: "space-between",
@@ -1120,8 +1116,8 @@ function App() {
                               <span style={{ fontSize: 14, color: "#6b7280" }}>
                                 {cartItems.length} sản phẩm
                               </span>
-                              <Link 
-                                to="/cart" 
+                              <Link
+                                to="/cart"
                                 onClick={() => setShowCartDropdown(false)}
                                 style={{
                                   background: "#065f46",
@@ -1143,11 +1139,11 @@ function App() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Popular searches */}
               <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
                 <ul style={{ display: 'flex', gap: 0, listStyle: 'none', padding: 0, margin: 0, alignItems: 'center', justifyContent: 'center', maxWidth: 1200, width: '100%' }}>
-                  {(topSearches || []).slice(0,8).map(term => (
+                  {(topSearches || []).slice(0, 8).map(term => (
                     <li key={term} style={{ margin: 0, padding: '0 8px' }}>
                       <a href={`/search?q=${encodeURIComponent(term)}`} style={{ color: 'white', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'none' }}>
                         {term}
@@ -1164,10 +1160,10 @@ function App() {
             <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px", position: "relative" }}>
               <nav onMouseEnter={handleDropdownEnter} onMouseLeave={handleRootCategoryLeave} style={{ display: "flex", gap: 0, padding: "6px 0 0 0", justifyContent: "center" }}>
                 {(rootCategories && rootCategories.length > 0 ? rootCategories : []).map((category) => (
-                  <Link key={category._id} to={`/catalog?category=${category.slug}`} onMouseEnter={() => handleRootCategoryEnter(category)} style={{ 
-                    color: "#374151", 
-                    textDecoration: "none", 
-                    fontWeight: 500, 
+                  <Link key={category._id} to={`/catalog?category=${category.slug}`} onMouseEnter={() => handleRootCategoryEnter(category)} style={{
+                    color: "#374151",
+                    textDecoration: "none",
+                    fontWeight: 500,
                     whiteSpace: "nowrap",
                     display: "flex",
                     alignItems: "center",
@@ -1184,7 +1180,7 @@ function App() {
                     )}
                   </Link>
                 ))}
-          </nav>
+              </nav>
               {/* Category Mega Dropdown */}
               {showCategoryDropdown && activeRootCategory && (
                 <div onMouseEnter={handleDropdownEnter} onMouseLeave={handleDropdownLeave} style={{ position: "absolute", top: "100%", left: 20, right: 20, background: "white", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 20px 25px rgba(0,0,0,0.1)", zIndex: 1000, marginTop: 8 }}>
@@ -1195,7 +1191,7 @@ function App() {
                         <div key={c._id} onMouseEnter={() => setActiveLevel1Id(c._id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 8, cursor: "pointer", background: activeLevel1Id === c._id ? "#f3f4f6" : "transparent", color: "#374151", fontSize: 16, fontWeight: 500 }}>
                           {/* Category Icon/Image */}
                           {c.iconUrl && c.iconUrl.trim() ? (
-                            <img 
+                            <img
                               src={c.iconUrl.startsWith('http') ? c.iconUrl : `http://localhost:5000${c.iconUrl}`}
                               alt={c.name}
                               style={{
@@ -1239,7 +1235,7 @@ function App() {
                             <Link key={c2._id} to={`/catalog?category=${c2.slug}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, border: "1px solid #e5e7eb", borderRadius: 10, color: "#374151", textDecoration: "none", background: "#fafafa" }}>
                               {/* Level 2 Category Icon/Image */}
                               {c2.iconUrl && c2.iconUrl.trim() ? (
-                                <img 
+                                <img
                                   src={c2.iconUrl.startsWith('http') ? c2.iconUrl : `http://localhost:5000${c2.iconUrl}`}
                                   alt={c2.name}
                                   style={{
@@ -1255,11 +1251,11 @@ function App() {
                                   }}
                                 />
                               ) : null}
-                              <span style={{ 
-                                width: 36, 
-                                height: 36, 
-                                borderRadius: 8, 
-                                background: c2.iconUrl && c2.iconUrl.trim() ? "transparent" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+                              <span style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 8,
+                                background: c2.iconUrl && c2.iconUrl.trim() ? "transparent" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                                 display: c2.iconUrl && c2.iconUrl.trim() ? "none" : "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -1338,16 +1334,6 @@ function App() {
               <InventoryManagement />
             </ProtectedRoute>
           } />
-          <Route path="goods-receipts" element={
-            <ProtectedRoute requiredPermission="read_inventory">
-              <GoodsReceiptManagement />
-            </ProtectedRoute>
-          } />
-          <Route path="inventory-alerts" element={
-            <ProtectedRoute requiredPermission="read_inventory">
-              <InventoryAlertsManagement />
-            </ProtectedRoute>
-          } />
           <Route path="suppliers" element={
             <ProtectedRoute requiredPermission="read_inventory">
               <AdminSuppliers />
@@ -1398,25 +1384,25 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-      
+
       {/* Footer - Only show on user pages, not admin */}
       {!location.pathname.startsWith('/admin') && <Footer />}
-      
+
       {/* Auth Modal */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
-      
+
       {/* Voice Search Modal */}
-      <VoiceSearchModal 
+      <VoiceSearchModal
         isOpen={showVoiceSearchModal}
         onClose={() => setShowVoiceSearchModal(false)}
         onSearch={handleVoiceSearch}
       />
-      
+
       {/* Image Search Modal */}
-      <ImageSearchModal 
+      <ImageSearchModal
         isOpen={showImageSearchModal}
         onClose={() => setShowImageSearchModal(false)}
         onSearch={handleImageSearch}

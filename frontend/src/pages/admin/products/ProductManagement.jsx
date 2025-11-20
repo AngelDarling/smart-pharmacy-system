@@ -51,6 +51,7 @@ const ProductManagement = () => {
     products,
     loading,
     pagination,
+    stats,
     fetchProducts,
     createProduct,
     updateProduct,
@@ -82,7 +83,7 @@ const ProductManagement = () => {
       try {
         const list = await fetchBrands();
         setBrandOptions(Array.isArray(list) ? list : []);
-      } catch {}
+      } catch { }
     })();
   }, [fetchBrands]);
 
@@ -225,7 +226,7 @@ const ProductManagement = () => {
           size={60}
           shape="square"
           src={getImageUrl(imageUrls?.[0], '/default-product.png')}
-          style={{ 
+          style={{
             borderRadius: '8px',
             border: '2px solid #f0f0f0'
           }}
@@ -243,8 +244,8 @@ const ProductManagement = () => {
       width: 300,
       render: (text, record) => (
         <div style={{ padding: '8px 0' }}>
-          <div style={{ 
-            fontWeight: 600, 
+          <div style={{
+            fontWeight: 600,
             fontSize: '14px',
             marginBottom: '4px',
             color: '#262626',
@@ -252,8 +253,8 @@ const ProductManagement = () => {
           }}>
             {text}
           </div>
-          <div style={{ 
-            fontSize: '12px', 
+          <div style={{
+            fontSize: '12px',
             color: '#8c8c8c',
             marginBottom: '6px',
             fontFamily: 'monospace'
@@ -261,14 +262,14 @@ const ProductManagement = () => {
             SKU: {record.sku || '-'}
           </div>
           {record.shortDescription && (
-            <div style={{ 
-              fontSize: '11px', 
+            <div style={{
+              fontSize: '11px',
               color: '#8c8c8c',
               fontStyle: 'italic',
               lineHeight: '1.3'
             }}>
-              {record.shortDescription.length > 80 
-                ? `${record.shortDescription.substring(0, 80)}...` 
+              {record.shortDescription.length > 80
+                ? `${record.shortDescription.substring(0, 80)}...`
                 : record.shortDescription
               }
             </div>
@@ -303,63 +304,63 @@ const ProductManagement = () => {
       width: 220,
       render: (_, record) => {
         // Kiểm tra có giảm giá không (từ direct coupon hoặc promotionInfo)
-        const hasDiscount = record.finalPrice !== undefined && 
-                           record.finalPrice < record.price && 
-                           record.discount > 0;
+        const hasDiscount = record.finalPrice !== undefined &&
+          record.finalPrice < record.price &&
+          record.discount > 0;
         const displayPrice = hasDiscount ? record.finalPrice : record.price;
         const originalPrice = hasDiscount ? (record.originalPrice || record.price) : null;
-        
+
         return (
           <div>
             <div style={{ marginBottom: '4px' }}>
               {hasDiscount ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <div style={{ 
-                    fontSize: '14px', 
-                    fontWeight: 600, 
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
                     color: '#3b82f6',
                   }}>
                     Giá bán: {displayPrice?.toLocaleString() || 0}đ
                   </div>
-                  <div style={{ 
-                    fontSize: '12px', 
+                  <div style={{
+                    fontSize: '12px',
                     color: '#9ca3af',
                     textDecoration: 'line-through'
                   }}>
                     {originalPrice?.toLocaleString() || 0}đ
                   </div>
                   {record.discount > 0 && (
-                    <div style={{ 
-                      fontSize: '11px', 
+                    <div style={{
+                      fontSize: '11px',
                       color: '#ef4444',
                       fontWeight: 500
                     }}>
-                      Giảm {record.discountType === 'percent' 
-                        ? `${record.discount}%` 
+                      Giảm {record.discountType === 'percent'
+                        ? `${record.discount}%`
                         : `${(record.discountValue || 0).toLocaleString()}đ`}
                     </div>
                   )}
                 </div>
               ) : (
-                <div style={{ 
-                  fontSize: '14px', 
-                  fontWeight: 600, 
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
                   color: '#52c41a',
                 }}>
                   Giá bán: {record.price?.toLocaleString() || 0}đ
                 </div>
               )}
             </div>
-            <div style={{ 
-              fontSize: '12px', 
+            <div style={{
+              fontSize: '12px',
               color: '#8c8c8c',
               marginBottom: '8px'
             }}>
               Giá nhập: {record.costPrice?.toLocaleString() || 0}đ
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ 
-                fontSize: '14px', 
+              <span style={{
+                fontSize: '14px',
                 fontWeight: 500,
                 color: record.totalStock > 0 ? '#52c41a' : '#ff4d4f'
               }}>
@@ -388,8 +389,8 @@ const ProductManagement = () => {
             style={{ marginBottom: '4px' }}
           />
           {record.totalStock === 0 && (
-            <div style={{ 
-              fontSize: '10px', 
+            <div style={{
+              fontSize: '10px',
               color: '#ff4d4f',
               marginTop: '2px'
             }}>
@@ -412,7 +413,7 @@ const ProductManagement = () => {
               shape="circle"
               icon={<EyeOutlined />}
               onClick={() => handleViewProduct(record)}
-              style={{ 
+              style={{
                 color: '#1890ff',
                 border: '1px solid #91d5ff'
               }}
@@ -425,7 +426,7 @@ const ProductManagement = () => {
               shape="circle"
               icon={<EditOutlined />}
               onClick={() => handleEditProduct(record)}
-              style={{ 
+              style={{
                 color: '#52c41a',
                 border: '1px solid #b7eb8f'
               }}
@@ -443,7 +444,7 @@ const ProductManagement = () => {
                 size="small"
                 shape="circle"
                 icon={<DeleteOutlined />}
-                style={{ 
+                style={{
                   color: '#ff4d4f',
                   border: '1px solid #ffccc7'
                 }}
@@ -469,17 +470,17 @@ const ProductManagement = () => {
   return (
     <div>
       {/* Header Section */}
-      <div style={{ 
+      <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 24
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <Avatar 
-            size="large" 
+          <Avatar
+            size="large"
             icon={<ShoppingOutlined />}
-            style={{ 
+            style={{
               backgroundColor: '#52c41a',
               marginRight: '16px'
             }}
@@ -534,10 +535,10 @@ const ProductManagement = () => {
           />
         </div>
         <div style={{ display: 'flex', gap: 16 }}>
-          <div style={{ 
-            padding: '16px', 
-            background: '#fff', 
-            borderRadius: '8px', 
+          <div style={{
+            padding: '16px',
+            background: '#fff',
+            borderRadius: '8px',
             border: '1px solid #f0f0f0',
             textAlign: 'center',
             minWidth: '150px'
@@ -549,32 +550,32 @@ const ProductManagement = () => {
               valueStyle={{ color: '#1890ff', fontSize: '18px' }}
             />
           </div>
-          <div style={{ 
-            padding: '16px', 
-            background: '#fff', 
-            borderRadius: '8px', 
+          <div style={{
+            padding: '16px',
+            background: '#fff',
+            borderRadius: '8px',
             border: '1px solid #f0f0f0',
             textAlign: 'center',
             minWidth: '150px'
           }}>
             <Statistic
               title="Đang hoạt động"
-              value={products?.filter(p => p.isActive).length || 0}
+              value={stats?.totalActive || 0}
               prefix={<StarOutlined />}
               valueStyle={{ color: '#52c41a', fontSize: '18px' }}
             />
           </div>
-          <div style={{ 
-            padding: '16px', 
-            background: '#fff', 
-            borderRadius: '8px', 
+          <div style={{
+            padding: '16px',
+            background: '#fff',
+            borderRadius: '8px',
             border: '1px solid #f0f0f0',
             textAlign: 'center',
             minWidth: '150px'
           }}>
             <Statistic
               title="Hết hàng"
-              value={products?.filter(p => p.totalStock === 0).length || 0}
+              value={stats?.totalOutOfStock || 0}
               prefix={<TagsOutlined />}
               valueStyle={{ color: '#ff4d4f', fontSize: '18px' }}
             />
@@ -583,7 +584,7 @@ const ProductManagement = () => {
       </div>
 
       {/* Filters */}
-      <div style={{ 
+      <div style={{
         display: 'flex',
         gap: 16,
         marginBottom: 24,
@@ -643,14 +644,14 @@ const ProductManagement = () => {
           </Select>
         </Form.Item>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             onClick={applyFilters}
             size="large"
           >
             Áp dụng bộ lọc
           </Button>
-          <Button 
+          <Button
             onClick={resetFilters}
             size="large"
           >
@@ -672,14 +673,14 @@ const ProductManagement = () => {
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => (
-            <div style={{ 
-              display: 'flex', 
+            <div style={{
+              display: 'flex',
               alignItems: 'center',
               gap: '8px',
               color: '#8c8c8c'
             }}>
               <span>
-                Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
+                Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong>
                 {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> sản phẩm
               </span>
             </div>
@@ -703,7 +704,7 @@ const ProductManagement = () => {
 
       {/* Bulk Actions */}
       {selectedRowKeys.length > 0 && (
-        <div style={{ 
+        <div style={{
           marginTop: 16,
           padding: '16px',
           background: '#f6ffed',
@@ -714,8 +715,8 @@ const ProductManagement = () => {
           alignItems: 'center'
         }}>
           <Space>
-            <Badge 
-              count={selectedRowKeys.length} 
+            <Badge
+              count={selectedRowKeys.length}
               style={{ backgroundColor: '#52c41a' }}
             />
             <span style={{ color: '#262626', fontWeight: 500 }}>
@@ -743,7 +744,7 @@ const ProductManagement = () => {
             >
               Xóa đã chọn
             </Button>
-            <Button 
+            <Button
               onClick={() => setSelectedRowKeys([])}
             >
               Bỏ chọn
@@ -777,80 +778,80 @@ const ProductManagement = () => {
           <div>
             <Row gutter={[16, 16]}>
               <Col span={24}>
-                <div style={{ 
-                  padding: '16px', 
-                  background: '#fafafa', 
-                  borderRadius: '8px', 
+                <div style={{
+                  padding: '16px',
+                  background: '#fafafa',
+                  borderRadius: '8px',
                   border: '1px solid #f0f0f0',
                   marginBottom: 16
                 }}>
                   <h3 style={{ marginTop: 0, marginBottom: 16 }}>Thông tin cơ bản</h3>
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Tên sản phẩm:</strong>
-                          <div style={{ marginTop: '4px' }}>{viewingProduct.name}</div>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Tên sản phẩm:</strong>
+                        <div style={{ marginTop: '4px' }}>{viewingProduct.name}</div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Slug:</strong>
+                        <div style={{ marginTop: '4px' }}>{viewingProduct.slug}</div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Danh mục:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          <Tag color="blue">
+                            {viewingProduct.categoryId?.name || viewingProduct.categoryId || 'Chưa phân loại'}
+                          </Tag>
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Slug:</strong>
-                          <div style={{ marginTop: '4px' }}>{viewingProduct.slug}</div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Thương hiệu:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          {viewingProduct.brandId ? (
+                            <Tag color="green">{viewingProduct.brandId.name || viewingProduct.brandId}</Tag>
+                          ) : (
+                            <span style={{ color: '#8c8c8c' }}>Chưa có thương hiệu</span>
+                          )}
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Danh mục:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            <Tag color="blue">
-                              {viewingProduct.categoryId?.name || viewingProduct.categoryId || 'Chưa phân loại'}
-                            </Tag>
-                          </div>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>SKU:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          {viewingProduct.sku || <span style={{ color: '#8c8c8c' }}>Chưa có SKU</span>}
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Thương hiệu:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            {viewingProduct.brandId ? (
-                              <Tag color="green">{viewingProduct.brandId.name || viewingProduct.brandId}</Tag>
-                            ) : (
-                              <span style={{ color: '#8c8c8c' }}>Chưa có thương hiệu</span>
-                            )}
-                          </div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Barcode:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          {viewingProduct.barcode || <span style={{ color: '#8c8c8c' }}>Chưa có barcode</span>}
                         </div>
-                      </Col>
-                      <Col span={12}>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>SKU:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            {viewingProduct.sku || <span style={{ color: '#8c8c8c' }}>Chưa có SKU</span>}
-                          </div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Đơn vị:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          {viewingProduct.unit || <span style={{ color: '#8c8c8c' }}>Chưa có đơn vị</span>}
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Barcode:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            {viewingProduct.barcode || <span style={{ color: '#8c8c8c' }}>Chưa có barcode</span>}
-                          </div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong>Trạng thái:</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          <Tag color={viewingProduct.isActive ? 'green' : 'red'}>
+                            {viewingProduct.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                          </Tag>
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Đơn vị:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            {viewingProduct.unit || <span style={{ color: '#8c8c8c' }}>Chưa có đơn vị</span>}
-                          </div>
-                        </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <strong>Trạng thái:</strong>
-                          <div style={{ marginTop: '4px' }}>
-                            <Tag color={viewingProduct.isActive ? 'green' : 'red'}>
-                              {viewingProduct.isActive ? 'Hoạt động' : 'Tạm dừng'}
-                            </Tag>
-                          </div>
-                        </div>
-                      </Col>
-                    </Row>
+                      </div>
+                    </Col>
+                  </Row>
                 </div>
               </Col>
 
               <Col span={24}>
-                <div style={{ 
-                  padding: '16px', 
-                  background: '#fafafa', 
-                  borderRadius: '8px', 
+                <div style={{
+                  padding: '16px',
+                  background: '#fafafa',
+                  borderRadius: '8px',
                   border: '1px solid #f0f0f0',
                   marginBottom: 16
                 }}>
@@ -876,8 +877,8 @@ const ProductManagement = () => {
                       <Statistic
                         title="Tồn kho"
                         value={viewingProduct.totalStock || 0}
-                        valueStyle={{ 
-                          color: viewingProduct.totalStock > 0 ? '#52c41a' : '#ff4d4f' 
+                        valueStyle={{
+                          color: viewingProduct.totalStock > 0 ? '#52c41a' : '#ff4d4f'
                         }}
                       />
                     </Col>
@@ -887,10 +888,10 @@ const ProductManagement = () => {
 
               {(viewingProduct.shortDescription || viewingProduct.description) && (
                 <Col span={24}>
-                  <div style={{ 
-                    padding: '16px', 
-                    background: '#fafafa', 
-                    borderRadius: '8px', 
+                  <div style={{
+                    padding: '16px',
+                    background: '#fafafa',
+                    borderRadius: '8px',
                     border: '1px solid #f0f0f0',
                     marginBottom: 16
                   }}>
@@ -917,10 +918,10 @@ const ProductManagement = () => {
 
               {viewingProduct.imageUrls && viewingProduct.imageUrls.length > 0 && (
                 <Col span={24}>
-                  <div style={{ 
-                    padding: '16px', 
-                    background: '#fafafa', 
-                    borderRadius: '8px', 
+                  <div style={{
+                    padding: '16px',
+                    background: '#fafafa',
+                    borderRadius: '8px',
                     border: '1px solid #f0f0f0',
                     marginBottom: 16
                   }}>
@@ -964,10 +965,10 @@ const ProductManagement = () => {
               )}
 
               <Col span={24}>
-                <div style={{ 
-                  padding: '16px', 
-                  background: '#fafafa', 
-                  borderRadius: '8px', 
+                <div style={{
+                  padding: '16px',
+                  background: '#fafafa',
+                  borderRadius: '8px',
                   border: '1px solid #f0f0f0',
                   marginBottom: 16
                 }}>
@@ -1005,10 +1006,10 @@ const ProductManagement = () => {
                   </Row>
                 </div>
               </Col>
-              </Row>
-            </div>
-          )}
-        </Modal>
+            </Row>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

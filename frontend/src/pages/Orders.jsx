@@ -29,15 +29,14 @@ export default function Orders() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending": return "#f59e0b";
-      case "processing": return "#3b82f6";
-      case "shipping": return "#8b5cf6";
-      case "completed": return "#10b981";
-      case "cancelled": return "#ef4444";
-      // Fallback cho các trạng thái cũ (nếu có trong database)
-      case "confirmed": return "#3b82f6";
-      case "delivered": return "#10b981";
-      default: return "#6b7280";
+      case "pending": return { bg: "#fff7ed", text: "#d97706", border: "#fed7aa" };
+      case "processing": return { bg: "#eff6ff", text: "#2563eb", border: "#bfdbfe" };
+      case "shipping": return { bg: "#f5f3ff", text: "#7c3aed", border: "#ddd6fe" };
+      case "completed": return { bg: "#ecfdf5", text: "#059669", border: "#a7f3d0" };
+      case "cancelled": return { bg: "#fef2f2", text: "#dc2626", border: "#fecaca" };
+      case "confirmed": return { bg: "#eff6ff", text: "#2563eb", border: "#bfdbfe" };
+      case "delivered": return { bg: "#ecfdf5", text: "#059669", border: "#a7f3d0" };
+      default: return { bg: "#f3f4f6", text: "#4b5563", border: "#e5e7eb" };
     }
   };
 
@@ -45,10 +44,9 @@ export default function Orders() {
     switch (status) {
       case "pending": return "Chờ xử lý";
       case "processing": return "Đang xử lý";
-      case "shipping": return "Đang giao";
-      case "completed": return "Hoàn tất";
+      case "shipping": return "Đang giao hàng";
+      case "completed": return "Giao hàng thành công";
       case "cancelled": return "Đã hủy";
-      // Fallback cho các trạng thái cũ (nếu có trong database)
       case "confirmed": return "Đã xác nhận";
       case "delivered": return "Đã giao hàng";
       default: return status || "Không xác định";
@@ -56,180 +54,263 @@ export default function Orders() {
   };
 
   if (!user) {
-    return <div>Vui lòng đăng nhập để xem đơn hàng</div>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ color: '#374151', marginBottom: 16 }}>Vui lòng đăng nhập</h2>
+          <p style={{ color: '#6b7280' }}>Bạn cần đăng nhập để xem lịch sử đơn hàng</p>
+        </div>
+      </div>
+    );
   }
 
   if (isLoading) {
     return (
       <div style={{ maxWidth: 1200, margin: "40px auto", padding: 20, textAlign: "center" }}>
-        <p>Đang tải đơn hàng...</p>
+        <div style={{
+          display: 'inline-block',
+          width: 40,
+          height: 40,
+          border: '3px solid #e5e7eb',
+          borderTopColor: '#3b82f6',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <p style={{ marginTop: 16, color: '#6b7280' }}>Đang tải đơn hàng...</p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: "40px auto", padding: 20, marginTop: 'auto' }}>
-      <h1 style={{ marginBottom: 32, color: "#1f2937" }}>Đơn hàng của tôi</h1>
-      
+    <div style={{ maxWidth: 1200, margin: "40px auto", padding: "0 24px", marginTop: 'auto' }}>
+      <div style={{ marginBottom: 40 }}>
+        <h1 style={{ fontSize: 32, fontWeight: 800, color: "#111827", marginBottom: 8 }}>Đơn hàng của tôi</h1>
+        <p style={{ color: "#6b7280", fontSize: 16 }}>Quản lý và theo dõi các đơn hàng của bạn</p>
+      </div>
+
       {orders.length === 0 ? (
-        <div style={{ 
-          textAlign: "center", 
-          padding: "60px 20px",
+        <div style={{
+          textAlign: "center",
+          padding: "80px 20px",
           background: "white",
-          borderRadius: 12,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+          borderRadius: 24,
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #f3f4f6"
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📦</div>
-          <h3 style={{ color: "#374151", marginBottom: 8 }}>Chưa có đơn hàng nào</h3>
-          <p style={{ color: "#6b7280", marginBottom: 24 }}>Hãy mua sắm để tạo đơn hàng đầu tiên của bạn!</p>
-          <a 
-            href="/products" 
+          <div style={{ fontSize: 64, marginBottom: 24 }}>📦</div>
+          <h3 style={{ fontSize: 24, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Chưa có đơn hàng nào</h3>
+          <p style={{ color: "#6b7280", marginBottom: 32, fontSize: 16 }}>Hãy khám phá các sản phẩm chất lượng của chúng tôi!</p>
+          <a
+            href="/products"
             style={{
               display: "inline-block",
-              padding: "12px 24px",
-              background: "#667eea",
+              padding: "16px 32px",
+              background: "#2563eb",
               color: "white",
               textDecoration: "none",
-              borderRadius: 8,
-              fontWeight: 500
+              borderRadius: 12,
+              fontWeight: 600,
+              fontSize: 16,
+              boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
+              transition: "all 0.2s"
             }}
           >
-            Mua sắm ngay
+            Bắt đầu mua sắm
           </a>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {orders.map((order) => (
-            <div key={order._id} style={{
-              background: "white",
-              borderRadius: 12,
-              padding: 24,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid #e5e7eb" }}>
-                <div>
-                  <h3 style={{ margin: 0, color: "#1f2937", fontSize: 20, fontWeight: 700 }}>
-                    Đơn hàng #{order.code || order.orderNumber || order._id.slice(-6).toUpperCase()}
-                  </h3>
-                  <p style={{ margin: "8px 0 0 0", color: "#6b7280", fontSize: 14 }}>
-                    Ngày đặt: {new Date(order.createdAt).toLocaleDateString("vi-VN", {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-                <div style={{ textAlign: "right" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {orders.map((order) => {
+            const statusStyle = getStatusColor(order.status);
+            return (
+              <div key={order._id} style={{
+                background: "white",
+                borderRadius: 20,
+                padding: 32,
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+                border: "1px solid #f3f4f6",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                cursor: "pointer"
+              }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "none";
+                  e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)";
+                }}
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setShowDetailModal(true);
+                }}
+              >
+                {/* Order Header */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 24,
+                  paddingBottom: 20,
+                  borderBottom: "1px solid #f3f4f6"
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: '#eff6ff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#2563eb'
+                    }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, color: "#111827", fontSize: 20, fontWeight: 700 }}>
+                        #{order.code || order.orderNumber || order._id.slice(-6).toUpperCase()}
+                      </h3>
+                      <p style={{ margin: "4px 0 0 0", color: "#6b7280", fontSize: 14 }}>
+                        Đặt ngày {new Date(order.createdAt).toLocaleDateString("vi-VN", {
+                          year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
                   <div style={{
                     padding: "8px 16px",
-                    borderRadius: 20,
-                    background: getStatusColor(order.status) + "20",
-                    color: getStatusColor(order.status),
-                    fontSize: 13,
+                    borderRadius: 999,
+                    background: statusStyle.bg,
+                    color: statusStyle.text,
+                    border: `1px solid ${statusStyle.border}`,
+                    fontSize: 14,
                     fontWeight: 600,
-                    display: "inline-block",
-                    marginBottom: 8
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusStyle.text }}></span>
                     {getStatusText(order.status)}
                   </div>
                 </div>
-              </div>
 
-              {/* Compact Product List */}
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <h4 style={{ margin: 0, color: "#374151", fontSize: 14, fontWeight: 600 }}>
-                    Sản phẩm ({order.items?.length || 0})
-                  </h4>
-                  <span style={{ color: "#1f2937", fontSize: 16, fontWeight: 700 }}>
-                    {(order.totals?.grand || order.totalAmount || 0).toLocaleString("vi-VN")}₫
-                  </span>
+                {/* Product Preview */}
+                <div style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
+                  <div style={{ flex: 1 }}>
+                    {order.items?.slice(0, 2).map((item, index) => (
+                      <div key={index} style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 20,
+                        marginBottom: 16,
+                        padding: 12,
+                        borderRadius: 12,
+                        background: '#f9fafb'
+                      }}>
+                        <img
+                          src={getImageUrl(item.imageSnapshot || item.image, "/default-product.svg")}
+                          alt={item.nameSnapshot || item.name}
+                          onError={handleImageError}
+                          style={{
+                            width: 80,
+                            height: 80,
+                            objectFit: "contain",
+                            borderRadius: 8,
+                            background: "white",
+                            padding: 4,
+                            border: '1px solid #e5e7eb'
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <p style={{ margin: "0 0 4px 0", color: "#111827", fontWeight: 600, fontSize: 16 }}>
+                            {item.nameSnapshot || item.name || 'Sản phẩm'}
+                          </p>
+                          <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
+                            {(item.priceSnapshot || item.price || 0).toLocaleString("vi-VN")}₫ × {item.quantity || 0}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: "right", color: "#111827", fontWeight: 700, fontSize: 16 }}>
+                          {((item.priceSnapshot || item.price || 0) * (item.quantity || 0)).toLocaleString("vi-VN")}₫
+                        </div>
+                      </div>
+                    ))}
+                    {order.items?.length > 2 && (
+                      <p style={{ margin: "8px 0 0 0", color: "#6b7280", fontSize: 14, paddingLeft: 12 }}>
+                        + {order.items.length - 2} sản phẩm khác...
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {order.items?.slice(0, 2).map((item, index) => (
-                    <div key={index} style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: 12,
-                      fontSize: 14
-                    }}>
-                      <img
-                        src={getImageUrl(item.imageSnapshot || item.image, "/default-product.svg")}
-                        alt={item.nameSnapshot || item.name}
-                        onError={handleImageError}
-                        style={{
-                          width: 40,
-                          height: 40,
-                          objectFit: "contain",
-                          borderRadius: 6,
-                          background: "#f9fafb",
-                          padding: 4
+
+                {/* Footer */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingTop: 20,
+                  borderTop: "1px solid #f3f4f6"
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 14, color: '#6b7280' }}>Tổng tiền thanh toán</span>
+                    <span style={{ fontSize: 24, fontWeight: 800, color: '#dc2626' }}>
+                      {(order.totals?.grand || order.totalAmount || 0).toLocaleString("vi-VN")}₫
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    {order.status === "pending" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle cancel logic here or open modal
+                          setSelectedOrder(order);
+                          setShowDetailModal(true);
                         }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <p style={{ margin: 0, color: "#374151", fontWeight: 500 }}>
-                          {item.nameSnapshot || item.name || 'Sản phẩm'}
-                        </p>
-                        <p style={{ margin: "2px 0 0 0", color: "#9ca3af", fontSize: 13 }}>
-                          {(item.priceSnapshot || item.price || 0).toLocaleString("vi-VN")}₫ × {item.quantity || 0}
-                        </p>
-                      </div>
-                      <div style={{ textAlign: "right", color: "#374151", fontWeight: 600 }}>
-                        {((item.priceSnapshot || item.price || 0) * (item.quantity || 0)).toLocaleString("vi-VN")}₫
-                      </div>
-                    </div>
-                  ))}
-                  {order.items?.length > 2 && (
-                    <p style={{ margin: "4px 0 0 0", color: "#9ca3af", fontSize: 13, textAlign: "center" }}>
-                      và {order.items.length - 2} sản phẩm khác...
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button 
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setShowDetailModal(true);
-                    }}
-                    style={{
-                      padding: "8px 16px",
-                      background: "#3b82f6",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      fontSize: 14,
-                      fontWeight: 500,
-                      transition: "background-color 0.2s"
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = "#2563eb"}
-                    onMouseLeave={(e) => e.target.style.background = "#3b82f6"}
-                  >
-                    Xem chi tiết
-                  </button>
-                  {order.status === "pending" && (
-                    <button style={{
-                      padding: "8px 16px",
-                      background: "#ef4444",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      fontSize: 14
-                    }}>
-                      Hủy đơn hàng
+                        style={{
+                          padding: "12px 24px",
+                          background: "white",
+                          color: "#ef4444",
+                          border: "1px solid #ef4444",
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          fontSize: 15,
+                          fontWeight: 600,
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = "#fef2f2"}
+                        onMouseLeave={(e) => e.target.style.background = "white"}
+                      >
+                        Hủy đơn hàng
+                      </button>
+                    )}
+                    <button
+                      style={{
+                        padding: "12px 24px",
+                        background: "#2563eb",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 10,
+                        cursor: "pointer",
+                        fontSize: 15,
+                        fontWeight: 600,
+                        boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = "#1d4ed8"}
+                      onMouseLeave={(e) => e.target.style.background = "#2563eb"}
+                    >
+                      Xem chi tiết
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -239,7 +320,8 @@ export default function Orders() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.5)",
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -251,191 +333,216 @@ export default function Orders() {
           <div
             style={{
               background: "white",
-              borderRadius: 12,
-              maxWidth: 800,
+              borderRadius: 24,
+              maxWidth: 900,
               width: "100%",
               maxHeight: "90vh",
               overflowY: "auto",
-              padding: 30
+              padding: 40,
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#1f2937" }}>
-                  Đơn hàng #{selectedOrder.code || selectedOrder.orderNumber || selectedOrder._id.slice(-6).toUpperCase()}
+                <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#111827" }}>
+                  Chi tiết đơn hàng
                 </h2>
-                <p style={{ margin: "8px 0 0 0", color: "#6b7280", fontSize: 14 }}>
-                  Ngày đặt: {new Date(selectedOrder.createdAt).toLocaleDateString("vi-VN", {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
+                <p style={{ margin: "8px 0 0 0", color: "#6b7280", fontSize: 16 }}>
+                  Mã đơn: <span style={{ fontWeight: 600, color: "#374151" }}>#{selectedOrder.code || selectedOrder.orderNumber || selectedOrder._id.slice(-6).toUpperCase()}</span>
                 </p>
               </div>
               <button
                 onClick={() => setShowDetailModal(false)}
                 style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: 28,
-                  color: "#9ca3af",
+                  background: "white",
+                  border: "1px solid #e5e7eb",
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: "pointer",
+                  color: "#000000",
                   padding: 0,
-                  lineHeight: 1
+                  transition: 'all 0.2s',
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f9fafb";
+                  e.currentTarget.style.borderColor = "#d1d5db";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "white";
+                  e.currentTarget.style.borderColor = "#e5e7eb";
                 }}
               >
-                ×
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
 
-            {/* Status */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{
-                display: "inline-block",
-                padding: "8px 16px",
-                borderRadius: 20,
-                background: getStatusColor(selectedOrder.status) + "20",
-                color: getStatusColor(selectedOrder.status),
-                fontSize: 13,
-                fontWeight: 600
-              }}>
-                {getStatusText(selectedOrder.status)}
-              </div>
-            </div>
-
-            {/* Products */}
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 600, color: "#1f2937" }}>
-                Sản phẩm
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {selectedOrder.items?.map((item, index) => (
-                  <div key={index} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    padding: 12,
-                    background: "#f9fafb",
-                    borderRadius: 8,
-                    border: "1px solid #e5e7eb"
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 32 }}>
+              {/* Left Column: Products & Status */}
+              <div>
+                {/* Status Card */}
+                <div style={{
+                  padding: 20,
+                  background: getStatusColor(selectedOrder.status).bg,
+                  border: `1px solid ${getStatusColor(selectedOrder.status).border}`,
+                  borderRadius: 16,
+                  marginBottom: 24,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12
+                }}>
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: getStatusColor(selectedOrder.status).text
                   }}>
-                    <img
-                      src={getImageUrl(item.imageSnapshot || item.image, "/default-product.svg")}
-                      alt={item.nameSnapshot || item.name}
-                      onError={handleImageError}
-                      style={{
-                        width: 60,
-                        height: 60,
-                        objectFit: "contain",
-                        borderRadius: 8,
-                        background: "white",
-                        padding: 4
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, color: "#1f2937", fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
-                        {item.nameSnapshot || item.name || 'Sản phẩm'}
-                      </p>
-                      <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13 }}>
-                        <span style={{ color: "#6b7280" }}>
-                          Đơn giá: <span style={{ fontWeight: 600, color: "#374151" }}>{(item.priceSnapshot || item.price || 0).toLocaleString("vi-VN")}₫</span>
-                        </span>
-                        <span style={{ color: "#6b7280" }}>
-                          Số lượng: <span style={{ fontWeight: 600, color: "#374151" }}>×{item.quantity || 0}</span>
-                        </span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>Trạng thái đơn hàng</p>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: getStatusColor(selectedOrder.status).text }}>
+                      {getStatusText(selectedOrder.status)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Products List */}
+                <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Sản phẩm</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {selectedOrder.items?.map((item, index) => (
+                    <div key={index} style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 20,
+                      padding: 16,
+                      background: "white",
+                      borderRadius: 16,
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <img
+                        src={getImageUrl(item.imageSnapshot || item.image, "/default-product.svg")}
+                        alt={item.nameSnapshot || item.name}
+                        onError={handleImageError}
+                        style={{
+                          width: 80,
+                          height: 80,
+                          objectFit: "contain",
+                          borderRadius: 12,
+                          background: "#f9fafb",
+                          padding: 4
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: "0 0 4px 0", color: "#111827", fontSize: 16, fontWeight: 600 }}>
+                          {item.nameSnapshot || item.name || 'Sản phẩm'}
+                        </p>
+                        <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
+                          Đơn giá: {(item.priceSnapshot || item.price || 0).toLocaleString("vi-VN")}₫
+                        </p>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ margin: "0 0 4px 0", color: "#6b7280", fontSize: 14 }}>
+                          x{item.quantity || 0}
+                        </p>
+                        <p style={{ margin: 0, color: "#111827", fontSize: 16, fontWeight: 700 }}>
+                          {((item.priceSnapshot || item.price || 0) * (item.quantity || 0)).toLocaleString("vi-VN")}₫
+                        </p>
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ margin: 0, color: "#dc2626", fontSize: 16, fontWeight: 700 }}>
-                        {((item.priceSnapshot || item.price || 0) * (item.quantity || 0)).toLocaleString("vi-VN")}₫
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Column: Info & Summary */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {/* Shipping Info */}
+                <div style={{ padding: 24, background: "#f9fafb", borderRadius: 20 }}>
+                  <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 700, color: "#111827" }}>
+                    Thông tin giao hàng
+                  </h3>
+                  {selectedOrder.shippingAddress ? (
+                    <div style={{ fontSize: 15, lineHeight: 1.6, color: '#4b5563' }}>
+                      <p style={{ margin: "0 0 8px 0", fontWeight: 600, color: "#111827", display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        {typeof selectedOrder.shippingAddress === 'string'
+                          ? selectedOrder.shippingAddress
+                          : `${selectedOrder.shippingAddress.fullName || ''}`}
                       </p>
+                      {typeof selectedOrder.shippingAddress === 'object' && (
+                        <>
+                          <p style={{ margin: "0 0 8px 0", display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            {selectedOrder.shippingAddress.phone}
+                          </p>
+                          <p style={{ margin: "0 0 8px 0", display: 'flex', alignItems: 'start', gap: 8 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginTop: 4 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            {selectedOrder.shippingAddress.address}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <p style={{ color: '#9ca3af' }}>Chưa có thông tin</p>
+                  )}
+                </div>
+
+                {/* Order Summary */}
+                <div style={{
+                  padding: 24,
+                  background: "white",
+                  borderRadius: 20,
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)"
+                }}>
+                  <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 700, color: "#111827" }}>
+                    Tổng thanh toán
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
+                      <span style={{ color: "#6b7280" }}>Tạm tính</span>
+                      <span style={{ color: "#111827", fontWeight: 600 }}>
+                        {(selectedOrder.totals?.items || selectedOrder.items?.reduce((sum, item) => sum + ((item.priceSnapshot || item.price || 0) * (item.quantity || 0)), 0) || 0).toLocaleString("vi-VN")}₫
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
+                      <span style={{ color: "#6b7280" }}>Phí vận chuyển</span>
+                      <span style={{ color: "#111827", fontWeight: 600 }}>
+                        {(selectedOrder.totals?.shipping || selectedOrder.shippingFee) ? `${(selectedOrder.totals?.shipping || selectedOrder.shippingFee).toLocaleString("vi-VN")}₫` : 'Miễn phí'}
+                      </span>
+                    </div>
+                    {(selectedOrder.totals?.discount || selectedOrder.discount) > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
+                        <span style={{ color: "#6b7280" }}>Giảm giá</span>
+                        <span style={{ color: "#059669", fontWeight: 600 }}>
+                          -{(selectedOrder.totals?.discount || selectedOrder.discount).toLocaleString("vi-VN")}₫
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ height: 1, background: "#e5e7eb", margin: "8px 0" }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: 'center' }}>
+                      <span style={{ color: "#111827", fontWeight: 700, fontSize: 16 }}>Tổng cộng</span>
+                      <span style={{ color: "#dc2626", fontWeight: 800, fontSize: 24 }}>
+                        {(selectedOrder.totals?.grand || selectedOrder.totalAmount || 0).toLocaleString("vi-VN")}₫
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Shipping Address */}
-            {selectedOrder.shippingAddress && (
-              <div style={{ marginBottom: 24, padding: 16, background: "#f9fafb", borderRadius: 8 }}>
-                <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 600, color: "#1f2937" }}>
-                  Địa chỉ giao hàng
-                </h3>
-                <div style={{ fontSize: 14, lineHeight: 1.6 }}>
-                  <p style={{ margin: "0 0 6px 0", color: "#374151", fontWeight: 600 }}>
-                    {typeof selectedOrder.shippingAddress === 'string'
-                      ? selectedOrder.shippingAddress
-                      : `${selectedOrder.shippingAddress.fullName || ''}`}
-                  </p>
-                  {typeof selectedOrder.shippingAddress === 'object' && selectedOrder.shippingAddress.phone && (
-                    <p style={{ margin: "0 0 6px 0", color: "#6b7280" }}>
-                      SĐT: {selectedOrder.shippingAddress.phone}
-                    </p>
-                  )}
-                  {typeof selectedOrder.shippingAddress === 'object' && selectedOrder.shippingAddress.address && (
-                    <p style={{ margin: "0 0 6px 0", color: "#6b7280" }}>
-                      {selectedOrder.shippingAddress.address}
-                    </p>
-                  )}
-                  {typeof selectedOrder.shippingAddress === 'object' && selectedOrder.shippingAddress.email && (
-                    <p style={{ margin: "0 0 6px 0", color: "#6b7280" }}>
-                      Email: {selectedOrder.shippingAddress.email}
-                    </p>
-                  )}
-                  {typeof selectedOrder.shippingAddress === 'object' && selectedOrder.shippingAddress.note && (
-                    <p style={{ margin: "6px 0 0 0", color: "#9ca3af", fontSize: 13, fontStyle: "italic" }}>
-                      Ghi chú: {selectedOrder.shippingAddress.note}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Order Summary */}
-            <div style={{
-              padding: 16,
-              background: "#f9fafb",
-              borderRadius: 8,
-              border: "1px solid #e5e7eb"
-            }}>
-              <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 600, color: "#1f2937" }}>
-                Tổng kết đơn hàng
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                  <span style={{ color: "#6b7280" }}>Tạm tính:</span>
-                  <span style={{ color: "#374151", fontWeight: 600 }}>
-                    {(selectedOrder.totals?.items || selectedOrder.items?.reduce((sum, item) => sum + ((item.priceSnapshot || item.price || 0) * (item.quantity || 0)), 0) || 0).toLocaleString("vi-VN")}₫
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                  <span style={{ color: "#6b7280" }}>Phí vận chuyển:</span>
-                  <span style={{ color: "#374151", fontWeight: 600 }}>
-                    {(selectedOrder.totals?.shipping || selectedOrder.shippingFee) ? `${(selectedOrder.totals?.shipping || selectedOrder.shippingFee).toLocaleString("vi-VN")}₫` : 'Miễn phí'}
-                  </span>
-                </div>
-                {(selectedOrder.totals?.discount || selectedOrder.discount) > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                    <span style={{ color: "#6b7280" }}>Giảm giá:</span>
-                    <span style={{ color: "#059669", fontWeight: 600 }}>
-                      -{(selectedOrder.totals?.discount || selectedOrder.discount).toLocaleString("vi-VN")}₫
-                    </span>
-                  </div>
-                )}
-                <div style={{
-                  height: 1,
-                  background: "#d1d5db",
-                  margin: "8px 0"
-                }} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16 }}>
-                  <span style={{ color: "#1f2937", fontWeight: 700 }}>Tổng cộng:</span>
-                  <span style={{ color: "#dc2626", fontWeight: 700, fontSize: 20 }}>
-                    {(selectedOrder.totals?.grand || selectedOrder.totalAmount || 0).toLocaleString("vi-VN")}₫
-                  </span>
                 </div>
               </div>
             </div>

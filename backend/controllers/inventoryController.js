@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import InventoryTransaction from '../models/InventoryTransaction.js';
 import InventoryAlert from '../models/InventoryAlert.js';
 import Product from '../models/Product.js';
@@ -283,5 +284,198 @@ async function checkAndCreateAlerts(productId, variantId) {
         { upsert: true, new: true }
       );
     }
+  }
+}
+/**
+ * Lấy tồn kho theo lô
+ */
+export async function getStockByBatch(req, res) {
+  try {
+    const { productId } = req.query;
+    
+    const matchStage = {};
+    if (productId) {
+      matchStage.productId = new mongoose.Types.ObjectId(productId);
+    }
+
+    const stockByBatch = await InventoryTransaction.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: {
+            productId: '$productId',
+            variantId: '$variantId',
+            batchNumber: '$batchNumber',
+            expiryDate: '$expiryDate'
+          },
+          totalImport: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'import'] }, '$quantity', 0]
+            }
+          },
+          totalExport: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'export'] }, '$quantity', 0]
+            }
+          },
+          totalReturn: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'return'] }, '$quantity', 0]
+            }
+          }
+          // Note: 'adjust' and 'transfer' might need specific handling depending on business logic
+          // For now, we assume simple import/export/return flow for batch tracking
+        }
+      },
+      {
+        $project: {
+          productId: '$_id.productId',
+          variantId: '$_id.variantId',
+          batchNumber: '$_id.batchNumber',
+          expiryDate: '$_id.expiryDate',
+          quantity: {
+            $subtract: [
+              { $add: ['$totalImport', '$totalReturn'] },
+              '$totalExport'
+            ]
+          }
+        }
+      },
+      { $match: { quantity: { $gt: 0 } } }, // Only show batches with positive stock
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      { $unwind: '$product' }
+    ]);
+
+    res.json(stockByBatch);
+  } catch (error) {
+    console.error('Get stock by batch error:', error);
+    res.status(500).json({ message: 'Lỗi khi lấy tồn kho theo lô' });
+  }
+}
+
+/**
+ * Lấy danh sách sản phẩm sắp hết hạn
+ */
+export async function getExpiringProducts(req, res) {
+  try {
+    const { days = 90 } = req.query;
+    const thresholdDate = new Date();
+    thresholdDate.setDate(thresholdDate.getDate() + parseInt(days));
+
+    // Find batches that expire before the threshold date
+    // We reuse the aggregation logic but filter by expiryDate
+    const expiringBatches = await InventoryTransaction.aggregate([
+      { 
+        $match: { 
+          expiryDate: { 
+            $ne: null,
+            $lte: thresholdDate,
+            $gte: new Date() // Not expired yet (optional, or show expired too)
+          } 
+        } 
+      },
+      {
+        $group: {
+          _id: {
+            productId: '$productId',
+            variantId: '$variantId',
+            batchNumber: '$batchNumber',
+            expiryDate: '$expiryDate'
+          },
+          totalImport: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'import'] }, '$quantity', 0]
+            }
+          },
+          totalExport: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'export'] }, '$quantity', 0]
+            }
+          },
+          totalReturn: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'return'] }, '$quantity', 0]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          productId: '$_id.productId',
+          variantId: '$_id.variantId',
+          batchNumber: '$_id.batchNumber',
+          expiryDate: '$_id.expiryDate',
+          quantity: {
+            $subtract: [
+              { $add: ['$totalImport', '$totalReturn'] },
+              '$totalExport'
+            ]
+          }
+        }
+      },
+      { $match: { quantity: { $gt: 0 } } },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      { $unwind: '$product' },
+      { $sort: { expiryDate: 1 } }
+    ]);
+
+    res.json(expiringBatches);
+  } catch (error) {
+    console.error('Get expiring products error:', error);
+    res.status(500).json({ message: 'Lỗi khi lấy danh sách sắp hết hạn' });
+  }
+}
+
+/**
+ * Xóa giao dịch tồn kho
+ */
+export async function deleteTransaction(req, res) {
+  try {
+    const { id } = req.params;
+
+    // Tìm giao dịch
+    const transaction = await InventoryTransaction.findById(id);
+    if (!transaction) {
+      return res.status(404).json({ message: 'Không tìm thấy giao dịch' });
+    }
+
+    // Hoàn tác thay đổi tồn kho
+    const reverseType = transaction.type === 'import' ? 'export' : 
+                       transaction.type === 'export' ? 'import' : 
+                       transaction.type;
+    
+    if (reverseType !== 'adjust') {
+      await updateProductStock(
+        transaction.productId,
+        transaction.variantId,
+        reverseType,
+        transaction.quantity
+      );
+    }
+
+    // Xóa giao dịch
+    await InventoryTransaction.findByIdAndDelete(id);
+
+    // Kiểm tra lại cảnh báo
+    await checkAndCreateAlerts(transaction.productId, transaction.variantId);
+
+    res.json({ message: 'Xóa giao dịch thành công' });
+  } catch (error) {
+    console.error('Delete transaction error:', error);
+    res.status(500).json({ message: 'Lỗi khi xóa giao dịch' });
   }
 }
