@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+/**
+ * @deprecated This model is deprecated. Use Staff.js for staff/admin users and Customer.js for customers.
+ * This is kept for backward compatibility and migration purposes only.
+ */
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -54,16 +59,23 @@ userSchema.statics.hashPassword = async function (plainPassword) {
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ employeeId: 1 }, { unique: true, sparse: true });
 
+
+// PointHistory is now exported from Customer.js
+// Commented out to avoid Mongoose OverwriteModelError
+/*
 const pointHistorySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true },
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
   orderCode: { type: String },
   points: { type: Number, required: true },
+  description: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
 
 export const PointHistory = mongoose.model("PointHistory", pointHistorySchema);
+*/
 
 export default mongoose.model("User", userSchema);
+
 
 

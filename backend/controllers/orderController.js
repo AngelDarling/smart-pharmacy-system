@@ -165,6 +165,13 @@ export async function updateStatus(req, res) {
     const oldStatus = order.status;
     const newStatus = status;
 
+    // Không cho phép thay đổi trạng thái nếu đơn hàng đã bị hủy
+    if (oldStatus === "cancelled") {
+      return res.status(400).json({ 
+        message: "Không thể thay đổi trạng thái của đơn hàng đã hủy" 
+      });
+    }
+
     // If switching from pending to processing/shipping/completed, reduce inventory
     if (oldStatus === "pending" && ["processing", "shipping", "completed"].includes(newStatus)) {
       for (const item of order.items) {
@@ -258,18 +265,20 @@ export async function updateStatus(req, res) {
     // Tích điểm thành viên khi hoàn thành đơn hàng
     if (newStatus === "completed" && order.userId) {
       try {
-        const User = (await import("../models/User.js")).default;
+        const Customer = (await import("../models/Customer.js")).default;
+        const { PointHistory } = await import("../models/Customer.js");
+        
         // Tính điểm chỉ dựa trên tổng tiền hàng, không tính phí vận chuyển
         const points = Math.floor(order.totals.items / 1000);
         if (points > 0) {
-          await User.findByIdAndUpdate(order.userId, { $inc: { loyaltyPoints: points } });
+          await Customer.findByIdAndUpdate(order.userId, { $inc: { loyaltyPoints: points } });
           // Lưu lịch sử nhận điểm
-          const { PointHistory } = await import("../models/User.js");
           await PointHistory.create({
             userId: order.userId,
             orderId: order._id,
             orderCode: order.code,
             points,
+            description: `Tích điểm từ đơn hàng ${order.code}`,
             createdAt: new Date()
           });
         }

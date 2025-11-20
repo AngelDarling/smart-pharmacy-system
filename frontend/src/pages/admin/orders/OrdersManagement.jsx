@@ -62,38 +62,40 @@ export default function OrdersManagement() {
   useEffect(() => { load(); }, [load]);
 
   const columns = [
-    { 
-      title: 'Mã đơn', 
-      dataIndex: 'code', 
+    {
+      title: 'Mã đơn',
+      dataIndex: 'code',
       width: 140,
       render: (v) => (
         <span style={{ color: '#1d4ed8', fontWeight: 700 }}>{v}</span>
       )
     },
-    { 
-      title: 'Khách hàng', 
-      dataIndex: ['shippingAddress', 'fullName'], 
-      width: 220, 
+    {
+      title: 'Khách hàng',
+      dataIndex: ['shippingAddress', 'fullName'],
+      width: 220,
       render: (_, r) => (
         <span style={{ color: '#0f172a', fontWeight: 700 }}>
           {r.shippingAddress?.fullName || (r.userId?.name || 'Khách vãng lai')}
         </span>
-      ) 
+      )
     },
-    { title: 'SĐT', dataIndex: ['shippingAddress','phone'], width: 130, render: (_, r) => r.shippingAddress?.phone || '—' },
-    { title: 'Thanh toán', dataIndex: 'paymentMethod', width: 110, render: (v)=> (v||'cod').toUpperCase() },
-    { title: 'Trạng thái', dataIndex: 'status', width: 130, render: (v)=> <Tag color={STATUS_COLORS[v] || 'default'}>{STATUS_LABELS[v] || v}</Tag> },
-    { title: 'Tổng tiền', dataIndex: ['totals','grand'], align:'right', width: 140, render: (v)=> (
-      <span style={{ color: '#16a34a', fontWeight: 700 }}>{(v||0).toLocaleString('vi-VN')}₫</span>
-    ) },
-    { title: 'Thời gian', dataIndex: 'createdAt', width: 160, render: (v)=> dayjs(v).format('DD/MM/YYYY HH:mm') },
+    { title: 'SĐT', dataIndex: ['shippingAddress', 'phone'], width: 130, render: (_, r) => r.shippingAddress?.phone || '—' },
+    { title: 'Thanh toán', dataIndex: 'paymentMethod', width: 110, render: (v) => (v || 'cod').toUpperCase() },
+    { title: 'Trạng thái', dataIndex: 'status', width: 130, render: (v) => <Tag color={STATUS_COLORS[v] || 'default'}>{STATUS_LABELS[v] || v}</Tag> },
+    {
+      title: 'Tổng tiền', dataIndex: ['totals', 'grand'], align: 'right', width: 140, render: (v) => (
+        <span style={{ color: '#16a34a', fontWeight: 700 }}>{(v || 0).toLocaleString('vi-VN')}₫</span>
+      )
+    },
+    { title: 'Thời gian', dataIndex: 'createdAt', width: 160, render: (v) => dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Thao tác', fixed: 'right', width: 180,
       render: (_, r) => (
         <Space wrap>
-          <Button 
-            type="primary" 
-            size="small" 
+          <Button
+            type="primary"
+            size="small"
             onClick={async () => {
               try {
                 // Fetch chi tiết đơn hàng để có đầy đủ thông tin
@@ -107,7 +109,7 @@ export default function OrdersManagement() {
           >
             Chi tiết
           </Button>
-          <Button 
+          <Button
             danger
             size="small"
             onClick={async () => {
@@ -162,7 +164,7 @@ export default function OrdersManagement() {
         <Input
           placeholder="Tìm mã đơn / tên / SĐT"
           value={filters.q}
-          onChange={(e)=> setFilters({ ...filters, q: e.target.value })}
+          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           prefix={<SearchOutlined />}
           style={{ width: 260 }}
           allowClear
@@ -170,7 +172,7 @@ export default function OrdersManagement() {
         <Select
           placeholder="Trạng thái"
           value={filters.status || undefined}
-          onChange={(v)=> setFilters({ ...filters, status: v || '' })}
+          onChange={(v) => setFilters({ ...filters, status: v || '' })}
           allowClear
           style={{ width: 180 }}
           options={[
@@ -184,7 +186,7 @@ export default function OrdersManagement() {
         <Select
           placeholder="Hình thức thanh toán"
           value={filters.paymentMethod || undefined}
-          onChange={(v)=> setFilters({ ...filters, paymentMethod: v || '' })}
+          onChange={(v) => setFilters({ ...filters, paymentMethod: v || '' })}
           allowClear
           style={{ width: 200 }}
           options={[
@@ -194,10 +196,10 @@ export default function OrdersManagement() {
         />
         <RangePicker
           value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
-          onChange={(vals)=> setFilters({ ...filters, from: vals?.[0] || null, to: vals?.[1] || null })}
+          onChange={(vals) => setFilters({ ...filters, from: vals?.[0] || null, to: vals?.[1] || null })}
         />
-        <Button 
-          onClick={()=> {
+        <Button
+          onClick={() => {
             const today = dayjs().startOf('day');
             const todayEnd = dayjs().endOf('day');
             setFilters({ ...filters, from: today, to: todayEnd });
@@ -206,9 +208,9 @@ export default function OrdersManagement() {
         >
           Hôm nay
         </Button>
-        <Button type="primary" onClick={()=> setPagination((p)=> ({ ...p }))} icon={<ReloadOutlined />}>Lọc</Button>
-        <Button 
-          onClick={()=> {
+        <Button type="primary" onClick={() => setPagination((p) => ({ ...p }))} icon={<ReloadOutlined />}>Lọc</Button>
+        <Button
+          onClick={() => {
             setFilters({ q: '', status: '', paymentMethod: '', from: null, to: null });
             setPagination((p) => ({ ...p, current: 1 }));
           }}
@@ -219,7 +221,7 @@ export default function OrdersManagement() {
       </div>
 
       {/* Stats */}
-      <Row gutter={[16,16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={8}>
           <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
             <Statistic title="Tổng đơn hàng" value={stats.totalOrders} />
@@ -227,14 +229,14 @@ export default function OrdersManagement() {
         </Col>
         <Col xs={24} sm={12} md={8}>
           <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
-            <Statistic title="Doanh thu hoàn tất" value={(stats.totalRevenue||0).toLocaleString('vi-VN') + '₫'} />
+            <Statistic title="Doanh thu hoàn tất" value={(stats.totalRevenue || 0).toLocaleString('vi-VN') + '₫'} />
           </div>
         </Col>
         <Col xs={24} md={8}>
           <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
             <Text strong>Trạng thái</Text>
-            <div style={{ marginTop: 8, display:'flex', flexWrap:'wrap', gap: 8 }}>
-              {(stats.statusBreakdown || []).map((s)=> (
+            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(stats.statusBreakdown || []).map((s) => (
                 <Tag key={s._id} color={STATUS_COLORS[s._id] || 'default'}>{STATUS_LABELS[s._id] || s._id}: {s.count}</Tag>
               ))}
             </div>
@@ -259,14 +261,14 @@ export default function OrdersManagement() {
 
       <Modal
         open={detail.open}
-        onCancel={()=> setDetail({ open:false, order:null })}
+        onCancel={() => setDetail({ open: false, order: null })}
         title={<span>Chi tiết đơn hàng <strong>{detail.order?.code}</strong></span>}
         footer={null}
         width={1000}
       >
         {detail.order && (
           <div>
-            <Row gutter={[16,16]}>
+            <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
                   <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Thông tin khách hàng</h3>
@@ -282,9 +284,9 @@ export default function OrdersManagement() {
                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
                   <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Thông tin thanh toán</h3>
                   <Descriptions column={1} size="small">
-                    <Descriptions.Item label="Phương thức">{(detail.order.paymentMethod||'cod').toUpperCase()}</Descriptions.Item>
-                    <Descriptions.Item label="Tổng tiền hàng">{(detail.order.totals?.items||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
-                    <Descriptions.Item label="Phí vận chuyển">{(detail.order.totals?.shipping||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
+                    <Descriptions.Item label="Phương thức">{(detail.order.paymentMethod || 'cod').toUpperCase()}</Descriptions.Item>
+                    <Descriptions.Item label="Tổng tiền hàng">{(detail.order.totals?.items || 0).toLocaleString('vi-VN')}₫</Descriptions.Item>
+                    <Descriptions.Item label="Phí vận chuyển">{(detail.order.totals?.shipping || 0).toLocaleString('vi-VN')}₫</Descriptions.Item>
                     {detail.order.couponCode && (
                       <Descriptions.Item label="Mã giảm giá">
                         <Space>
@@ -292,13 +294,13 @@ export default function OrdersManagement() {
                             {detail.order.couponCode}
                           </Text>
                           <Text type="secondary" style={{ fontSize: 12 }}>
-                            (Giảm {(detail.order.totals?.discount||0).toLocaleString('vi-VN')}₫)
+                            (Giảm {(detail.order.totals?.discount || 0).toLocaleString('vi-VN')}₫)
                           </Text>
                         </Space>
                       </Descriptions.Item>
                     )}
                     <Descriptions.Item label="Giảm giá">
-                      {(detail.order.totals?.discount||0).toLocaleString('vi-VN')}₫
+                      {(detail.order.totals?.discount || 0).toLocaleString('vi-VN')}₫
                       {detail.order.totals?.discount > 0 && detail.order.couponCode && (
                         <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
                           (từ mã {detail.order.couponCode})
@@ -308,18 +310,20 @@ export default function OrdersManagement() {
                     <Descriptions.Item label="Trạng thái">
                       <Space>
                         <Tag color={STATUS_COLORS[detail.order.status] || 'default'}>{STATUS_LABELS[detail.order.status] || detail.order.status}</Tag>
-                        <Select
-                          size="small"
-                          value={detail.order.status}
-                          onChange={(v)=> updateStatus(detail.order._id, v)}
-                          options={[
-                            { label: 'Chờ xử lý', value: 'pending' },
-                            { label: 'Đang xử lý', value: 'processing' },
-                            { label: 'Đang giao', value: 'shipping' },
-                            { label: 'Hoàn tất', value: 'completed' },
-                            { label: 'Đã hủy', value: 'cancelled' },
-                          ]}
-                        />
+                        {detail.order.status !== 'cancelled' && (
+                          <Select
+                            size="small"
+                            value={detail.order.status}
+                            onChange={(v) => updateStatus(detail.order._id, v)}
+                            options={[
+                              { label: 'Chờ xử lý', value: 'pending' },
+                              { label: 'Đang xử lý', value: 'processing' },
+                              { label: 'Đang giao', value: 'shipping' },
+                              { label: 'Hoàn tất', value: 'completed' },
+                              { label: 'Đã hủy', value: 'cancelled' },
+                            ]}
+                          />
+                        )}
                       </Space>
                     </Descriptions.Item>
                     {detail.order.shipment?.shippingCode && (
@@ -334,7 +338,7 @@ export default function OrdersManagement() {
                         </Space>
                       </Descriptions.Item>
                     )}
-                    <Descriptions.Item label="Tổng thanh toán"><span style={{ color:'#16a34a', fontWeight:700 }}>{(detail.order.totals?.grand||0).toLocaleString('vi-VN')}₫</span></Descriptions.Item>
+                    <Descriptions.Item label="Tổng thanh toán"><span style={{ color: '#16a34a', fontWeight: 700 }}>{(detail.order.totals?.grand || 0).toLocaleString('vi-VN')}₫</span></Descriptions.Item>
                   </Descriptions>
                 </div>
               </Col>
@@ -343,7 +347,7 @@ export default function OrdersManagement() {
             <div style={{ marginTop: 16, padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
               <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Sản phẩm</h3>
               <Table
-                rowKey={(r,idx)=> `${r.productId || idx}`}
+                rowKey={(r, idx) => `${r.productId || idx}`}
                 dataSource={detail.order.items || []}
                 pagination={false}
                 columns={[
@@ -351,39 +355,39 @@ export default function OrdersManagement() {
                     title: 'Sản phẩm',
                     dataIndex: 'nameSnapshot',
                     render: (_, r) => (
-                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <img
                           src={getImageUrl(r.productId?.imageUrls?.[0], '/default-product.png')}
                           alt={r.nameSnapshot}
                           width={56}
                           height={56}
-                          style={{ objectFit:'cover', borderRadius:8, border:'1px solid #f0f0f0' }}
-                          onError={(e)=> handleImageError(e, '/default-product.png')}
+                          style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #f0f0f0' }}
+                          onError={(e) => handleImageError(e, '/default-product.png')}
                         />
                         <div>
-                          <div style={{ fontWeight:600 }}>{r.nameSnapshot}</div>
+                          <div style={{ fontWeight: 600 }}>{r.nameSnapshot}</div>
                         </div>
                       </div>
                     )
                   },
-                  { 
-                    title:'SL', 
-                    dataIndex:'quantity', 
-                    align:'right', 
-                    width:80 
+                  {
+                    title: 'SL',
+                    dataIndex: 'quantity',
+                    align: 'right',
+                    width: 80
                   },
-                  { 
-                    title:'Đơn giá', 
-                    dataIndex:'priceSnapshot', 
-                    align:'right', 
-                    width:180, 
-                    render:(v, r) => {
+                  {
+                    title: 'Đơn giá',
+                    dataIndex: 'priceSnapshot',
+                    align: 'right',
+                    width: 180,
+                    render: (v, r) => {
                       // Kiểm tra có giảm giá: có originalPriceSnapshot hoặc có discount > 0
-                      const hasDiscount = (r.originalPriceSnapshot && r.originalPriceSnapshot > r.priceSnapshot) || 
-                                         (r.discount > 0 && r.priceSnapshot < (r.originalPriceSnapshot || r.priceSnapshot));
+                      const hasDiscount = (r.originalPriceSnapshot && r.originalPriceSnapshot > r.priceSnapshot) ||
+                        (r.discount > 0 && r.priceSnapshot < (r.originalPriceSnapshot || r.priceSnapshot));
                       const displayPrice = r.priceSnapshot || 0; // Giá đã giảm (finalPrice)
                       const originalPrice = r.originalPriceSnapshot || (hasDiscount ? r.priceSnapshot : null);
-                      
+
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                           <span style={{ color: '#3b82f6', fontWeight: 600 }}>
@@ -396,22 +400,22 @@ export default function OrdersManagement() {
                           )}
                           {r.discount > 0 && (
                             <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 500 }}>
-                              Giảm {r.discountType === 'percent' ? `${r.discount}%` : `${(r.discountValue||0).toLocaleString('vi-VN')}₫`}
+                              Giảm {r.discountType === 'percent' ? `${r.discount}%` : `${(r.discountValue || 0).toLocaleString('vi-VN')}₫`}
                             </span>
                           )}
                         </div>
                       );
                     }
                   },
-                  { 
-                    title:'Thành tiền', 
-                    align:'right', 
-                    width:180, 
-                    render:(_,r)=> {
+                  {
+                    title: 'Thành tiền',
+                    align: 'right',
+                    width: 180,
+                    render: (_, r) => {
                       const hasDiscount = r.originalPriceSnapshot && r.originalPriceSnapshot > r.priceSnapshot;
-                      const totalPrice = (r.priceSnapshot||0) * (r.quantity||0);
-                      const totalOriginalPrice = hasDiscount ? (r.originalPriceSnapshot||0) * (r.quantity||0) : null;
-                      
+                      const totalPrice = (r.priceSnapshot || 0) * (r.quantity || 0);
+                      const totalOriginalPrice = hasDiscount ? (r.originalPriceSnapshot || 0) * (r.quantity || 0) : null;
+
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                           <span style={{ color: '#3b82f6', fontWeight: 600 }}>

@@ -1,10 +1,11 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
+import { PointHistory } from "../models/Customer.js";
 
 const userSchema = z.object({
   name: z.string().min(2),
-  email: z.string().email(),
+  email: z.string().email().or(z.literal('')).optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
   role: z.enum(["customer", "admin", "staff", "manager", "pharmacist"]),
@@ -15,10 +16,11 @@ const userSchema = z.object({
   hireDate: z.string().optional(),
   salary: z.number().min(0).optional(),
   permissions: z.array(z.string()).optional(),
-  avatar: z.string().optional()
+  avatar: z.string().optional(),
+  loyaltyPoints: z.number().min(0).optional()
 });
 
-const updateUserSchema = userSchema.partial().omit({ email: true });
+const updateUserSchema = userSchema.partial();
 
 // Simple profile update schema (no validation for profile updates)
 const profileUpdateSchema = z.object({
@@ -150,6 +152,23 @@ export async function update(req, res) {
   try {
     const parsed = updateUserSchema.parse(req.body);
     
+    // Find current user
+    const currentUser = await User.findById(req.params.id);
+    if (!currentUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    // Check if email already exists (if changed and not empty)
+    if (parsed.email && parsed.email !== currentUser.email) {
+      const existingEmail = await User.findOne({ 
+        email: parsed.email,
+        _id: { $ne: req.params.id }
+      });
+      if (existingEmail) {
+        return res.status(409).json({ message: "Email đã tồn tại" });
+      }
+    }
+    
     // Check if employeeId already exists (for staff)
     if (parsed.employeeId) {
       const existingEmployee = await User.findOne({ 
@@ -158,6 +177,19 @@ export async function update(req, res) {
       });
       if (existingEmployee) {
         return res.status(409).json({ message: "Mã nhân viên đã tồn tại" });
+      }
+    }
+
+    // Handle point history
+    if (parsed.loyaltyPoints !== undefined && parsed.loyaltyPoints !== currentUser.loyaltyPoints) {
+      const diff = parsed.loyaltyPoints - (currentUser.loyaltyPoints || 0);
+      if (diff !== 0) {
+        await PointHistory.create({
+          userId: currentUser._id,
+          points: diff,
+          description: 'Admin cập nhật thủ công',
+          orderCode: 'ADMIN_UPDATE'
+        });
       }
     }
 
@@ -177,15 +209,12 @@ export async function update(req, res) {
       { new: true }
     ).select('-passwordHash');
     
-    if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    }
-    
     res.json(user);
   } catch (error) {
     if (error.name === 'ValidationError') {
       res.status(400).json({ message: "Dữ liệu không hợp lệ" });
     } else {
+      console.error(error);
       res.status(500).json({ message: "Lỗi khi cập nhật người dùng" });
     }
   }
@@ -373,10 +402,10 @@ export async function changePassword(req, res) {
 export async function getPointHistory(req, res) {
   try {
     const userId = req.params.id;
-    const { PointHistory } = await import("../models/User.js");
     const logs = await PointHistory.find({ userId }).sort({ createdAt: -1 });
     res.json(logs);
   } catch (err) {
+    console.error("getPointHistory error:", err);
     res.status(500).json({ message: "Không lấy được lịch sử nhận điểm", error: err.message });
   }
 }

@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
 
 export async function authRequired(req, res, next) {
   try {
@@ -7,7 +6,20 @@ export async function authRequired(req, res, next) {
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
     if (!token) return res.status(401).json({ message: "Unauthorized" });
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(payload.sub);
+    
+    // Try Staff first
+    let user = await (await import("../models/Staff.js")).default.findById(payload.sub);
+    
+    // If not found, try Customer
+    if (!user) {
+      const Customer = (await import("../models/Customer.js")).default;
+      user = await Customer.findById(payload.sub);
+      // Set role to customer if found in Customer collection
+      if (user) {
+        user.role = 'customer';
+      }
+    }
+    
     if (!user || !user.isActive) return res.status(401).json({ message: "Unauthorized" });
     req.user = user;
     next();
@@ -24,7 +36,20 @@ export async function optionalAuth(req, res, next) {
     
     if (token) {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(payload.sub);
+      
+      // Try Staff first
+      let user = await (await import("../models/Staff.js")).default.findById(payload.sub);
+      
+      // If not found, try Customer
+      if (!user) {
+        const Customer = (await import("../models/Customer.js")).default;
+        user = await Customer.findById(payload.sub);
+        // Set role to customer if found in Customer collection
+        if (user) {
+          user.role = 'customer';
+        }
+      }
+      
       if (user && user.isActive) {
         req.user = user;
       }
@@ -123,4 +148,15 @@ export function requireAllPermissions(...permissions) {
   };
 }
 
-
+// Require staff (not customer)
+export function requireStaff(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  if (req.user.role === 'customer') {
+    return res.status(403).json({ message: "Chỉ nhân viên mới có quyền truy cập" });
+  }
+  
+  next();
+}

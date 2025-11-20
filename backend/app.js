@@ -24,6 +24,8 @@ import reviewRoutes from "./routes/reviews.js";
 import healthCheckRoutes from "./routes/healthChecks.js";
 import adminHealthCheckRoutes from "./routes/adminHealthChecks.js";
 import chatRoutes from "./routes/chat.js";
+import staffRoutes from "./routes/staff.js";
+import customerRoutes from "./routes/customer.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -59,6 +61,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/health-checks", healthCheckRoutes);
 app.use("/api/admin", adminHealthCheckRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/staff", staffRoutes);
+app.use("/api/customers", customerRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });

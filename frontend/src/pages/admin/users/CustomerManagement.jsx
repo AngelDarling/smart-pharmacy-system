@@ -1,6 +1,6 @@
 /**
- * Staff Management Page
- * Specialized management for staff members
+ * User Management Page
+ * Advanced user management with filtering and modern UI
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,14 +16,16 @@ import {
   Tooltip,
   Row,
   Col,
-  Typography,
   Form,
   Switch,
   Badge,
   Statistic,
   Dropdown,
   Menu,
-  Progress
+  Modal,
+  Descriptions,
+  Empty,
+  Spin
 } from 'antd';
 import {
   PlusOutlined,
@@ -32,6 +34,7 @@ import {
   SearchOutlined,
   FilterOutlined,
   ReloadOutlined,
+  UserOutlined,
   TeamOutlined,
   SettingOutlined,
   EyeOutlined,
@@ -40,49 +43,53 @@ import {
   UserAddOutlined,
   UserDeleteOutlined,
   CrownOutlined,
-  SafetyOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  IdcardOutlined
+  SafetyOutlined
 } from '@ant-design/icons';
-import { useStaff } from '../../../hooks/admin/useStaff';
-import { usePermissions } from '../../../hooks/usePermissions';
-import StaffForm from '../../../components/admin/StaffForm';
+import { useUsers } from '../../../hooks/admin/useUsers';
+import CustomerForm from '../../../components/admin/CustomerForm';
+import api from '../../../api/client.js';
 
 const { Search } = Input;
 const { Option } = Select;
 
-const StaffManagement = () => {
+const CustomerManagement = () => {
   const {
-    staff,
-    users, // Keeping for compatibility
+    users,
     loading,
     pagination,
     stats,
-    fetchStaff,
-    createStaff,
-    updateStaff,
-    updateStaffRole,
-    deleteStaff,
-    toggleStaffStatus,
-    bulkUpdateStaff,
+    fetchUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+    toggleUserStatus,
+    bulkUpdateUsers,
     handleTableChange
-  } = useStaff();
-
-  const { permissions } = usePermissions();
+  } = useUsers();
 
   const [filters, setFilters] = useState({
     search: '',
-    role: '',
+    role: 'customer', // Mặc định chỉ hiển thị customers
     isActive: undefined,
     department: ''
   });
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isUserFormVisible, setIsUserFormVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
+  const [pointHistory, setPointHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
 
-  // Staff roles only
-  const staffRoles = ['staff', 'manager', 'pharmacist', 'admin'];
+  // Role options
+  const roleOptions = [
+    { value: 'customer', label: 'Khách hàng', color: 'blue' },
+    { value: 'staff', label: 'Nhân viên', color: 'green' },
+    { value: 'manager', label: 'Quản lý', color: 'orange' },
+    { value: 'pharmacist', label: 'Dược sĩ', color: 'purple' },
+    { value: 'admin', label: 'Quản trị viên', color: 'red' }
+  ];
 
   // Department options
   const departmentOptions = [
@@ -95,31 +102,6 @@ const StaffManagement = () => {
     'Marketing'
   ];
 
-  // Position options by department
-  const positionOptions = {
-    'Bán hàng': ['Nhân viên bán hàng', 'Trưởng nhóm bán hàng', 'Giám đốc bán hàng'],
-    'Kho': ['Nhân viên kho', 'Trưởng kho', 'Giám đốc kho'],
-    'Kế toán': ['Kế toán viên', 'Kế toán trưởng', 'Giám đốc tài chính'],
-    'Dược': ['Dược sĩ', 'Dược sĩ trưởng', 'Giám đốc dược'],
-    'Quản lý': ['Quản lý', 'Giám đốc', 'CEO'],
-    'IT': ['Lập trình viên', 'Kỹ sư hệ thống', 'Giám đốc IT'],
-    'Marketing': ['Chuyên viên marketing', 'Trưởng phòng marketing', 'Giám đốc marketing']
-  };
-
-  // Filter users to show only staff (include admin users)
-  const staffUsers = users.filter(user => {
-    // Include all staff roles
-    if (staffRoles.includes(user.role)) {
-      // For admin role, always include (they are administrators)
-      if (user.role === 'admin') {
-        return true;
-      }
-      // For other roles, include if they have employee info
-      return user.employeeId || user.department || user.position;
-    }
-    return false;
-  });
-
   // Handle filter change
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -127,18 +109,18 @@ const StaffManagement = () => {
 
   // Apply filters
   const applyFilters = () => {
-    fetchUsers({ ...filters, role: filters.role || undefined });
+    fetchUsers(filters);
   };
 
   // Reset filters
   const resetFilters = () => {
     setFilters({
       search: '',
-      role: '',
+      role: 'customer', // Mặc định chỉ hiển thị customers
       isActive: undefined,
       department: ''
     });
-    fetchUsers({});
+    fetchUsers({ role: 'customer' });
   };
 
   // Handle search
@@ -197,6 +179,23 @@ const StaffManagement = () => {
     setIsUserFormVisible(true);
   };
 
+  // Handle view user point history
+  const handleViewPointHistory = async (user) => {
+    setViewingUser(user);
+    setIsHistoryModalVisible(true);
+    setHistoryLoading(true);
+    setPointHistory([]);
+    try {
+      const response = await api.get(`/users/${user._id}/point-history`);
+      setPointHistory(response.data || []);
+    } catch (error) {
+      console.error('Error fetching point history:', error);
+      setPointHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // Handle user form submit
   const handleUserFormSubmit = async (values) => {
     try {
@@ -219,21 +218,10 @@ const StaffManagement = () => {
     setEditingUser(null);
   };
 
-  // Calculate staff statistics
-  const staffStats = {
-    totalStaff: staffUsers.length,
-    activeStaff: staffUsers.filter(user => user.isActive).length,
-    staffByRole: {
-      staff: staffUsers.filter(user => user.role === 'staff').length,
-      manager: staffUsers.filter(user => user.role === 'manager').length,
-      pharmacist: staffUsers.filter(user => user.role === 'pharmacist').length,
-      admin: staffUsers.filter(user => user.role === 'admin').length
-    },
-    staffByDepartment: departmentOptions.reduce((acc, dept) => {
-      acc[dept] = staffUsers.filter(user => user.department === dept).length;
-      return acc;
-    }, {})
-  };
+  // Load users with customer filter on mount
+  useEffect(() => {
+    fetchUsers({ role: 'customer' });
+  }, []);
 
   // Table columns
   const columns = [
@@ -246,7 +234,7 @@ const StaffManagement = () => {
         <Avatar
           size={50}
           src={avatar || '/default-avatar.png'}
-          icon={<TeamOutlined />}
+          icon={<UserOutlined />}
           style={{
             backgroundColor: record.isActive ? '#52c41a' : '#ff4d4f'
           }}
@@ -254,7 +242,7 @@ const StaffManagement = () => {
       )
     },
     {
-      title: 'Thông tin nhân viên',
+      title: 'Thông tin khách hàng',
       dataIndex: 'name',
       key: 'name',
       width: 250,
@@ -275,121 +263,76 @@ const StaffManagement = () => {
             marginBottom: '6px',
             fontFamily: 'monospace'
           }}>
-            {record.email}
+            {record.email || 'Chưa có email'}
           </div>
-          {record.employeeId && (
-            <div style={{
-              fontSize: '11px',
-              color: '#1890ff',
-              fontWeight: 500
-            }}>
-              <IdcardOutlined style={{ marginRight: '4px' }} />
-              {record.employeeId}
-            </div>
-          )}
         </div>
       )
     },
     {
-      title: 'Vai trò & Phòng ban',
-      key: 'roleDepartment',
-      width: 200,
+      title: 'Thông tin liên hệ',
+      key: 'contact',
+      width: 220,
       render: (_, record) => (
         <div>
-          <div style={{ marginBottom: '4px' }}>
-            <Tag
-              color={
-                record.role === 'admin' ? 'red' :
-                  record.role === 'manager' ? 'orange' :
-                    record.role === 'pharmacist' ? 'purple' : 'green'
-              }
-              style={{ marginBottom: '2px' }}
-            >
-              {record.role === 'admin' ? 'Quản trị viên' :
-                record.role === 'manager' ? 'Quản lý' :
-                  record.role === 'pharmacist' ? 'Dược sĩ' : 'Nhân viên'}
-            </Tag>
-          </div>
-          {record.department && (
-            <div style={{ marginBottom: '4px' }}>
-              <Tag color="blue" style={{ marginBottom: '2px' }}>
-                {record.department}
-              </Tag>
-            </div>
-          )}
-          {record.position && (
-            <div>
-              <Tag color="green" style={{ marginBottom: '2px' }}>
-                {record.position}
-              </Tag>
-            </div>
-          )}
-        </div>
-      )
-    },
-    {
-      title: 'Thông tin công việc',
-      key: 'workInfo',
-      width: 200,
-      render: (_, record) => (
-        <div>
-          {/* Show role-specific information */}
-          {record.role === 'admin' ? (
+          {record.phone && (
             <div style={{
               fontSize: '12px',
-              color: '#722ed1',
-              marginBottom: '4px',
-              fontWeight: 500
+              color: '#262626',
+              marginBottom: '4px'
             }}>
-              <CrownOutlined style={{ marginRight: '4px' }} />
-              Quản trị viên hệ thống
+              📞 {record.phone}
             </div>
-          ) : (
-            <>
-              {record.hireDate && (
-                <div style={{
-                  fontSize: '12px',
-                  color: '#262626',
-                  marginBottom: '4px'
-                }}>
-                  <CalendarOutlined style={{ marginRight: '4px', color: '#1890ff' }} />
-                  Tuyển dụng: {new Date(record.hireDate).toLocaleDateString('vi-VN')}
-                </div>
-              )}
-              {record.salary && (
-                <div style={{
-                  fontSize: '12px',
-                  color: '#52c41a',
-                  marginBottom: '4px',
-                  fontWeight: 500
-                }}>
-                  <DollarOutlined style={{ marginRight: '4px' }} />
-                  {record.salary.toLocaleString('vi-VN')} VNĐ
-                </div>
-              )}
-            </>
           )}
-
-          {/* Show last login for all users */}
-          {record.lastLogin ? (
+          {record.address && (
             <div style={{
-              fontSize: '10px',
+              fontSize: '11px',
               color: '#8c8c8c',
-              marginTop: '4px'
+              fontStyle: 'italic',
+              lineHeight: '1.3'
             }}>
-              Đăng nhập cuối: {new Date(record.lastLogin).toLocaleDateString('vi-VN')}
+              📍 {record.address.length > 40
+                ? `${record.address.substring(0, 40)}...`
+                : record.address
+              }
             </div>
-          ) : (
+          )}
+          {record.lastLogin && (
             <div style={{
               fontSize: '10px',
               color: '#8c8c8c',
               marginTop: '4px'
             }}>
-              Chưa có lịch sử đăng nhập
+              Đăng nhập: {new Date(record.lastLogin).toLocaleDateString()}
             </div>
           )}
         </div>
       )
+    },
+    {
+      title: 'Điểm tích lũy',
+      dataIndex: 'loyaltyPoints',
+      key: 'loyaltyPoints',
+      width: 120,
+      align: 'center',
+      render: (points) => (
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 700,
+            color: '#4f46e5'
+          }}>
+            {points || 0}
+          </div>
+          <div style={{
+            fontSize: '11px',
+            color: '#8c8c8c',
+            marginTop: '2px'
+          }}>
+            điểm
+          </div>
+        </div>
+      ),
+      sorter: true
     },
     {
       title: 'Trạng thái',
@@ -410,7 +353,7 @@ const StaffManagement = () => {
             color: isActive ? '#52c41a' : '#ff4d4f',
             marginTop: '2px'
           }}>
-            {isActive ? 'Đang làm việc' : 'Nghỉ việc'}
+            {isActive ? 'Đang hoạt động' : 'Đã tạm dừng'}
           </div>
         </div>
       )
@@ -424,71 +367,67 @@ const StaffManagement = () => {
           {
             key: 'view',
             icon: <EyeOutlined />,
-            label: 'Xem chi tiết',
-            onClick: () => console.log('View staff:', record._id)
+            label: 'Xem lịch sử tích điểm',
+            onClick: () => handleViewPointHistory(record)
           },
-          ...(permissions.canWriteUsers() ? [{
+          {
             key: 'edit',
             icon: <EditOutlined />,
             label: 'Chỉnh sửa',
             onClick: () => handleEditUser(record)
-          }] : []),
-          ...(permissions.canWriteUsers() || permissions.canDeleteUsers() ? [{
+          },
+          {
             type: 'divider'
-          }] : []),
-          ...(permissions.canDeleteUsers() ? [{
+          },
+          {
             key: 'delete',
             icon: <DeleteOutlined />,
-            label: 'Xóa nhân viên',
+            label: 'Xóa người dùng',
             danger: true,
             onClick: () => handleDeleteUser(record._id)
-          }] : [])
-        ].filter(Boolean);
+          }
+        ];
 
         return (
           <Space size="small">
-            <Tooltip title="Xem chi tiết">
+            <Tooltip title="Xem lịch sử tích điểm">
               <Button
                 type="text"
                 size="small"
                 shape="circle"
                 icon={<EyeOutlined />}
-                onClick={() => console.log('View staff:', record._id, record.name)}
+                onClick={() => handleViewPointHistory(record)}
                 style={{
                   color: '#1890ff',
                   border: '1px solid #91d5ff'
                 }}
               />
             </Tooltip>
-            {permissions.canWriteUsers() && (
-              <Tooltip title="Chỉnh sửa">
-                <Button
-                  type="text"
-                  size="small"
-                  shape="circle"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEditUser(record)}
-                  style={{
-                    color: '#52c41a',
-                    border: '1px solid #b7eb8f'
-                  }}
-                />
-              </Tooltip>
-            )}
-            {actionMenu.length > 1 && (
-              <Dropdown menu={{ items: actionMenu }} trigger={['click']}>
-                <Button
-                  type="text"
-                  size="small"
-                  shape="circle"
-                  icon={<MoreOutlined />}
-                  style={{
-                    color: '#8c8c8c',
-                    border: '1px solid #d9d9d9'
-                  }}
-                />
-              </Dropdown>
-            )}
+            <Tooltip title="Chỉnh sửa">
+              <Button
+                type="text"
+                size="small"
+                shape="circle"
+                icon={<EditOutlined />}
+                onClick={() => handleEditUser(record)}
+                style={{
+                  color: '#52c41a',
+                  border: '1px solid #b7eb8f'
+                }}
+              />
+            </Tooltip>
+            <Dropdown menu={{ items: actionMenu }} trigger={['click']}>
+              <Button
+                type="text"
+                size="small"
+                shape="circle"
+                icon={<MoreOutlined />}
+                style={{
+                  color: '#8c8c8c',
+                  border: '1px solid #d9d9d9'
+                }}
+              />
+            </Dropdown>
           </Space>
         );
       }
@@ -509,7 +448,7 @@ const StaffManagement = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý Nhân viên</h2>
+        <h2 style={{ margin: 0 }}>Quản lý Khách hàng</h2>
         <Space>
           <Tooltip title="Làm mới dữ liệu">
             <Button
@@ -518,15 +457,13 @@ const StaffManagement = () => {
               loading={loading}
             />
           </Tooltip>
-          {permissions.canWriteUsers() && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAddUser}
-            >
-              Thêm nhân viên
-            </Button>
-          )}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAddUser}
+          >
+            Thêm người dùng
+          </Button>
         </Space>
       </div>
 
@@ -534,7 +471,7 @@ const StaffManagement = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={12}>
           <Search
-            placeholder="Tìm kiếm theo tên, email, mã nhân viên..."
+            placeholder="Tìm kiếm theo tên, email, số điện thoại..."
             allowClear
             onSearch={handleSearch}
             style={{ width: '100%' }}
@@ -546,19 +483,9 @@ const StaffManagement = () => {
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
-                  title="Tổng nhân viên"
-                  value={staffStats.totalStaff}
-                  prefix={<TeamOutlined />}
-                  valueStyle={{ color: '#52c41a', fontSize: '18px' }}
-                />
-              </div>
-            </Col>
-            <Col span={6}>
-              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
-                <Statistic
-                  title="Đang làm việc"
-                  value={staffStats.activeStaff}
-                  prefix={<SafetyOutlined />}
+                  title="Tổng khách hàng"
+                  value={stats?.customers || users.length || 0}
+                  prefix={<UserOutlined />}
                   valueStyle={{ color: '#1890ff', fontSize: '18px' }}
                 />
               </div>
@@ -566,53 +493,36 @@ const StaffManagement = () => {
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
-                  title="Quản lý"
-                  value={staffStats.staffByRole.manager + staffStats.staffByRole.admin}
-                  prefix={<CrownOutlined />}
-                  valueStyle={{ color: '#faad14', fontSize: '18px' }}
+                  title="Đang hoạt động"
+                  value={stats?.activeUsers || users.filter(u => u.isActive).length || 0}
+                  prefix={<SafetyOutlined />}
+                  valueStyle={{ color: '#52c41a', fontSize: '18px' }}
                 />
               </div>
             </Col>
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
-                  title="Dược sĩ"
-                  value={staffStats.staffByRole.pharmacist}
-                  prefix={<SettingOutlined />}
+                  title="Tổng điểm tích lũy"
+                  value={users.reduce((sum, u) => sum + (u.loyaltyPoints || 0), 0)}
+                  prefix={<CrownOutlined />}
                   valueStyle={{ color: '#722ed1', fontSize: '18px' }}
+                />
+              </div>
+            </Col>
+            <Col span={6}>
+              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
+                <Statistic
+                  title="Đăng nhập gần nhất"
+                  value={stats?.recentLogins || users.filter(u => u.lastLogin).length || 0}
+                  prefix={<UserOutlined />}
+                  valueStyle={{ color: '#faad14', fontSize: '18px' }}
                 />
               </div>
             </Col>
           </Row>
         </Col>
       </Row>
-
-      {/* Department Distribution */}
-      <div style={{ marginBottom: 16, padding: 16, background: '#f9fafb', borderRadius: 4 }}>
-        <h3 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Phân bố theo phòng ban</h3>
-        <Row gutter={16}>
-          {Object.entries(staffStats.staffByDepartment)
-            .filter(([dept, count]) => count > 0)
-            .map(([dept, count]) => (
-              <Col span={3} key={dept}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 600, color: '#262626' }}>
-                    {count}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                    {dept}
-                  </div>
-                  <Progress
-                    percent={staffStats.totalStaff > 0 ? Math.round((count / staffStats.totalStaff) * 100) : 0}
-                    size="small"
-                    showInfo={false}
-                    strokeColor="#52c41a"
-                  />
-                </div>
-              </Col>
-            ))}
-        </Row>
-      </div>
 
       {/* Advanced Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
@@ -621,25 +531,9 @@ const StaffManagement = () => {
           allowClear
           style={{ width: 150 }}
           value={filters.role || undefined}
-          onChange={(value) => handleFilterChange('role', value)}
+          onChange={(value) => handleFilterChange('role', value || 'customer')}
         >
-          <Option value="staff">Nhân viên</Option>
-          <Option value="manager">Quản lý</Option>
-          <Option value="pharmacist">Dược sĩ</Option>
-          <Option value="admin">Quản trị viên</Option>
-        </Select>
-        <Select
-          placeholder="Phòng ban"
-          allowClear
-          style={{ width: 150 }}
-          value={filters.department || undefined}
-          onChange={(value) => handleFilterChange('department', value)}
-        >
-          {departmentOptions.map(dept => (
-            <Option key={dept} value={dept}>
-              {dept}
-            </Option>
-          ))}
+          <Option value="customer">Khách hàng</Option>
         </Select>
         <Select
           placeholder="Trạng thái"
@@ -648,8 +542,8 @@ const StaffManagement = () => {
           value={filters.isActive}
           onChange={(value) => handleFilterChange('isActive', value)}
         >
-          <Option value={true}>Đang làm việc</Option>
-          <Option value={false}>Nghỉ việc</Option>
+          <Option value={true}>Hoạt động</Option>
+          <Option value={false}>Tạm dừng</Option>
         </Select>
         <Button
           type="primary"
@@ -666,10 +560,10 @@ const StaffManagement = () => {
         </Button>
       </div>
 
-      {/* Staff Table */}
+      {/* Users Table */}
       <Table
         columns={columns}
-        dataSource={staffUsers}
+        dataSource={users}
         rowKey={(record) => record._id}
         loading={loading}
         pagination={{
@@ -685,10 +579,10 @@ const StaffManagement = () => {
               gap: '8px',
               color: '#8c8c8c'
             }}>
-              <TeamOutlined />
+              <UserOutlined />
               <span>
                 Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong>
-                {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> nhân viên
+                {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> khách hàng
               </span>
             </div>
           ),
@@ -718,7 +612,7 @@ const StaffManagement = () => {
               style={{ backgroundColor: '#52c41a' }}
             />
             <span style={{ color: '#262626', fontWeight: 500 }}>
-              Đã chọn {selectedRowKeys.length} nhân viên
+              Đã chọn {selectedRowKeys.length} người dùng
             </span>
           </Space>
           <Space>
@@ -752,16 +646,90 @@ const StaffManagement = () => {
         </div>
       )}
 
-      {/* Staff Form Modal */}
-      <StaffForm
+      {/* Customer Form Modal */}
+      <CustomerForm
         visible={isUserFormVisible}
         onCancel={handleUserFormClose}
         onSubmit={handleUserFormSubmit}
         initialValues={editingUser}
         isEditing={!!editingUser}
       />
+
+      {/* Point History Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CrownOutlined style={{ color: '#722ed1' }} />
+            <span>Lịch sử tích điểm - {viewingUser?.name || ''}</span>
+          </div>
+        }
+        open={isHistoryModalVisible}
+        onCancel={() => {
+          setIsHistoryModalVisible(false);
+          setViewingUser(null);
+          setPointHistory([]);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setIsHistoryModalVisible(false);
+            setViewingUser(null);
+            setPointHistory([]);
+          }}>
+            Đóng
+          </Button>
+        ]}
+        width={700}
+      >
+        <Spin spinning={historyLoading}>
+          {viewingUser && (
+            <Descriptions bordered column={2} size="small" style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Khách hàng">{viewingUser.name}</Descriptions.Item>
+              <Descriptions.Item label="Tổng điểm tích lũy">
+                <span style={{ fontSize: '18px', fontWeight: 700, color: '#4f46e5' }}>
+                  {viewingUser.loyaltyPoints || 0} điểm
+                </span>
+              </Descriptions.Item>
+            </Descriptions>
+          )}
+
+          {pointHistory.length === 0 && !historyLoading ? (
+            <Empty description="Khách hàng chưa có lịch sử tích điểm" />
+          ) : (
+            <Table
+              columns={[
+                {
+                  title: 'Mã đơn hàng',
+                  dataIndex: 'orderCode',
+                  key: 'orderCode',
+                  width: 150
+                },
+                {
+                  title: 'Số điểm nhận',
+                  dataIndex: 'points',
+                  key: 'points',
+                  width: 120,
+                  align: 'center',
+                  render: (points) => (
+                    <span style={{ fontWeight: 600, color: '#4f46e5' }}>+{points} điểm</span>
+                  )
+                },
+                {
+                  title: 'Ngày nhận',
+                  dataIndex: 'createdAt',
+                  key: 'createdAt',
+                  render: (date) => new Date(date).toLocaleString('vi-VN')
+                }
+              ]}
+              dataSource={pointHistory}
+              rowKey={(record) => record._id || record.orderCode}
+              pagination={pointHistory.length > 10 ? { pageSize: 10 } : false}
+              size="small"
+            />
+          )}
+        </Spin>
+      </Modal>
     </div>
   );
 };
 
-export default StaffManagement;
+export default CustomerManagement;

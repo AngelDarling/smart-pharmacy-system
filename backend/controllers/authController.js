@@ -31,47 +31,48 @@ function signToken(user) {
 export async function register(req, res, next) {
   try {
     const parsed = registerSchema.parse(req.body);
+    const Customer = (await import("../models/Customer.js")).default;
     
     // Check if phone already exists
-    const existedPhone = await User.findOne({ phone: parsed.phone });
+    const existedPhone = await Customer.findOne({ phone: parsed.phone });
     if (existedPhone) {
       return res.status(409).json({ message: "Số điện thoại đã tồn tại" });
     }
     
     // Check if email already exists (if provided and not empty)
     if (parsed.email && parsed.email.trim() !== "") {
-      const existedEmail = await User.findOne({ email: parsed.email });
+      const existedEmail = await Customer.findOne({ email: parsed.email });
       if (existedEmail) {
         return res.status(409).json({ message: "Email đã tồn tại" });
       }
     }
     
-    const passwordHash = await User.hashPassword(parsed.password);
-    const userData = {
+    const passwordHash = await Customer.hashPassword(parsed.password);
+    const customerData = {
       name: parsed.fullName,
       passwordHash,
       phone: parsed.phone,
-      address: parsed.address || "",
-      role: parsed.role || "customer"
+      address: parsed.address || ""
     };
     
     // Only add email if it's provided and not empty
     if (parsed.email && parsed.email.trim() !== "") {
-      userData.email = parsed.email;
+      customerData.email = parsed.email;
     }
     
-    const user = await User.create(userData);
-    const token = signToken(user);
+    const customer = await Customer.create(customerData);
+    const token = signToken(customer);
     res.status(201).json({
       token,
       user: {
-        _id: user._id,
-        fullName: user.name,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        role: user.role
+        _id: customer._id,
+        fullName: customer.name,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+        role: 'customer',
+        loyaltyPoints: customer.loyaltyPoints || 0
       }
     });
   } catch (err) {
@@ -88,36 +89,63 @@ export async function login(req, res, next) {
   try {
     const parsed = loginSchema.parse(req.body);
     const query = parsed.phone ? { phone: parsed.phone } : { email: parsed.email };
-    const user = await User.findOne(query);
+    
+    // Try to find in Staff first
+    let user = await (await import("../models/Staff.js")).default.findOne(query);
+    let userType = 'staff';
+    
+    // If not found in Staff, try Customer
+    if (!user) {
+      const Customer = (await import("../models/Customer.js")).default;
+      user = await Customer.findOne(query);
+      userType = 'customer';
+    }
+    
     if (!user) {
       return res.status(401).json({ message: "Tài khoản hoặc mật khẩu không đúng" });
     }
+    
     const ok = await user.comparePassword(parsed.password);
     if (!ok) {
       return res.status(401).json({ message: "Tài khoản hoặc mật khẩu không đúng" });
     }
+    
+    // Update last login
+    user.lastLogin = new Date();
+    user.loginCount = (user.loginCount || 0) + 1;
+    await user.save();
+    
     const token = signToken(user);
+    
+    // Build response based on user type
+    const userResponse = {
+      _id: user._id,
+      fullName: user.name,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      isActive: user.isActive,
+      lastLogin: user.lastLogin,
+      loginCount: user.loginCount
+    };
+    
+    if (userType === 'staff') {
+      userResponse.role = user.role;
+      userResponse.permissions = user.permissions;
+      userResponse.employeeId = user.employeeId;
+      userResponse.department = user.department;
+      userResponse.position = user.position;
+      userResponse.salary = user.salary;
+      userResponse.hireDate = user.hireDate;
+    } else {
+      userResponse.role = 'customer';
+      userResponse.loyaltyPoints = user.loyaltyPoints || 0;
+    }
+    
     res.json({
       token,
-      user: {
-        _id: user._id,
-        fullName: user.name,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        role: user.role,
-        permissions: user.permissions,
-        isActive: user.isActive,
-        employeeId: user.employeeId,
-        department: user.department,
-        position: user.position,
-        salary: user.salary,
-        hireDate: user.hireDate,
-        lastLogin: user.lastLogin,
-        loginCount: user.loginCount,
-        loyaltyPoints: user.loyaltyPoints || 0
-      }
+      user: userResponse
     });
   } catch (err) {
     if (err.name === 'ZodError') {

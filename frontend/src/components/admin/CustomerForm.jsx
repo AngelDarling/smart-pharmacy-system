@@ -1,6 +1,6 @@
 /**
- * User Form Component
- * Form for creating and editing users
+ * Customer Form Component
+ * Form for creating and editing customers
  */
 
 import React, { useState, useEffect } from 'react';
@@ -30,7 +30,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Title } = Typography;
 
-const UserForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) => {
+const CustomerForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -291,4 +291,4 @@ const UserForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) => 
   );
 };
 
-export default UserForm;
+export default CustomerForm;
