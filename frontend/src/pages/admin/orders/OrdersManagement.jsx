@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions } from 'antd';
 import { SearchOutlined, ReloadOutlined, ClearOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import Swal from 'sweetalert2';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import api from '../../../api/client';
 
@@ -25,6 +26,7 @@ const STATUS_LABELS = {
 };
 
 export default function OrdersManagement() {
+  const [modal, contextHolder] = Modal.useModal();
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
@@ -112,17 +114,27 @@ export default function OrdersManagement() {
           <Button
             danger
             size="small"
-            onClick={async () => {
-              Modal.confirm({
+            onClick={() => {
+              modal.confirm({
                 title: 'Xóa đơn hàng?',
                 content: 'Thao tác này sẽ xóa đơn hàng vĩnh viễn. Nếu đơn hàng đã được xử lý, tồn kho sẽ được hoàn lại. Bạn có chắc chắn?',
+                okText: 'Xóa',
+                okType: 'danger',
+                cancelText: 'Hủy',
                 onOk: async () => {
                   try {
                     await api.delete(`/orders/${r._id}`);
-                    message.success('Đã xóa đơn hàng');
+                    Swal.fire({
+                      icon: 'success',
+                      title: 'Xóa thành công!',
+                      text: 'Xóa đơn hàng thành công!',
+                      showConfirmButton: false,
+                      timer: 1500
+                    });
                     load();
                   } catch (e) {
-                    message.error('Không thể xóa đơn hàng');
+                    console.error("Delete failed:", e);
+                    message.error('Không thể xóa đơn hàng: ' + (e.response?.data?.message || e.message));
                   }
                 }
               });
@@ -155,6 +167,7 @@ export default function OrdersManagement() {
 
   return (
     <div>
+      {contextHolder}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <h2 style={{ margin: 0, color: '#1d4ed8' }}>Quản lý đơn hàng</h2>
       </div>

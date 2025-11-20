@@ -26,10 +26,12 @@ import adminHealthCheckRoutes from "./routes/adminHealthChecks.js";
 import chatRoutes from "./routes/chat.js";
 import staffRoutes from "./routes/staff.js";
 import customerRoutes from "./routes/customer.js";
+import paymentRoutes from "./routes/payment.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
 import { errorHandler, notFound } from "./middlewares/error.js";
+import { startOrderCleanupJob } from "./jobs/orderCleanup.js";
 
 const app = express();
 app.use(cors());
@@ -63,6 +65,7 @@ app.use("/api/admin", adminHealthCheckRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/customers", customerRoutes);
+app.use("/api/payment", paymentRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });
@@ -94,6 +97,9 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
   const url = `/uploads/${req.file.filename}`;
   res.json({ url });
 });
+
+// Start cron jobs
+startOrderCleanupJob();
 
 // Error handlers
 app.use(notFound);

@@ -12,6 +12,7 @@ import {
   shipOrder,
   deleteOrder
 } from "../controllers/orderController.js";
+import { runOrderCleanupNow } from "../jobs/orderCleanup.js";
 
 const router = Router();
 
@@ -28,5 +29,15 @@ router.patch("/:orderId/status", authRequired, requireRole("admin"), updateStatu
 router.post("/:orderId/ship", authRequired, requireRole("admin"), shipOrder);
 router.patch("/:orderId/cancel", authRequired, cancel);
 router.delete("/:orderId", authRequired, requireRole("admin"), deleteOrder);
+
+// Manual cleanup endpoint (admin only, for testing)
+router.post("/cleanup/expired", authRequired, requireRole("admin"), async (req, res) => {
+  try {
+    const result = await runOrderCleanupNow();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 export default router;

@@ -12,67 +12,67 @@ import Swal from "sweetalert2";
 // Icons
 const ArrowLeftIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M19 12H5M12 19l-7-7 7-7"/>
+    <path d="M19 12H5M12 19l-7-7 7-7" />
   </svg>
 );
 
 const UserIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
   </svg>
 );
 
 const PhoneIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
   </svg>
 );
 
 const MailIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-    <polyline points="22,6 12,13 2,6"/>
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
   </svg>
 );
 
 const MapPinIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-    <circle cx="12" cy="10" r="3"/>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
   </svg>
 );
 
 const CreditCardIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-    <line x1="1" y1="10" x2="23" y2="10"/>
+    <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+    <line x1="1" y1="10" x2="23" y2="10" />
   </svg>
 );
 
 const CheckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="20,6 9,17 4,12"/>
+    <polyline points="20,6 9,17 4,12" />
   </svg>
 );
 
 const ToggleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="1" y="5" width="22" height="14" rx="7" ry="7"/>
-    <circle cx="8" cy="12" r="3"/>
+    <rect x="1" y="5" width="22" height="14" rx="7" ry="7" />
+    <circle cx="8" cy="12" r="3" />
   </svg>
 );
 
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="11" cy="11" r="8"/>
-    <path d="m21 21-4.35-4.35"/>
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.35-4.35" />
   </svg>
 );
 
 const ChevronDownIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M6 9l6 6 6-6"/>
+    <path d="M6 9l6 6 6-6" />
   </svg>
 );
 
@@ -84,7 +84,7 @@ export default function Checkout() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const skipEmptyCartRedirectRef = useRef(false);
-  
+
   // Lấy danh sách sản phẩm đã chọn từ localStorage (chỉ đọc một lần khi mount)
   const [savedSelectedIds] = useState(() => {
     try {
@@ -100,7 +100,7 @@ export default function Checkout() {
     }
     return null; // null nghĩa là dùng tất cả items
   });
-  
+
   // Filter items chỉ lấy những sản phẩm đã chọn
   const items = useMemo(() => {
     if (savedSelectedIds) {
@@ -109,7 +109,7 @@ export default function Checkout() {
     // Nếu không có selectedItems đã lưu, dùng tất cả items
     return allItems;
   }, [allItems, savedSelectedIds]);
-  
+
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
     phone: user?.phone || "",
@@ -135,7 +135,7 @@ export default function Checkout() {
   const [cities, setCities] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
-  
+
   // Search states for dropdowns
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
@@ -166,9 +166,9 @@ export default function Checkout() {
       setCities(locationsAfter.map(city => ({ name: city.FullName, code: city.Code })));
     } else { // before
       const cityCodes = Object.keys(locationsBefore);
-      setCities(cityCodes.map(code => ({ 
-        name: locationsBefore[code].name_with_type, 
-        code: code 
+      setCities(cityCodes.map(code => ({
+        name: locationsBefore[code].name_with_type,
+        code: code
       })));
     }
   }, [formData.addressType]);
@@ -176,7 +176,7 @@ export default function Checkout() {
   // 2. Lấy Quận/Huyện (cho 'before') HOẶC Phường/Xã (cho 'after')
   useEffect(() => {
     if (!formData.city) return;
-    
+
     setDistricts([]); setWards([]);
     setFormData(p => ({ ...p, district: "", ward: "" }));
 
@@ -191,9 +191,9 @@ export default function Checkout() {
       const cityData = locationsBefore[formData.city];
       if (cityData && cityData['quan-huyen']) {
         const districtCodes = Object.keys(cityData['quan-huyen']);
-        setDistricts(districtCodes.map(code => ({ 
-          name: cityData['quan-huyen'][code].name_with_type, 
-          code: code 
+        setDistricts(districtCodes.map(code => ({
+          name: cityData['quan-huyen'][code].name_with_type,
+          code: code
         })));
       }
     }
@@ -207,9 +207,9 @@ export default function Checkout() {
       const districtData = locationsBefore[formData.city]?.['quan-huyen']?.[formData.district];
       if (districtData && districtData['xa-phuong']) {
         const wardCodes = Object.keys(districtData['xa-phuong']);
-        setWards(wardCodes.map(code => ({ 
-          name: districtData['xa-phuong'][code].name_with_type, 
-          code: code 
+        setWards(wardCodes.map(code => ({
+          name: districtData['xa-phuong'][code].name_with_type,
+          code: code
         })));
       }
     }
@@ -266,15 +266,15 @@ export default function Checkout() {
   };
 
   // Filter functions for search
-  const filteredCities = cities.filter(city => 
+  const filteredCities = cities.filter(city =>
     city.name.toLowerCase().includes(citySearch.toLowerCase())
   );
-  
-  const filteredDistricts = districts.filter(district => 
+
+  const filteredDistricts = districts.filter(district =>
     district.name.toLowerCase().includes(districtSearch.toLowerCase())
   );
-  
-  const filteredWards = wards.filter(ward => 
+
+  const filteredWards = wards.filter(ward =>
     ward.name.toLowerCase().includes(wardSearch.toLowerCase())
   );
 
@@ -409,7 +409,7 @@ export default function Checkout() {
   async function handleSubmit(e) {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     // Validation các trường bắt buộc
     if (!formData.fullName || !formData.fullName.trim()) {
       Swal.fire({
@@ -421,7 +421,7 @@ export default function Checkout() {
       setIsSubmitting(false);
       return;
     }
-    
+
     if (!formData.phone || !formData.phone.trim()) {
       Swal.fire({
         icon: "warning",
@@ -432,7 +432,7 @@ export default function Checkout() {
       setIsSubmitting(false);
       return;
     }
-    
+
     if (!formData.address || !formData.address.trim()) {
       Swal.fire({
         icon: "warning",
@@ -443,7 +443,7 @@ export default function Checkout() {
       setIsSubmitting(false);
       return;
     }
-    
+
     if (!formData.city) {
       Swal.fire({
         icon: "warning",
@@ -454,7 +454,7 @@ export default function Checkout() {
       setIsSubmitting(false);
       return;
     }
-    
+
     if (!formData.ward) {
       Swal.fire({
         icon: "warning",
@@ -465,7 +465,7 @@ export default function Checkout() {
       setIsSubmitting(false);
       return;
     }
-    
+
     // Tìm tên từ code
     const cityName = cities.find(c => c.code === formData.city)?.name || formData.city;
     const districtName = districts.find(d => d.code === formData.district)?.name || formData.district;
@@ -487,7 +487,7 @@ export default function Checkout() {
         const hasDiscount = i.finalPrice !== undefined && i.finalPrice < i.price && (i.discount > 0 || i.originalPrice > i.finalPrice);
         const itemPrice = hasDiscount ? i.finalPrice : i.price;
         const originalPrice = hasDiscount ? (i.originalPrice || i.price) : null;
-        
+
         return {
           productId: i.id,
           nameSnapshot: i.name,
@@ -515,8 +515,41 @@ export default function Checkout() {
       skipEmptyCartRedirectRef.current = true; // tránh redirect về giỏ khi xóa cart
       const res = await api.post('/orders', payload);
       const order = res.data;
-      clear();
-      navigate('/order-success', { state: { orderId: order._id, code: order.code } });
+
+      // Handle MoMo payment
+      if (formData.paymentMethod === 'momo') {
+        try {
+          // Create MoMo payment
+          const paymentRes = await api.post('/payment/momo/create', {
+            orderId: order._id,
+            amount: order.totals.grand,
+            orderInfo: `Thanh toán đơn hàng ${order.code}`
+          });
+
+          if (paymentRes.data.success && paymentRes.data.payUrl) {
+            // Clear cart before redirecting
+            clear();
+            // Redirect to MoMo payment page
+            window.location.href = paymentRes.data.payUrl;
+          } else {
+            throw new Error('Không thể tạo thanh toán MoMo');
+          }
+        } catch (paymentError) {
+          console.error('MoMo payment error:', paymentError);
+          Swal.fire({
+            icon: "error",
+            title: "Lỗi thanh toán",
+            text: paymentError.response?.data?.message || 'Không thể tạo thanh toán MoMo. Vui lòng thử lại.',
+            confirmButtonColor: "#ef4444"
+          });
+          setIsSubmitting(false);
+          skipEmptyCartRedirectRef.current = false;
+        }
+      } else {
+        // COD or other payment methods
+        clear();
+        navigate('/order-success', { state: { orderId: order._id, code: order.code } });
+      }
     } catch (error) {
       console.error('Error submitting order:', error);
       Swal.fire({
@@ -542,11 +575,11 @@ export default function Checkout() {
   // Tính toán lại subtotal dựa trên giá đã giảm
   const itemsSubtotal = items.reduce((sum, item) => {
     const itemPrice = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice)
-      ? item.finalPrice 
+      ? item.finalPrice
       : item.price;
     return sum + itemPrice * item.qty;
   }, 0);
-  
+
   // Tính tổng tiết kiệm từ giá giảm sản phẩm
   const productSavings = items.reduce((sum, item) => {
     if (item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice)) {
@@ -555,7 +588,7 @@ export default function Checkout() {
     }
     return sum;
   }, 0);
-  
+
   const shippingFee = itemsSubtotal >= 300000 ? 0 : 30000;
   const grandTotal = itemsSubtotal + shippingFee - couponDiscount;
 
@@ -570,15 +603,15 @@ export default function Checkout() {
       });
       return;
     }
-    
+
     // Tính itemsSubtotal trước khi validate coupon
     const currentItemsSubtotal = items.reduce((sum, item) => {
       const itemPrice = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice)
-        ? item.finalPrice 
+        ? item.finalPrice
         : item.price;
       return sum + itemPrice * item.qty;
     }, 0);
-    
+
     try {
       const res = await api.post("/coupons/validate", {
         code: couponCode.trim().toUpperCase(),
@@ -851,187 +884,132 @@ export default function Checkout() {
         `}
       </style>
       <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <button onClick={() => navigate("/cart")} style={styles.backButton} className="back-button">
-          <ArrowLeftIcon />
-          <span>Quay lại giỏ hàng</span>
-        </button>
-        <h1 style={styles.title}>Thanh toán</h1>
-      </div>
+        {/* Header */}
+        <div style={styles.header}>
+          <button onClick={() => navigate("/cart")} style={styles.backButton} className="back-button">
+            <ArrowLeftIcon />
+            <span>Quay lại giỏ hàng</span>
+          </button>
+          <h1 style={styles.title}>Thanh toán</h1>
+        </div>
 
-      <div style={styles.layout}>
-        {/* Left Column - Forms */}
-        <div style={styles.leftColumn}>
-          <form id="checkout-form" onSubmit={handleSubmit}>
-            {/* Shipping Information */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <MapPinIcon />
-                <h3 style={styles.cardTitle}>Thông tin giao hàng</h3>
-              </div>
-              
-              <div style={styles.formGrid}>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>
-                    <UserIcon />
-                    Họ và tên *
-                  </label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    required
-                    style={styles.input}
-                    placeholder="Nhập họ và tên"
-                  />
+        <div style={styles.layout}>
+          {/* Left Column - Forms */}
+          <div style={styles.leftColumn}>
+            <form id="checkout-form" onSubmit={handleSubmit}>
+              {/* Shipping Information */}
+              <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <MapPinIcon />
+                  <h3 style={styles.cardTitle}>Thông tin giao hàng</h3>
                 </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>
-                    <PhoneIcon />
-                    Số điện thoại *
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    style={styles.input}
-                    placeholder="Nhập số điện thoại"
-                  />
-                </div>
-              </div>
 
-              <div style={{...styles.inputGroup, marginTop: '-10px'}}>
-                <label style={styles.label}>
-                  <MailIcon />
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  placeholder="Nhập email (tùy chọn)"
-                />
-              </div>
-
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Loại địa chỉ</label>
-                <div style={styles.radioGroup}>
-                  <label style={styles.radioOption}>
-                    <input type="radio" name="addressType" value="after" checked={formData.addressType === "after"} onChange={handleInputChange} style={styles.radio} />
-                    <span>Sau sáp nhập (Địa chỉ hiện tại)</span>
-                  </label>
-                  <label style={styles.radioOption}>
-                    <input type="radio" name="addressType" value="before" checked={formData.addressType === "before"} onChange={handleInputChange} style={styles.radio} />
-                    <span>Trước sáp nhập</span>
-                  </label>
-                </div>
-                <div style={styles.infoBanner}>
-                  <span>Đơn vị hành chính đã thay đổi theo quy định. </span>
-                  <a href="/tra-cuu/dia-chinh-moi" style={styles.infoLink}>Tra cứu địa chỉ trước và sau sáp nhập</a>
-                </div>
-              </div>
-
-              <div style={formData.addressType === 'before' ? styles.formGrid3 : styles.formGrid2}>
-                {/* City Dropdown */}
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Tỉnh/Thành phố *</label>
-                  <div style={styles.dropdownContainer} className="dropdown-container">
-                    <div 
-                      style={styles.dropdownInput}
-                      onClick={() => setShowCityDropdown(!showCityDropdown)}
-                    >
-                      <span style={styles.dropdownText}>
-                        {citySearch || "Chọn Tỉnh/Thành phố"}
-                      </span>
-                      <ChevronDownIcon />
-                    </div>
-                    
-                    {showCityDropdown && (
-                      <div style={styles.dropdownMenu}>
-                        <div style={styles.searchContainer}>
-                          <SearchIcon />
-                          <input
-                            type="text"
-                            placeholder="Nhập tìm Tỉnh/Thành phố"
-                            value={citySearch}
-                            onChange={(e) => setCitySearch(e.target.value)}
-                            style={styles.searchInput}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                        <div style={styles.optionsList}>
-                          {filteredCities.map(city => (
-                            <div
-                              key={city.code}
-                              style={{
-                                ...styles.optionItem,
-                                ...(formData.city === city.code ? styles.optionSelected : {})
-                              }}
-                              onClick={() => handleCitySelect(city)}
-                            >
-                              <span style={styles.optionText}>{city.name}</span>
-                              {formData.city === city.code && (
-                                <div style={styles.checkIcon}>
-                                  <CheckIcon />
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                <div style={styles.formGrid}>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>
+                      <UserIcon />
+                      Họ và tên *
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      required
+                      style={styles.input}
+                      placeholder="Nhập họ và tên"
+                    />
+                  </div>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>
+                      <PhoneIcon />
+                      Số điện thoại *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      style={styles.input}
+                      placeholder="Nhập số điện thoại"
+                    />
                   </div>
                 </div>
 
-                {/* District Dropdown (only for 'before' address type) */}
-                {formData.addressType === 'before' && (
+                <div style={{ ...styles.inputGroup, marginTop: '-10px' }}>
+                  <label style={styles.label}>
+                    <MailIcon />
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    style={styles.input}
+                    placeholder="Nhập email (tùy chọn)"
+                  />
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Loại địa chỉ</label>
+                  <div style={styles.radioGroup}>
+                    <label style={styles.radioOption}>
+                      <input type="radio" name="addressType" value="after" checked={formData.addressType === "after"} onChange={handleInputChange} style={styles.radio} />
+                      <span>Sau sáp nhập (Địa chỉ hiện tại)</span>
+                    </label>
+                    <label style={styles.radioOption}>
+                      <input type="radio" name="addressType" value="before" checked={formData.addressType === "before"} onChange={handleInputChange} style={styles.radio} />
+                      <span>Trước sáp nhập</span>
+                    </label>
+                  </div>
+                  <div style={styles.infoBanner}>
+                    <span>Đơn vị hành chính đã thay đổi theo quy định. </span>
+                    <a href="/tra-cuu/dia-chinh-moi" style={styles.infoLink}>Tra cứu địa chỉ trước và sau sáp nhập</a>
+                  </div>
+                </div>
+
+                <div style={formData.addressType === 'before' ? styles.formGrid3 : styles.formGrid2}>
+                  {/* City Dropdown */}
                   <div style={styles.inputGroup}>
-                    <label style={styles.label}>Quận/Huyện *</label>
+                    <label style={styles.label}>Tỉnh/Thành phố *</label>
                     <div style={styles.dropdownContainer} className="dropdown-container">
-                      <div 
-                        style={{
-                          ...styles.dropdownInput,
-                          ...(formData.city ? {} : styles.dropdownDisabled)
-                        }}
-                        onClick={() => formData.city && setShowDistrictDropdown(!showDistrictDropdown)}
+                      <div
+                        style={styles.dropdownInput}
+                        onClick={() => setShowCityDropdown(!showCityDropdown)}
                       >
                         <span style={styles.dropdownText}>
-                          {districtSearch || (formData.city ? "Chọn Quận/Huyện" : "Chọn Tỉnh/TP trước")}
+                          {citySearch || "Chọn Tỉnh/Thành phố"}
                         </span>
                         <ChevronDownIcon />
                       </div>
-                      
-                      {showDistrictDropdown && formData.city && (
+
+                      {showCityDropdown && (
                         <div style={styles.dropdownMenu}>
                           <div style={styles.searchContainer}>
                             <SearchIcon />
                             <input
                               type="text"
-                              placeholder="Nhập tìm Quận/Huyện"
-                              value={districtSearch}
-                              onChange={(e) => setDistrictSearch(e.target.value)}
+                              placeholder="Nhập tìm Tỉnh/Thành phố"
+                              value={citySearch}
+                              onChange={(e) => setCitySearch(e.target.value)}
                               style={styles.searchInput}
                               onClick={(e) => e.stopPropagation()}
                             />
                           </div>
                           <div style={styles.optionsList}>
-                            {filteredDistricts.map(district => (
+                            {filteredCities.map(city => (
                               <div
-                                key={district.code}
+                                key={city.code}
                                 style={{
                                   ...styles.optionItem,
-                                  ...(formData.district === district.code ? styles.optionSelected : {})
+                                  ...(formData.city === city.code ? styles.optionSelected : {})
                                 }}
-                                onClick={() => handleDistrictSelect(district)}
+                                onClick={() => handleCitySelect(city)}
                               >
-                                <span style={styles.optionText}>{district.name}</span>
-                                {formData.district === district.code && (
+                                <span style={styles.optionText}>{city.name}</span>
+                                {formData.city === city.code && (
                                   <div style={styles.checkIcon}>
                                     <CheckIcon />
                                   </div>
@@ -1043,699 +1021,754 @@ export default function Checkout() {
                       )}
                     </div>
                   </div>
-                )}
 
-                {/* Ward Dropdown */}
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Phường/Xã *</label>
-                  <div style={styles.dropdownContainer} className="dropdown-container">
-                    <div 
-                      style={{
-                        ...styles.dropdownInput,
-                        ...((formData.addressType === 'before' && !formData.district) || (formData.addressType === 'after' && !formData.city) ? styles.dropdownDisabled : {})
-                      }}
-                      onClick={() => {
-                        const canOpen = (formData.addressType === 'before' && formData.district) || (formData.addressType === 'after' && formData.city);
-                        canOpen && setShowWardDropdown(!showWardDropdown);
-                      }}
-                    >
-                      <span style={styles.dropdownText}>
-                        {wardSearch || "Chọn Phường/Xã"}
-                      </span>
-                      <ChevronDownIcon />
-                    </div>
-                    
-                    {showWardDropdown && ((formData.addressType === 'before' && formData.district) || (formData.addressType === 'after' && formData.city)) && (
-                      <div style={styles.dropdownMenu}>
-                        <div style={styles.searchContainer}>
-                          <SearchIcon />
-                          <input
-                            type="text"
-                            placeholder="Nhập tìm Phường/Xã"
-                            value={wardSearch}
-                            onChange={(e) => setWardSearch(e.target.value)}
-                            style={styles.searchInput}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                        <div style={styles.optionsList}>
-                          {filteredWards.map(ward => (
-                            <div
-                              key={ward.code}
-                              style={{
-                                ...styles.optionItem,
-                                ...(formData.ward === ward.code ? styles.optionSelected : {})
-                              }}
-                              onClick={() => handleWardSelect(ward)}
-                            >
-                              <span style={styles.optionText}>{ward.name}</span>
-                              {formData.ward === ward.code && (
-                                <div style={styles.checkIcon}>
-                                  <CheckIcon />
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Nhập địa chỉ cụ thể *</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Số nhà, tên đường, tên khu phố..."
-                  style={styles.input}
-                />
-              </div>
-
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Ghi chú (không bắt buộc)</label>
-                <textarea
-                  name="note"
-                  value={formData.note}
-                  onChange={handleInputChange}
-                  rows={3}
-                  placeholder="Ví dụ: Hãy gọi cho tôi 15 phút trước khi giao"
-                  style={styles.textarea}
-                />
-              </div>
-
-              {/* Electronic Invoice Request */}
-              <div style={styles.inputGroup}>
-                <div style={styles.toggleContainer}>
-                  <label style={styles.toggleLabel}>
-                    <ToggleIcon />
-                    Yêu cầu xuất hóa đơn điện tử
-                  </label>
-                  <label style={styles.toggleSwitch}>
-                    <input
-                      type="checkbox"
-                      name="requestInvoice"
-                      checked={formData.requestInvoice}
-                      onChange={openInvoiceModal}
-                      style={styles.toggleInput}
-                      className="toggle-input"
-                    />
-                    <span style={styles.toggleSlider} className="toggle-slider"></span>
-                  </label>
-                </div>
-                {formData.requestInvoice && formData.invoiceData && (
-                  <div style={styles.invoiceStatus}>
-                    Đã yêu cầu xuất hóa đơn điện tử cho{" "}
-                    <span 
-                      style={styles.recipientType}
-                      onClick={toggleInvoiceStatus}
-                    >
-                      {formData.invoiceData.recipientType === "company" ? "Công ty" : "Cá nhân"}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* Payment Methods */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <CreditCardIcon />
-                <h3 style={styles.cardTitle}>Phương thức thanh toán</h3>
-              </div>
-              
-              <div style={styles.paymentOptions}>
-                <label style={styles.paymentOption} className={`payment-option ${formData.paymentMethod === "cod" ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cod"
-                    checked={formData.paymentMethod === "cod"}
-                    onChange={handleInputChange}
-                    style={styles.radio}
-                  />
-                  <div style={styles.paymentContent}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ position: 'relative' }}>
-                        <img 
-                          src={getImageUrl("/uploads/logo-tienmat.png", "/uploads/logo-tienmat.png")} 
-                          alt="Tiền mặt" 
-                          style={{ width: 40, height: 40, objectFit: 'contain' }}
-                          onError={(e) => {
-                            // Fallback nếu tải ảnh thất bại
-                            e.target.style.display = 'none';
-                            const fallback = e.target.parentElement.querySelector('.cod-fallback');
-                            if (fallback) fallback.style.display = 'flex';
+                  {/* District Dropdown (only for 'before' address type) */}
+                  {formData.addressType === 'before' && (
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Quận/Huyện *</label>
+                      <div style={styles.dropdownContainer} className="dropdown-container">
+                        <div
+                          style={{
+                            ...styles.dropdownInput,
+                            ...(formData.city ? {} : styles.dropdownDisabled)
                           }}
-                        />
-                        <div className="cod-fallback" style={{ 
-                          display: 'none',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: 40, 
-                          height: 40, 
-                          background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-                          borderRadius: 8,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: 14
-                        }}>
-                          COD
-                        </div>
-                      </div>
-                      <div>
-                        <div style={styles.paymentTitle}>Thanh toán khi nhận hàng (COD)</div>
-                        <div style={styles.paymentDesc}>Thanh toán bằng tiền mặt khi nhận hàng</div>
-                      </div>
-                    </div>
-                  </div>
-                  {formData.paymentMethod === "cod" && <CheckIcon />}
-                </label>
-
-                <label style={styles.paymentOption} className={`payment-option ${formData.paymentMethod === "momo" ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="momo"
-                    checked={formData.paymentMethod === "momo"}
-                    onChange={handleInputChange}
-                    style={styles.radio}
-                  />
-                  <div style={styles.paymentContent}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ position: 'relative' }}>
-                        <img 
-                          src={getImageUrl("/uploads/logo-momo.png", "/uploads/logo-momo.png")} 
-                          alt="MoMo" 
-                          style={{ width: 40, height: 40, objectFit: 'contain' }}
-                          onError={(e) => {
-                            // Fallback nếu tải ảnh thất bại
-                            e.target.style.display = 'none';
-                            const fallback = e.target.parentElement.querySelector('.momo-fallback');
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
-                        />
-                        <div className="momo-fallback" style={{ 
-                          display: 'none',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: 40, 
-                          height: 40, 
-                          background: 'linear-gradient(135deg, #E31837 0%, #B11C45 100%)',
-                          borderRadius: 8,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: 18
-                        }}>
-                          MM
-                        </div>
-                      </div>
-                      <div>
-                        <div style={styles.paymentTitle}>Ví điện tử MoMo</div>
-                        <div style={styles.paymentDesc}>Thanh toán qua ứng dụng MoMo</div>
-                      </div>
-                    </div>
-                  </div>
-                  {formData.paymentMethod === "momo" && <CheckIcon />}
-                </label>
-
-                <label style={styles.paymentOption} className={`payment-option ${formData.paymentMethod === "vnpay" ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="vnpay"
-                    checked={formData.paymentMethod === "vnpay"}
-                    onChange={handleInputChange}
-                    style={styles.radio}
-                  />
-                  <div style={styles.paymentContent}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ position: 'relative' }}>
-                        <img 
-                          src={getImageUrl("/uploads/logo-vnpay.png", "/uploads/logo-vnpay.png")} 
-                          alt="VNPay" 
-                          style={{ width: 40, height: 40, objectFit: 'contain' }}
-                          onError={(e) => {
-                            // Fallback nếu tải ảnh thất bại
-                            e.target.style.display = 'none';
-                            const fallback = e.target.parentElement.querySelector('.vnpay-fallback');
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
-                        />
-                        <div className="vnpay-fallback" style={{ 
-                          display: 'none',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: 40, 
-                          height: 40, 
-                          background: 'linear-gradient(135deg, #0066CC 0%, #0A84FF 100%)',
-                          borderRadius: 8,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: 16
-                        }}>
-                          VN
-                        </div>
-                      </div>
-                      <div>
-                        <div style={styles.paymentTitle}>VNPay</div>
-                        <div style={styles.paymentDesc}>Thanh toán qua VNPay</div>
-                      </div>
-                    </div>
-                  </div>
-                  {formData.paymentMethod === "vnpay" && <CheckIcon />}
-                </label>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {/* Right Column - Order Summary */}
-        <div style={styles.rightColumn}>
-          <div style={styles.summaryCard}>
-            <h3 style={styles.summaryTitle}>Tóm tắt đơn hàng</h3>
-            
-            {/* Coupon Button */}
-            <div style={{ marginBottom: 16 }}>
-              {!appliedCoupon ? (
-                <button
-                  type="button"
-                  onClick={() => setShowCouponModal(true)}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    background: "#eff6ff",
-                    border: "1px solid #3b82f6",
-                    borderRadius: "8px",
-                    color: "#3b82f6",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    transition: "all 0.2s"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = "#dbeafe";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "#eff6ff";
-                  }}
-                >
-                  <span>Áp dụng ưu đãi để được giảm giá</span>
-                  <span>→</span>
-                </button>
-              ) : (
-                <div style={{
-                  padding: "12px 16px",
-                  background: "#f0fdf4",
-                  border: "1px solid #10b981",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between"
-                }}>
-                  <div>
-                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#059669", marginBottom: 4 }}>
-                      Mã: {appliedCoupon.code}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                      Giảm {appliedCoupon.discountType === 'percent' 
-                        ? `${appliedCoupon.discountValue}%` 
-                        : `${appliedCoupon.discountValue.toLocaleString()}₫`}
-                      {couponDiscount > 0 && ` (${couponDiscount.toLocaleString()}₫)`}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRemoveCoupon}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "#ef4444",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      padding: "4px 8px"
-                    }}
-                  >
-                    Xóa
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            <div style={styles.itemsList}>
-              {items.map((item) => (
-                <div key={item.id} style={styles.itemRow}>
-                  <div style={styles.itemInfo}>
-                    <img 
-                      src={getImageUrl(item.image, "/default-product.png")} 
-                      alt={item.name} 
-                      style={styles.itemImage}
-                      onError={(e) => handleImageError(e, "/default-product.png")}
-                    />
-                    <div>
-                      <div style={styles.itemName}>{item.name}</div>
-                      <div style={styles.itemQty}>Số lượng: {item.qty}</div>
-                    </div>
-                  </div>
-                  <div style={styles.itemPrice}>
-                    {(() => {
-                      const hasDiscount = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice);
-                      const itemPrice = hasDiscount ? item.finalPrice : item.price;
-                      const originalPrice = hasDiscount ? (item.originalPrice || item.price) : null;
-                      
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                          <span style={{ color: '#3b82f6', fontWeight: 600 }}>
-                            {(itemPrice * item.qty).toLocaleString()}₫
+                          onClick={() => formData.city && setShowDistrictDropdown(!showDistrictDropdown)}
+                        >
+                          <span style={styles.dropdownText}>
+                            {districtSearch || (formData.city ? "Chọn Quận/Huyện" : "Chọn Tỉnh/TP trước")}
                           </span>
-                          {originalPrice && (
-                            <span style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>
-                              {(originalPrice * item.qty).toLocaleString()}₫
-                            </span>
-                          )}
+                          <ChevronDownIcon />
                         </div>
-                      );
-                    })()}
+
+                        {showDistrictDropdown && formData.city && (
+                          <div style={styles.dropdownMenu}>
+                            <div style={styles.searchContainer}>
+                              <SearchIcon />
+                              <input
+                                type="text"
+                                placeholder="Nhập tìm Quận/Huyện"
+                                value={districtSearch}
+                                onChange={(e) => setDistrictSearch(e.target.value)}
+                                style={styles.searchInput}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div style={styles.optionsList}>
+                              {filteredDistricts.map(district => (
+                                <div
+                                  key={district.code}
+                                  style={{
+                                    ...styles.optionItem,
+                                    ...(formData.district === district.code ? styles.optionSelected : {})
+                                  }}
+                                  onClick={() => handleDistrictSelect(district)}
+                                >
+                                  <span style={styles.optionText}>{district.name}</span>
+                                  {formData.district === district.code && (
+                                    <div style={styles.checkIcon}>
+                                      <CheckIcon />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ward Dropdown */}
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>Phường/Xã *</label>
+                    <div style={styles.dropdownContainer} className="dropdown-container">
+                      <div
+                        style={{
+                          ...styles.dropdownInput,
+                          ...((formData.addressType === 'before' && !formData.district) || (formData.addressType === 'after' && !formData.city) ? styles.dropdownDisabled : {})
+                        }}
+                        onClick={() => {
+                          const canOpen = (formData.addressType === 'before' && formData.district) || (formData.addressType === 'after' && formData.city);
+                          canOpen && setShowWardDropdown(!showWardDropdown);
+                        }}
+                      >
+                        <span style={styles.dropdownText}>
+                          {wardSearch || "Chọn Phường/Xã"}
+                        </span>
+                        <ChevronDownIcon />
+                      </div>
+
+                      {showWardDropdown && ((formData.addressType === 'before' && formData.district) || (formData.addressType === 'after' && formData.city)) && (
+                        <div style={styles.dropdownMenu}>
+                          <div style={styles.searchContainer}>
+                            <SearchIcon />
+                            <input
+                              type="text"
+                              placeholder="Nhập tìm Phường/Xã"
+                              value={wardSearch}
+                              onChange={(e) => setWardSearch(e.target.value)}
+                              style={styles.searchInput}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div style={styles.optionsList}>
+                            {filteredWards.map(ward => (
+                              <div
+                                key={ward.code}
+                                style={{
+                                  ...styles.optionItem,
+                                  ...(formData.ward === ward.code ? styles.optionSelected : {})
+                                }}
+                                onClick={() => handleWardSelect(ward)}
+                              >
+                                <span style={styles.optionText}>{ward.name}</span>
+                                {formData.ward === ward.code && (
+                                  <div style={styles.checkIcon}>
+                                    <CheckIcon />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            <div style={styles.summaryBreakdown}>
-              <div style={styles.summaryRow}>
-                <span>Tạm tính:</span>
-                <span>{itemsSubtotal.toLocaleString()}₫</span>
-              </div>
-              {productSavings > 0 && (
-                <div style={styles.summaryRow}>
-                  <span>Tiết kiệm từ sản phẩm:</span>
-                  <span style={{ color: "#10b981" }}>
-                    -{productSavings.toLocaleString()}₫
-                  </span>
-                </div>
-              )}
-              <div style={styles.summaryRow}>
-                <span>Phí vận chuyển:</span>
-                <span style={{ color: shippingFee === 0 ? "#10b981" : "#6b7280" }}>
-                  {shippingFee === 0 ? "Miễn phí" : `${shippingFee.toLocaleString()}₫`}
-                </span>
-              </div>
-              <div style={styles.summaryRow}>
-                <span>Giảm giá:</span>
-                <span style={{ color: couponDiscount > 0 ? "#ef4444" : "#6b7280" }}>
-                  {couponDiscount > 0 ? `-${couponDiscount.toLocaleString()}₫` : "0₫"}
-                </span>
-              </div>
-            </div>
-
-            <div style={styles.totalRow}>
-              <span>Tổng cộng:</span>
-              <span style={styles.totalAmount}>{grandTotal.toLocaleString()}₫</span>
-            </div>
-
-            <button
-              type="submit"
-              form="checkout-form"
-              style={styles.checkoutButton}
-              className="checkout-button"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
-            </button>
-
-            <div style={styles.disclaimer}>
-              Bằng việc đặt hàng, bạn đồng ý với{" "}
-              <a href="#" style={styles.disclaimerLink}>Điều khoản dịch vụ</a>{" "}
-              và{" "}
-              <a href="#" style={styles.disclaimerLink}>Chính sách xử lý dữ liệu cá nhân</a>{" "}
-              của Smart Pharmacy.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Invoice Modal */}
-      {showInvoiceModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent} className="modal-content">
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Yêu cầu xuất hóa đơn điện tử</h3>
-              <button
-                onClick={handleInvoiceCancel}
-                style={styles.closeButton}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              {/* Recipient Type Selection */}
-              <div style={styles.recipientSection}>
-                <label style={styles.recipientLabel}>Xuất hóa đơn cho</label>
-                <div style={styles.recipientOptions}>
-                  <button
-                    type="button"
-                    onClick={() => handleInvoiceRecipientChange("company")}
-                    style={{
-                      ...styles.recipientOption,
-                      ...(invoiceData.recipientType === "company" ? styles.recipientOptionSelected : {})
-                    }}
-                    className="recipient-option"
-                  >
-                    <div style={styles.recipientIcon}>🏢</div>
-                    <span style={styles.recipientText}>Công ty</span>
-                    {invoiceData.recipientType === "company" && (
-                      <div style={styles.checkIcon}>✓</div>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleInvoiceRecipientChange("individual")}
-                    style={{
-                      ...styles.recipientOption,
-                      ...(invoiceData.recipientType === "individual" ? styles.recipientOptionSelected : {})
-                    }}
-                    className="recipient-option"
-                  >
-                    <div style={styles.recipientIcon}>👤</div>
-                    <span style={styles.recipientText}>Cá nhân</span>
-                    {invoiceData.recipientType === "individual" && (
-                      <div style={styles.checkIcon}>✓</div>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Form Fields */}
-              <div style={styles.formFields}>
-                {invoiceData.recipientType === "company" ? (
-                  <>
-                    <input
-                      type="text"
-                      name="taxCode"
-                      value={invoiceData.taxCode}
-                      onChange={handleInvoiceInputChange}
-                      placeholder="Mã số thuế"
-                      style={styles.modalInput}
-                      className="modal-input"
-                      required
-                    />
-                    <input
-                      type="text"
-                      name="companyName"
-                      value={invoiceData.companyName}
-                      onChange={handleInvoiceInputChange}
-                      placeholder="Tên công ty"
-                      style={styles.modalInput}
-                      className="modal-input"
-                      required
-                    />
-                  </>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={invoiceData.fullName}
-                      onChange={handleInvoiceInputChange}
-                      placeholder="Họ và tên"
-                      style={styles.modalInput}
-                      className="modal-input"
-                      required
-                    />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={invoiceData.phone}
-                      onChange={handleInvoiceInputChange}
-                      placeholder="Số điện thoại"
-                      style={styles.modalInput}
-                      className="modal-input"
-                      required
-                    />
-                  </>
-                )}
-
-                <input
-                  type="text"
-                  name="address"
-                  value={invoiceData.address}
-                  onChange={handleInvoiceInputChange}
-                  placeholder="Địa chỉ"
-                  style={styles.modalInput}
-                  className="modal-input"
-                  required
-                />
-
-                <input
-                  type="email"
-                  name="email"
-                  value={invoiceData.email}
-                  onChange={handleInvoiceInputChange}
-                  placeholder="Email (không bắt buộc)"
-                  style={styles.modalInput}
-                  className="modal-input"
-                />
-              </div>
-
-              <div style={styles.noteSection}>
-                <p style={styles.noteText}>
-                  Lưu ý: Nhà thuốc Smart Pharmacy chỉ xuất hóa đơn điện tử.
-                </p>
-              </div>
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button
-                type="button"
-                onClick={handleInvoiceCancel}
-                style={styles.cancelButton}
-                className="cancel-button"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleInvoiceSubmit}
-                style={styles.confirmButton}
-                className="confirm-button"
-              >
-                Xác nhận
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Coupon Modal */}
-      {showCouponModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent} className="modal-content">
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Ưu đãi dành cho bạn</h3>
-              <button
-                onClick={() => {
-                  setShowCouponModal(false);
-                  setCouponCode("");
-                }}
-                style={styles.closeButton}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Nhập địa chỉ cụ thể *</label>
                   <input
                     type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="Nhập mã giảm giá"
-                    style={{
-                      ...styles.modalInput,
-                      flex: 1
-                    }}
-                    className="modal-input"
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        handleApplyCoupon();
-                      }
-                    }}
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Số nhà, tên đường, tên khu phố..."
+                    style={styles.input}
                   />
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Ghi chú (không bắt buộc)</label>
+                  <textarea
+                    name="note"
+                    value={formData.note}
+                    onChange={handleInputChange}
+                    rows={3}
+                    placeholder="Ví dụ: Hãy gọi cho tôi 15 phút trước khi giao"
+                    style={styles.textarea}
+                  />
+                </div>
+
+                {/* Electronic Invoice Request */}
+                <div style={styles.inputGroup}>
+                  <div style={styles.toggleContainer}>
+                    <label style={styles.toggleLabel}>
+                      <ToggleIcon />
+                      Yêu cầu xuất hóa đơn điện tử
+                    </label>
+                    <label style={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        name="requestInvoice"
+                        checked={formData.requestInvoice}
+                        onChange={openInvoiceModal}
+                        style={styles.toggleInput}
+                        className="toggle-input"
+                      />
+                      <span style={styles.toggleSlider} className="toggle-slider"></span>
+                    </label>
+                  </div>
+                  {formData.requestInvoice && formData.invoiceData && (
+                    <div style={styles.invoiceStatus}>
+                      Đã yêu cầu xuất hóa đơn điện tử cho{" "}
+                      <span
+                        style={styles.recipientType}
+                        onClick={toggleInvoiceStatus}
+                      >
+                        {formData.invoiceData.recipientType === "company" ? "Công ty" : "Cá nhân"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Payment Methods */}
+              <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <CreditCardIcon />
+                  <h3 style={styles.cardTitle}>Phương thức thanh toán</h3>
+                </div>
+
+                <div style={styles.paymentOptions}>
+                  <label style={styles.paymentOption} className={`payment-option ${formData.paymentMethod === "cod" ? "selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={formData.paymentMethod === "cod"}
+                      onChange={handleInputChange}
+                      style={styles.radio}
+                    />
+                    <div style={styles.paymentContent}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ position: 'relative' }}>
+                          <img
+                            src={getImageUrl("/uploads/logo-tienmat.png", "/uploads/logo-tienmat.png")}
+                            alt="Tiền mặt"
+                            style={{ width: 40, height: 40, objectFit: 'contain' }}
+                            onError={(e) => {
+                              // Fallback nếu tải ảnh thất bại
+                              e.target.style.display = 'none';
+                              const fallback = e.target.parentElement.querySelector('.cod-fallback');
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                          <div className="cod-fallback" style={{
+                            display: 'none',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: 40,
+                            height: 40,
+                            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: 14
+                          }}>
+                            COD
+                          </div>
+                        </div>
+                        <div>
+                          <div style={styles.paymentTitle}>Thanh toán khi nhận hàng (COD)</div>
+                          <div style={styles.paymentDesc}>Thanh toán bằng tiền mặt khi nhận hàng</div>
+                        </div>
+                      </div>
+                    </div>
+                    {formData.paymentMethod === "cod" && <CheckIcon />}
+                  </label>
+
+                  <label style={styles.paymentOption} className={`payment-option ${formData.paymentMethod === "momo" ? "selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="momo"
+                      checked={formData.paymentMethod === "momo"}
+                      onChange={handleInputChange}
+                      style={styles.radio}
+                    />
+                    <div style={styles.paymentContent}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ position: 'relative' }}>
+                          <img
+                            src={getImageUrl("/uploads/logo-momo.png", "/uploads/logo-momo.png")}
+                            alt="MoMo"
+                            style={{ width: 40, height: 40, objectFit: 'contain' }}
+                            onError={(e) => {
+                              // Fallback nếu tải ảnh thất bại
+                              e.target.style.display = 'none';
+                              const fallback = e.target.parentElement.querySelector('.momo-fallback');
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                          <div className="momo-fallback" style={{
+                            display: 'none',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: 40,
+                            height: 40,
+                            background: 'linear-gradient(135deg, #E31837 0%, #B11C45 100%)',
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: 18
+                          }}>
+                            MM
+                          </div>
+                        </div>
+                        <div>
+                          <div style={styles.paymentTitle}>Ví điện tử MoMo</div>
+                          <div style={styles.paymentDesc}>Thanh toán qua ứng dụng MoMo</div>
+                        </div>
+                      </div>
+                    </div>
+                    {formData.paymentMethod === "momo" && <CheckIcon />}
+                  </label>
+
+                  <label style={styles.paymentOption} className={`payment-option ${formData.paymentMethod === "vnpay" ? "selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="vnpay"
+                      checked={formData.paymentMethod === "vnpay"}
+                      onChange={handleInputChange}
+                      style={styles.radio}
+                    />
+                    <div style={styles.paymentContent}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ position: 'relative' }}>
+                          <img
+                            src={getImageUrl("/uploads/logo-vnpay.png", "/uploads/logo-vnpay.png")}
+                            alt="VNPay"
+                            style={{ width: 40, height: 40, objectFit: 'contain' }}
+                            onError={(e) => {
+                              // Fallback nếu tải ảnh thất bại
+                              e.target.style.display = 'none';
+                              const fallback = e.target.parentElement.querySelector('.vnpay-fallback');
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                          <div className="vnpay-fallback" style={{
+                            display: 'none',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: 40,
+                            height: 40,
+                            background: 'linear-gradient(135deg, #0066CC 0%, #0A84FF 100%)',
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: 16
+                          }}>
+                            VN
+                          </div>
+                        </div>
+                        <div>
+                          <div style={styles.paymentTitle}>VNPay</div>
+                          <div style={styles.paymentDesc}>Thanh toán qua VNPay</div>
+                        </div>
+                      </div>
+                    </div>
+                    {formData.paymentMethod === "vnpay" && <CheckIcon />}
+                  </label>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Column - Order Summary */}
+          <div style={styles.rightColumn}>
+            <div style={styles.summaryCard}>
+              <h3 style={styles.summaryTitle}>Tóm tắt đơn hàng</h3>
+
+              {/* Coupon Button */}
+              <div style={{ marginBottom: 16 }}>
+                {!appliedCoupon ? (
                   <button
                     type="button"
-                    onClick={handleApplyCoupon}
+                    onClick={() => setShowCouponModal(true)}
                     style={{
-                      padding: "12px 24px",
-                      background: "#3b82f6",
-                      color: "white",
-                      border: "none",
+                      width: "100%",
+                      padding: "12px 16px",
+                      background: "#eff6ff",
+                      border: "1px solid #3b82f6",
                       borderRadius: "8px",
+                      color: "#3b82f6",
                       fontSize: "14px",
                       fontWeight: "600",
                       cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
                       transition: "all 0.2s"
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.background = "#2563eb";
+                      e.target.style.background = "#dbeafe";
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.background = "#3b82f6";
+                      e.target.style.background = "#eff6ff";
                     }}
                   >
-                    Xác nhận
+                    <span>Áp dụng ưu đãi để được giảm giá</span>
+                    <span>→</span>
                   </button>
-                </div>
-                <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
-                  Nhập mã giảm giá để được áp dụng những ưu đãi
-                </p>
+                ) : (
+                  <div style={{
+                    padding: "12px 16px",
+                    background: "#f0fdf4",
+                    border: "1px solid #10b981",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between"
+                  }}>
+                    <div>
+                      <div style={{ fontSize: "14px", fontWeight: "600", color: "#059669", marginBottom: 4 }}>
+                        Mã: {appliedCoupon.code}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                        Giảm {appliedCoupon.discountType === 'percent'
+                          ? `${appliedCoupon.discountValue}%`
+                          : `${appliedCoupon.discountValue.toLocaleString()}₫`}
+                        {couponDiscount > 0 && ` (${couponDiscount.toLocaleString()}₫)`}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#ef4444",
+                        cursor: "pointer",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        padding: "4px 8px"
+                      }}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div style={styles.modalFooter}>
+              <div style={styles.itemsList}>
+                {items.map((item) => (
+                  <div key={item.id} style={styles.itemRow}>
+                    <div style={styles.itemInfo}>
+                      <img
+                        src={getImageUrl(item.image, "/default-product.png")}
+                        alt={item.name}
+                        style={styles.itemImage}
+                        onError={(e) => handleImageError(e, "/default-product.png")}
+                      />
+                      <div>
+                        <div style={styles.itemName}>{item.name}</div>
+                        <div style={styles.itemQty}>Số lượng: {item.qty}</div>
+                      </div>
+                    </div>
+                    <div style={styles.itemPrice}>
+                      {(() => {
+                        const hasDiscount = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice);
+                        const itemPrice = hasDiscount ? item.finalPrice : item.price;
+                        const originalPrice = hasDiscount ? (item.originalPrice || item.price) : null;
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                            <span style={{ color: '#3b82f6', fontWeight: 600 }}>
+                              {(itemPrice * item.qty).toLocaleString()}₫
+                            </span>
+                            {originalPrice && (
+                              <span style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>
+                                {(originalPrice * item.qty).toLocaleString()}₫
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={styles.summaryBreakdown}>
+                <div style={styles.summaryRow}>
+                  <span>Tạm tính:</span>
+                  <span>{itemsSubtotal.toLocaleString()}₫</span>
+                </div>
+                {productSavings > 0 && (
+                  <div style={styles.summaryRow}>
+                    <span>Tiết kiệm từ sản phẩm:</span>
+                    <span style={{ color: "#10b981" }}>
+                      -{productSavings.toLocaleString()}₫
+                    </span>
+                  </div>
+                )}
+                <div style={styles.summaryRow}>
+                  <span>Phí vận chuyển:</span>
+                  <span style={{ color: shippingFee === 0 ? "#10b981" : "#6b7280" }}>
+                    {shippingFee === 0 ? "Miễn phí" : `${shippingFee.toLocaleString()}₫`}
+                  </span>
+                </div>
+                <div style={styles.summaryRow}>
+                  <span>Giảm giá:</span>
+                  <span style={{ color: couponDiscount > 0 ? "#ef4444" : "#6b7280" }}>
+                    {couponDiscount > 0 ? `-${couponDiscount.toLocaleString()}₫` : "0₫"}
+                  </span>
+                </div>
+              </div>
+
+              <div style={styles.totalRow}>
+                <span>Tổng cộng:</span>
+                <span style={styles.totalAmount}>{grandTotal.toLocaleString()}₫</span>
+              </div>
+
               <button
-                type="button"
-                onClick={() => {
-                  setShowCouponModal(false);
-                  setCouponCode("");
-                }}
-                style={styles.cancelButton}
-                className="cancel-button"
+                type="submit"
+                form="checkout-form"
+                style={styles.checkoutButton}
+                className="checkout-button"
+                disabled={isSubmitting}
               >
-                Hủy
+                {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
               </button>
-              <button
-                type="button"
-                onClick={handleApplyCoupon}
-                style={styles.confirmButton}
-                className="confirm-button"
-              >
-                Áp dụng
-              </button>
+
+              <div style={styles.disclaimer}>
+                Bằng việc đặt hàng, bạn đồng ý với{" "}
+                <a href="#" style={styles.disclaimerLink}>Điều khoản dịch vụ</a>{" "}
+                và{" "}
+                <a href="#" style={styles.disclaimerLink}>Chính sách xử lý dữ liệu cá nhân</a>{" "}
+                của Smart Pharmacy.
+              </div>
             </div>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Invoice Modal */}
+        {showInvoiceModal && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalContent} className="modal-content">
+              <div style={styles.modalHeader}>
+                <h3 style={styles.modalTitle}>Yêu cầu xuất hóa đơn điện tử</h3>
+                <button
+                  onClick={handleInvoiceCancel}
+                  style={styles.closeButton}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={styles.modalBody}>
+                {/* Recipient Type Selection */}
+                <div style={styles.recipientSection}>
+                  <label style={styles.recipientLabel}>Xuất hóa đơn cho</label>
+                  <div style={styles.recipientOptions}>
+                    <button
+                      type="button"
+                      onClick={() => handleInvoiceRecipientChange("company")}
+                      style={{
+                        ...styles.recipientOption,
+                        ...(invoiceData.recipientType === "company" ? styles.recipientOptionSelected : {})
+                      }}
+                      className="recipient-option"
+                    >
+                      <div style={styles.recipientIcon}>🏢</div>
+                      <span style={styles.recipientText}>Công ty</span>
+                      {invoiceData.recipientType === "company" && (
+                        <div style={styles.checkIcon}>✓</div>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInvoiceRecipientChange("individual")}
+                      style={{
+                        ...styles.recipientOption,
+                        ...(invoiceData.recipientType === "individual" ? styles.recipientOptionSelected : {})
+                      }}
+                      className="recipient-option"
+                    >
+                      <div style={styles.recipientIcon}>👤</div>
+                      <span style={styles.recipientText}>Cá nhân</span>
+                      {invoiceData.recipientType === "individual" && (
+                        <div style={styles.checkIcon}>✓</div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div style={styles.formFields}>
+                  {invoiceData.recipientType === "company" ? (
+                    <>
+                      <input
+                        type="text"
+                        name="taxCode"
+                        value={invoiceData.taxCode}
+                        onChange={handleInvoiceInputChange}
+                        placeholder="Mã số thuế"
+                        style={styles.modalInput}
+                        className="modal-input"
+                        required
+                      />
+                      <input
+                        type="text"
+                        name="companyName"
+                        value={invoiceData.companyName}
+                        onChange={handleInvoiceInputChange}
+                        placeholder="Tên công ty"
+                        style={styles.modalInput}
+                        className="modal-input"
+                        required
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={invoiceData.fullName}
+                        onChange={handleInvoiceInputChange}
+                        placeholder="Họ và tên"
+                        style={styles.modalInput}
+                        className="modal-input"
+                        required
+                      />
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={invoiceData.phone}
+                        onChange={handleInvoiceInputChange}
+                        placeholder="Số điện thoại"
+                        style={styles.modalInput}
+                        className="modal-input"
+                        required
+                      />
+                    </>
+                  )}
+
+                  <input
+                    type="text"
+                    name="address"
+                    value={invoiceData.address}
+                    onChange={handleInvoiceInputChange}
+                    placeholder="Địa chỉ"
+                    style={styles.modalInput}
+                    className="modal-input"
+                    required
+                  />
+
+                  <input
+                    type="email"
+                    name="email"
+                    value={invoiceData.email}
+                    onChange={handleInvoiceInputChange}
+                    placeholder="Email (không bắt buộc)"
+                    style={styles.modalInput}
+                    className="modal-input"
+                  />
+                </div>
+
+                <div style={styles.noteSection}>
+                  <p style={styles.noteText}>
+                    Lưu ý: Nhà thuốc Smart Pharmacy chỉ xuất hóa đơn điện tử.
+                  </p>
+                </div>
+              </div>
+
+              <div style={styles.modalFooter}>
+                <button
+                  type="button"
+                  onClick={handleInvoiceCancel}
+                  style={styles.cancelButton}
+                  className="cancel-button"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleInvoiceSubmit}
+                  style={styles.confirmButton}
+                  className="confirm-button"
+                >
+                  Xác nhận
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Coupon Modal */}
+        {showCouponModal && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalContent} className="modal-content">
+              <div style={styles.modalHeader}>
+                <h3 style={styles.modalTitle}>Ưu đãi dành cho bạn</h3>
+                <button
+                  onClick={() => {
+                    setShowCouponModal(false);
+                    setCouponCode("");
+                  }}
+                  style={styles.closeButton}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={styles.modalBody}>
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="Nhập mã giảm giá"
+                      style={{
+                        ...styles.modalInput,
+                        flex: 1
+                      }}
+                      className="modal-input"
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          handleApplyCoupon();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      style={{
+                        padding: "12px 24px",
+                        background: "#3b82f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = "#2563eb";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = "#3b82f6";
+                      }}
+                    >
+                      Xác nhận
+                    </button>
+                  </div>
+                  <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
+                    Nhập mã giảm giá để được áp dụng những ưu đãi
+                  </p>
+                </div>
+              </div>
+
+              <div style={styles.modalFooter}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCouponModal(false);
+                    setCouponCode("");
+                  }}
+                  style={styles.cancelButton}
+                  className="cancel-button"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  style={styles.confirmButton}
+                  className="confirm-button"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }

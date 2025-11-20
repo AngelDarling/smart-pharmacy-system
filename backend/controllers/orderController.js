@@ -4,6 +4,7 @@ import Product from "../models/Product.js";
 import InventoryTransaction from "../models/InventoryTransaction.js";
 import ProductSalesDaily from "../models/ProductSalesDaily.js";
 import Coupon from "../models/Coupon.js";
+import Payment from "../models/Payment.js";
 import mongoose from "mongoose";
 
 // Generate unique order code
@@ -26,6 +27,25 @@ export async function create(req, res) {
 
     if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.address) {
       return res.status(400).json({ message: "Shipping address is required" });
+    }
+
+    // **SPAM PREVENTION: Check for existing pending unpaid orders**
+    if (userId && paymentMethod !== 'cod') {
+      const existingPendingOrder = await Order.findOne({
+        userId,
+        status: 'pending',
+        paymentStatus: 'pending',
+        paymentMethod: { $in: ['momo', 'vnpay'] },
+        createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) } // Last 30 minutes
+      });
+
+      if (existingPendingOrder) {
+        return res.status(400).json({ 
+          message: "Bạn có đơn hàng chưa thanh toán. Vui lòng hoàn tất hoặc hủy đơn hàng trước khi tạo đơn mới.",
+          existingOrderId: existingPendingOrder._id,
+          existingOrderCode: existingPendingOrder.code
+        });
+      }
     }
 
     // Validate products exist and have sufficient stock
@@ -468,14 +488,17 @@ export async function getByCodePublic(req, res) {
 export async function deleteOrder(req, res) {
   try {
     const { orderId } = req.params;
+    console.log(`[OrderController] Deleting order: ${orderId}`);
 
     const order = await Order.findById(orderId);
     if (!order) {
+      console.log(`[OrderController] Order not found: ${orderId}`);
       return res.status(404).json({ message: "Order not found" });
     }
 
     // If order status is processing/shipping/completed, restore inventory
     if (["processing", "shipping", "completed"].includes(order.status)) {
+      console.log(`[OrderController] Restoring inventory for order: ${order.code}`);
       for (const item of order.items) {
         const product = await Product.findById(item.productId);
         if (product) {
@@ -515,9 +538,13 @@ export async function deleteOrder(req, res) {
     // Delete inventory transactions related to this order
     await InventoryTransaction.deleteMany({ orderId: order._id });
 
+    // Delete associated payment
+    await Payment.deleteMany({ orderId: order._id });
+
     // Delete the order
     await Order.findByIdAndDelete(orderId);
 
+    console.log(`[OrderController] Order deleted successfully: ${order.code}`);
     res.json({ message: "Order deleted successfully" });
   } catch (error) {
     console.error("Error deleting order:", error);
