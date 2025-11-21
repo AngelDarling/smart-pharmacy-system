@@ -545,6 +545,35 @@ export default function Checkout() {
           setIsSubmitting(false);
           skipEmptyCartRedirectRef.current = false;
         }
+      } else if (formData.paymentMethod === 'vnpay') {
+        // Handle VNPay payment
+        try {
+          // Create VNPay payment
+          const paymentRes = await api.post('/payment/vnpay/create', {
+            orderId: order._id,
+            amount: order.totals.grand,
+            orderInfo: `Thanh toán đơn hàng ${order.code}`
+          });
+
+          if (paymentRes.data.success && paymentRes.data.payUrl) {
+            // Clear cart before redirecting
+            clear();
+            // Redirect to VNPay payment page
+            window.location.href = paymentRes.data.payUrl;
+          } else {
+            throw new Error('Không thể tạo thanh toán VNPay');
+          }
+        } catch (paymentError) {
+          console.error('VNPay payment error:', paymentError);
+          Swal.fire({
+            icon: "error",
+            title: "Lỗi thanh toán",
+            text: paymentError.response?.data?.message || 'Không thể tạo thanh toán VNPay. Vui lòng thử lại.',
+            confirmButtonColor: "#ef4444"
+          });
+          setIsSubmitting(false);
+          skipEmptyCartRedirectRef.current = false;
+        }
       } else {
         // COD or other payment methods
         clear();

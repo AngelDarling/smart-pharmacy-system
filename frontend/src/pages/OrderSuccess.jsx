@@ -28,9 +28,17 @@ export default function OrderSuccess() {
     const loadOrder = async () => {
       try {
         // Get orderId and code from location state or query params
-        const orderId = location.state?.orderId || searchParams.get('orderId');
+        let orderId = location.state?.orderId || searchParams.get('orderId');
         const code = location.state?.code || searchParams.get('code');
         const status = searchParams.get('status');
+        const vnp_ResponseCode = searchParams.get('vnp_ResponseCode');
+        const vnp_TxnRef = searchParams.get('vnp_TxnRef');
+
+        // If no orderId but has vnp_TxnRef, extract orderId from it
+        if (!orderId && vnp_TxnRef) {
+          orderId = vnp_TxnRef.split('_')[0]; // Extract orderId from format: orderId_timestamp
+          console.log('Extracted orderId from vnp_TxnRef:', orderId);
+        }
 
         if (!orderId && !code) {
           navigate('/');
@@ -44,7 +52,24 @@ export default function OrderSuccess() {
             try {
               await api.get(`/payment/momo/status/${orderId}`);
             } catch (err) {
-              console.error('Error checking payment status:', err);
+              console.error('Error checking MoMo payment status:', err);
+            }
+          }
+
+          // If returning from VNPay with success, update order status manually
+          // This is needed because IPN cannot reach localhost
+          if (vnp_ResponseCode === '00' && orderId) {
+            try {
+              console.log('VNPay payment successful, updating order status...');
+              // Call backend to verify and update order status
+              await api.post(`/payment/vnpay/verify-return`, {
+                orderId,
+                vnp_ResponseCode,
+                vnp_TransactionNo: searchParams.get('vnp_TransactionNo'),
+                vnp_TxnRef: searchParams.get('vnp_TxnRef')
+              });
+            } catch (err) {
+              console.error('Error updating VNPay order status:', err);
             }
           }
 
@@ -81,6 +106,7 @@ export default function OrderSuccess() {
   }
 
   const isMoMoPayment = order?.paymentMethod === 'momo';
+  const isVNPayPayment = order?.paymentMethod === 'vnpay';
   const isPaymentSuccess = searchParams.get('status') === 'success' || order?.paymentStatus === 'paid';
   const isCancelled = order?.status === 'cancelled' || order?.paymentStatus === 'failed';
 
@@ -121,7 +147,16 @@ export default function OrderSuccess() {
           {isMoMoPayment && !isPaymentSuccess && !isCancelled && (
             <>Đơn hàng đã được tạo. Vui lòng hoàn tất thanh toán để chúng tôi xử lý đơn hàng.</>
           )}
-          {!isMoMoPayment && (
+          {isVNPayPayment && isPaymentSuccess && (
+            <>Thanh toán VNPay thành công. Đơn hàng của bạn đang được xử lý.</>
+          )}
+          {isVNPayPayment && isCancelled && (
+            <>Giao dịch thanh toán đã bị hủy hoặc thất bại. Đơn hàng đã được cập nhật trạng thái hủy.</>
+          )}
+          {isVNPayPayment && !isPaymentSuccess && !isCancelled && (
+            <>Đơn hàng đã được tạo. Vui lòng hoàn tất thanh toán để chúng tôi xử lý đơn hàng.</>
+          )}
+          {!isMoMoPayment && !isVNPayPayment && (
             <>Cảm ơn bạn đã đặt hàng. Chúng tôi sẽ liên hệ với bạn sớm nhất.</>
           )}
         </p>
@@ -143,6 +178,13 @@ export default function OrderSuccess() {
               </div>
             )}
 
+            {searchParams.get('vnp_TransactionNo') && (
+              <div style={styles.infoRow}>
+                <span style={styles.infoLabel}>Mã giao dịch VNPay:</span>
+                <span style={styles.infoValue}>{searchParams.get('vnp_TransactionNo')}</span>
+              </div>
+            )}
+
             {order.totals?.grand && (
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>Tổng tiền:</span>
@@ -157,13 +199,14 @@ export default function OrderSuccess() {
                 <span style={styles.infoLabel}>Phương thức thanh toán:</span>
                 <span style={styles.infoValue}>
                   {order.paymentMethod === 'momo' ? 'MoMo' :
-                    order.paymentMethod === 'cod' ? 'COD' :
-                      order.paymentMethod?.toUpperCase()}
+                    order.paymentMethod === 'vnpay' ? 'VNPay' :
+                      order.paymentMethod === 'cod' ? 'COD' :
+                        order.paymentMethod?.toUpperCase()}
                 </span>
               </div>
             )}
 
-            {isMoMoPayment && (
+            {(isMoMoPayment || isVNPayPayment) && (
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>Trạng thái thanh toán:</span>
                 <span style={{

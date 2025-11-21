@@ -24,7 +24,7 @@ router.get("/public/by-code/:code", getByCodePublic);
 // Protected routes
 router.get("/stats", authRequired, requireRole("admin"), getStats);
 router.get("/admin", authRequired, requireRole("admin"), adminList);
-router.get("/:orderId", authRequired, getById);
+router.get("/:orderId", optionalAuth, getById);
 router.patch("/:orderId/status", authRequired, requireRole("admin"), updateStatus);
 router.post("/:orderId/ship", authRequired, requireRole("admin"), shipOrder);
 router.patch("/:orderId/cancel", authRequired, cancel);

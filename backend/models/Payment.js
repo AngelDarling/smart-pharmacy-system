@@ -9,7 +9,7 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['momo', 'cod', 'bank_transfer'],
+    enum: ['momo', 'vnpay', 'cod', 'bank_transfer'],
     required: true
   },
   amount: {

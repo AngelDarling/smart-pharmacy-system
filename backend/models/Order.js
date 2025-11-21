@@ -19,7 +19,7 @@ const orderSchema = new mongoose.Schema(
     code: { type: String },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     status: { type: String, enum: ["pending", "processing", "shipping", "completed", "cancelled"], default: "pending" },
-    paymentMethod: { type: String, enum: ["cod", "simulate", "momo"], default: "cod" },
+    paymentMethod: { type: String, enum: ["cod", "simulate", "momo", "vnpay"], default: "cod" },
     paymentStatus: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
     shippingAddress: { type: Object },
     items: { type: [orderItemSchema], default: [] },

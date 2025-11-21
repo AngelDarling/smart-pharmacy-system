@@ -1,6 +1,7 @@
 import Payment from '../models/Payment.js';
 import Order from '../models/Order.js';
 import { createPaymentRequest, verifySignature, checkTransactionStatus } from '../utils/momo.js';
+import vnpay from '../utils/vnpay.js';
 import Product from '../models/Product.js';
 import InventoryTransaction from '../models/InventoryTransaction.js';
 
@@ -350,9 +351,475 @@ export async function checkPaymentStatus(req, res) {
   }
 }
 
+/**
+ * Create VNPay payment
+ * POST /api/payment/vnpay/create
+ */
+export async function createVNPayPayment(req, res) {
+  try {
+    const { orderId, amount, orderInfo } = req.body;
+
+    // Validate input
+    if (!orderId || !amount) {
+      return res.status(400).json({ message: 'Missing required fields: orderId, amount' });
+    }
+
+    // Check if order exists
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if payment already exists and is successful
+    const existingPayment = await Payment.findSuccessfulPayment(orderId);
+    if (existingPayment) {
+      return res.status(400).json({ message: 'Order already paid' });
+    }
+
+    // Get client IP address
+    const ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+
+    // Generate unique transaction reference (orderId_timestamp)
+    const vnp_TxnRef = `${orderId}_${Date.now()}`;
+
+    // Create payment record
+    const payment = await Payment.create({
+      orderId,
+      paymentMethod: 'vnpay',
+      amount,
+      status: 'pending',
+      requestId: vnp_TxnRef // Store vnp_TxnRef for later reference
+    });
+
+    // Prepare payment parameters
+    const paymentParams = {
+      vnp_Amount: amount,
+      vnp_IpAddr: ipAddr,
+      vnp_TxnRef: vnp_TxnRef,
+      vnp_OrderInfo: orderInfo || `Thanh toan don hang ${order.code}`,
+      vnp_OrderType: 'other',
+      vnp_ReturnUrl: process.env.VNPAY_RETURN_URL || 'http://localhost:5173/order-success',
+      vnp_Locale: 'vn',
+    };
+
+    console.log('📝 Building VNPay payment URL with params:', {
+      ...paymentParams,
+      vnp_Amount: `${paymentParams.vnp_Amount} VND`
+    });
+
+    // Build VNPay payment URL
+    const paymentUrl = vnpay.buildPaymentUrl(paymentParams);
+
+    // Update payment status to processing
+    payment.status = 'processing';
+    payment.metadata = {
+      payUrl: paymentUrl,
+      vnp_TxnRef: vnp_TxnRef
+    };
+    await payment.save();
+
+    console.log('✅ VNPay payment URL created:', {
+      orderId: order.code,
+      vnp_TxnRef,
+      amount,
+      payUrlLength: paymentUrl.length
+    });
+
+    res.json({
+      success: true,
+      payUrl: paymentUrl,
+      vnp_TxnRef: vnp_TxnRef
+    });
+  } catch (error) {
+    console.error('Create VNPay Payment Error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Handle VNPay return URL (user redirect)
+ * GET /api/payment/vnpay/return
+ */
+export async function vnpayReturn(req, res) {
+  try {
+    console.log('=== VNPay Return Received ===');
+    console.log('Query params:', req.query);
+
+    let verify;
+    try {
+      // Verify return URL signature
+      verify = vnpay.verifyReturnUrl(req.query);
+    } catch (e) {
+      console.error('VNPay signature verification error:', e);
+      return res.redirect(`${process.env.VNPAY_RETURN_URL}?status=error&message=Invalid signature`);
+    }
+
+    if (verify.isVerified) {
+      // Extract orderId from vnp_TxnRef (format: orderId_timestamp)
+      const vnp_TxnRef = verify.vnp_TxnRef || '';
+      const orderId = vnp_TxnRef.split('_')[0]; // Get orderId part
+
+      // Check response code (00 = success)
+      if (verify.vnp_ResponseCode === '00') {
+        console.log('✅ VNPay payment successful (user redirect)');
+        return res.redirect(`${process.env.VNPAY_RETURN_URL}?orderId=${orderId}&status=success&vnp_TransactionNo=${verify.vnp_TransactionNo || ''}&vnp_ResponseCode=${verify.vnp_ResponseCode}`);
+      } else {
+        console.log('❌ VNPay payment failed (user redirect):', verify.vnp_ResponseCode);
+        return res.redirect(`${process.env.VNPAY_RETURN_URL}?orderId=${orderId}&status=failed&message=${encodeURIComponent(verify.vnp_Message || 'Payment failed')}&vnp_ResponseCode=${verify.vnp_ResponseCode}`);
+      }
+    }
+
+    // Signature verification failed
+    return res.redirect(`${process.env.VNPAY_RETURN_URL}?status=error&message=Signature verification failed`);
+  } catch (error) {
+    console.error('VNPay Return Error:', error);
+    return res.redirect(`${process.env.VNPAY_RETURN_URL}?status=error&message=Internal server error`);
+  }
+}
+
+/**
+ * Handle VNPay IPN (Instant Payment Notification)
+ * GET /api/payment/vnpay/ipn
+ * IMPORTANT: VNPay sends IPN via GET method, not POST
+ */
+export async function vnpayIPN(req, res) {
+  try {
+    console.log('=== VNPay IPN Received ===');
+    console.log('Query params:', JSON.stringify(req.query, null, 2));
+
+    let verify;
+    try {
+      // Verify IPN signature
+      verify = vnpay.verifyIpnCall(req.query);
+    } catch (e) {
+      console.error('VNPay IPN signature verification error:', e);
+      return res.json({ RspCode: '97', Message: 'Checksum failed' });
+    }
+
+    if (!verify.isVerified) {
+      console.error('Invalid signature from VNPay IPN');
+      return res.json({ RspCode: '97', Message: 'Checksum failed' });
+    }
+
+    // Extract transaction reference
+    const vnp_TxnRef = verify.vnp_TxnRef;
+    const vnp_Amount = verify.vnp_Amount;
+    const vnp_ResponseCode = verify.vnp_ResponseCode;
+
+    // Find payment record by requestId (which stores vnp_TxnRef)
+    const payment = await Payment.findOne({ requestId: vnp_TxnRef });
+    if (!payment) {
+      console.error('Payment not found for vnp_TxnRef:', vnp_TxnRef);
+      return res.json({ RspCode: '01', Message: 'Order not found' });
+    }
+
+    // Check if already processed (idempotency)
+    if (payment.ipnReceived && payment.status !== 'processing') {
+      console.log('IPN already processed for vnp_TxnRef:', vnp_TxnRef);
+      return res.json({ RspCode: '00', Message: 'Success' });
+    }
+
+    // Find order
+    const order = await Order.findById(payment.orderId);
+    if (!order) {
+      console.error('Order not found:', payment.orderId);
+      return res.json({ RspCode: '01', Message: 'Order not found' });
+    }
+
+    // Verify amount matches
+    if (payment.amount !== vnp_Amount) {
+      console.error('Amount mismatch:', { expected: payment.amount, received: vnp_Amount });
+      return res.json({ RspCode: '04', Message: 'Invalid amount' });
+    }
+
+    // Process based on response code
+    if (vnp_ResponseCode === '00') {
+      // Payment successful
+      console.log('✅ VNPay payment successful for order:', order.code);
+
+      // Update payment record
+      payment.status = 'success';
+      payment.transId = verify.vnp_TransactionNo;
+      payment.resultCode = 0;
+      payment.message = 'Payment successful';
+      payment.responseTime = new Date();
+      payment.ipnReceived = true;
+      payment.ipnReceivedAt = new Date();
+      await payment.save();
+
+      // Update order status
+      if (order.status === 'pending') {
+        order.status = 'processing';
+        order.paymentStatus = 'paid';
+        await order.save();
+
+        // Reduce inventory (same logic as MoMo)
+        for (const item of order.items) {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            if (product.variants && product.variants.length > 0) {
+              const activeVariant = product.variants.find(v => v.isActive);
+              if (activeVariant && activeVariant.stockOnHand >= item.quantity) {
+                activeVariant.stockOnHand -= item.quantity;
+                product.totalStock = product.variants.reduce((total, v) => {
+                  return total + (v.isActive ? v.stockOnHand : 0);
+                }, 0);
+              }
+            } else {
+              if (product.totalStock >= item.quantity) {
+                product.totalStock -= item.quantity;
+              }
+            }
+            await product.save();
+
+            // Create inventory transaction
+            await InventoryTransaction.create({
+              productId: item.productId,
+              type: 'sale',
+              quantity: -item.quantity,
+              reason: `Order ${order.code} - VNPay payment confirmed`,
+              orderId: order._id,
+              performedBy: order.userId || null
+            });
+          }
+        }
+
+        // Add loyalty points if user exists
+        if (order.userId) {
+          try {
+            const Customer = (await import('../models/Customer.js')).default;
+            const { PointHistory } = await import('../models/Customer.js');
+            
+            const points = Math.floor(order.totals.items / 1000);
+            if (points > 0) {
+              await Customer.findByIdAndUpdate(order.userId, { $inc: { loyaltyPoints: points } });
+              await PointHistory.create({
+                userId: order.userId,
+                orderId: order._id,
+                orderCode: order.code,
+                points,
+                description: `Tích điểm từ đơn hàng ${order.code} (VNPay)`,
+                createdAt: new Date()
+              });
+            }
+          } catch (pointErr) {
+            console.error('Error adding loyalty points:', pointErr);
+          }
+        }
+      }
+
+      return res.json({ RspCode: '00', Message: 'Success' });
+    } else {
+      // Payment failed
+      console.log('❌ VNPay payment failed for order:', order.code, 'Response code:', vnp_ResponseCode);
+
+      // Update payment record
+      payment.status = 'failed';
+      payment.resultCode = parseInt(vnp_ResponseCode) || -1;
+      payment.message = verify.vnp_Message || 'Payment failed';
+      payment.errorCode = vnp_ResponseCode;
+      payment.errorMessage = verify.vnp_Message;
+      payment.responseTime = new Date();
+      payment.ipnReceived = true;
+      payment.ipnReceivedAt = new Date();
+      await payment.save();
+
+      // Update order status to cancelled
+      if (order.status === 'pending') {
+        order.status = 'cancelled';
+        order.paymentStatus = 'failed';
+        await order.save();
+      }
+
+      return res.json({ RspCode: '00', Message: 'Success' });
+    }
+  } catch (error) {
+    console.error('VNPay IPN Error:', error);
+    return res.json({ RspCode: '99', Message: 'Unknown error' });
+  }
+}
+
+/**
+ * Check VNPay payment status
+ * GET /api/payment/vnpay/status/:orderId
+ */
+export async function checkVNPayStatus(req, res) {
+  try {
+    const { orderId } = req.params;
+
+    const payment = await Payment.findByOrder(orderId);
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    res.json({
+      status: payment.status,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      transId: payment.transId,
+      message: payment.message,
+      createdAt: payment.createdAt
+    });
+  } catch (error) {
+    console.error('Check VNPay Payment Status Error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Verify VNPay return and update order status
+ * POST /api/payment/vnpay/verify-return
+ * This is needed because IPN cannot reach localhost in development
+ */
+export async function vnpayVerifyReturn(req, res) {
+  try {
+    const { orderId, vnp_ResponseCode, vnp_TransactionNo, vnp_TxnRef } = req.body;
+
+    console.log('=== VNPay Verify Return ===');
+    console.log('Request:', { orderId, vnp_ResponseCode, vnp_TransactionNo });
+
+    if (!orderId || !vnp_ResponseCode) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Find payment by orderId
+    const payment = await Payment.findByOrder(orderId);
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    // Check if already processed
+    if (payment.status === 'success') {
+      console.log('Payment already processed');
+      return res.json({ message: 'Payment already processed', status: 'success' });
+    }
+
+    // Find order
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Only process if response code is success
+    if (vnp_ResponseCode === '00') {
+      console.log('✅ Processing successful VNPay payment for order:', order.code);
+
+      // Update payment record
+      payment.status = 'success';
+      payment.transId = vnp_TransactionNo;
+      payment.resultCode = 0;
+      payment.message = 'Payment successful';
+      payment.responseTime = new Date();
+      await payment.save();
+
+      // Update order status
+      if (order.status === 'pending') {
+        order.status = 'processing';
+        order.paymentStatus = 'paid';
+        await order.save();
+
+        // Reduce inventory
+        for (const item of order.items) {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            if (product.variants && product.variants.length > 0) {
+              const activeVariant = product.variants.find(v => v.isActive);
+              if (activeVariant && activeVariant.stockOnHand >= item.quantity) {
+                activeVariant.stockOnHand -= item.quantity;
+                product.totalStock = product.variants.reduce((total, v) => {
+                  return total + (v.isActive ? v.stockOnHand : 0);
+                }, 0);
+              }
+            } else {
+              if (product.totalStock >= item.quantity) {
+                product.totalStock -= item.quantity;
+              }
+            }
+            await product.save();
+
+            // Create inventory transaction
+            await InventoryTransaction.create({
+              productId: item.productId,
+              type: 'sale',
+              quantity: -item.quantity,
+              reason: `Order ${order.code} - VNPay payment confirmed`,
+              orderId: order._id,
+              performedBy: order.userId || null
+            });
+          }
+        }
+
+        // Add loyalty points
+        if (order.userId) {
+          try {
+            const Customer = (await import('../models/Customer.js')).default;
+            const { PointHistory } = await import('../models/Customer.js');
+            
+            const points = Math.floor(order.totals.items / 1000);
+            if (points > 0) {
+              await Customer.findByIdAndUpdate(order.userId, { $inc: { loyaltyPoints: points } });
+              await PointHistory.create({
+                userId: order.userId,
+                orderId: order._id,
+                orderCode: order.code,
+                points,
+                description: `Tích điểm từ đơn hàng ${order.code} (VNPay)`,
+                createdAt: new Date()
+              });
+            }
+          } catch (pointErr) {
+            console.error('Error adding loyalty points:', pointErr);
+          }
+        }
+      }
+
+      return res.json({ 
+        message: 'Payment verified and order updated successfully',
+        status: 'success',
+        orderStatus: order.status,
+        paymentStatus: order.paymentStatus
+      });
+    } else {
+      // Payment failed
+      payment.status = 'failed';
+      payment.errorCode = vnp_ResponseCode;
+      payment.errorMessage = 'Payment failed';
+      await payment.save();
+
+      if (order.status === 'pending') {
+        order.status = 'cancelled';
+        order.paymentStatus = 'failed';
+        await order.save();
+      }
+
+      return res.json({ 
+        message: 'Payment verification failed',
+        status: 'failed'
+      });
+    }
+  } catch (error) {
+    console.error('VNPay Verify Return Error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+}
+
 export default {
   createMoMoPayment,
   momoIPN,
   momoCallback,
-  checkPaymentStatus
+  checkPaymentStatus,
+  createVNPayPayment,
+  vnpayReturn,
+  vnpayIPN,
+  checkVNPayStatus,
+  vnpayVerifyReturn
 };

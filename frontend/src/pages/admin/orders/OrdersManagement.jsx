@@ -25,6 +25,25 @@ const STATUS_LABELS = {
   cancelled: 'Đã hủy'
 };
 
+const PAYMENT_METHOD_LABELS = {
+  cod: 'Tiền mặt',
+  momo: 'MoMo',
+  vnpay: 'VNPay',
+  simulate: 'Simulate'
+};
+
+const PAYMENT_STATUS_COLORS = {
+  pending: 'gold',
+  paid: 'green',
+  failed: 'red'
+};
+
+const PAYMENT_STATUS_LABELS = {
+  pending: 'Chờ thanh toán',
+  paid: 'Đã thanh toán',
+  failed: 'Thất bại'
+};
+
 export default function OrdersManagement() {
   const [modal, contextHolder] = Modal.useModal();
   const [loading, setLoading] = useState(false);
@@ -83,7 +102,12 @@ export default function OrdersManagement() {
       )
     },
     { title: 'SĐT', dataIndex: ['shippingAddress', 'phone'], width: 130, render: (_, r) => r.shippingAddress?.phone || '—' },
-    { title: 'Thanh toán', dataIndex: 'paymentMethod', width: 110, render: (v) => (v || 'cod').toUpperCase() },
+    {
+      title: 'Thanh toán',
+      dataIndex: 'paymentMethod',
+      width: 110,
+      render: (v) => PAYMENT_METHOD_LABELS[v] || v
+    },
     { title: 'Trạng thái', dataIndex: 'status', width: 130, render: (v) => <Tag color={STATUS_COLORS[v] || 'default'}>{STATUS_LABELS[v] || v}</Tag> },
     {
       title: 'Tổng tiền', dataIndex: ['totals', 'grand'], align: 'right', width: 140, render: (v) => (
@@ -203,7 +227,9 @@ export default function OrdersManagement() {
           allowClear
           style={{ width: 200 }}
           options={[
-            { label: 'COD', value: 'cod' },
+            { label: 'Tiền mặt (COD)', value: 'cod' },
+            { label: 'MoMo', value: 'momo' },
+            { label: 'VNPay', value: 'vnpay' },
             { label: 'Simulate', value: 'simulate' },
           ]}
         />
@@ -297,7 +323,12 @@ export default function OrdersManagement() {
                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
                   <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Thông tin thanh toán</h3>
                   <Descriptions column={1} size="small">
-                    <Descriptions.Item label="Phương thức">{(detail.order.paymentMethod || 'cod').toUpperCase()}</Descriptions.Item>
+                    <Descriptions.Item label="Phương thức">{PAYMENT_METHOD_LABELS[detail.order.paymentMethod] || detail.order.paymentMethod}</Descriptions.Item>
+                    <Descriptions.Item label="Trạng thái thanh toán">
+                      <Tag color={PAYMENT_STATUS_COLORS[detail.order.paymentStatus] || 'default'}>
+                        {PAYMENT_STATUS_LABELS[detail.order.paymentStatus] || detail.order.paymentStatus}
+                      </Tag>
+                    </Descriptions.Item>
                     <Descriptions.Item label="Tổng tiền hàng">{(detail.order.totals?.items || 0).toLocaleString('vi-VN')}₫</Descriptions.Item>
                     <Descriptions.Item label="Phí vận chuyển">{(detail.order.totals?.shipping || 0).toLocaleString('vi-VN')}₫</Descriptions.Item>
                     {detail.order.couponCode && (

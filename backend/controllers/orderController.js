@@ -473,7 +473,7 @@ export async function getByCodePublic(req, res) {
     if (!code) return res.status(400).json({ message: "Missing code" });
 
     const order = await Order.findOne({ code })
-      .select("code status createdAt totals shippingAddress items.nameSnapshot items.quantity items.priceSnapshot")
+      .select("code status paymentMethod paymentStatus createdAt totals shippingAddress items.nameSnapshot items.quantity items.priceSnapshot")
       .lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
 
