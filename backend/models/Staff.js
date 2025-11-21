@@ -30,7 +30,8 @@ const staffSchema = new mongoose.Schema(
         'read_orders', 'write_orders', 'delete_orders',
         'read_inventory', 'write_inventory', 'delete_inventory',
         'read_reports', 'write_reports',
-        'manage_staff', 'manage_settings'
+        'manage_staff', 'manage_settings',
+        'manage_content'
       ]
     }],
     avatar: { type: String },

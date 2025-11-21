@@ -140,6 +140,22 @@ const AdminLayout = () => {
         },
       ].filter(Boolean),
     }] : []),
+    // Health News section
+    ...[{
+      key: 'health-news',
+      icon: <HeartOutlined />,
+      label: 'Tin tức sức khỏe',
+      children: [
+        {
+          key: '/admin/health-news',
+          label: 'Quản lý bài viết',
+        },
+        {
+          key: '/admin/health-news/categories',
+          label: 'Quản lý danh mục',
+        },
+      ],
+    }],
     // Orders section
     ...[{
       key: 'orders',
@@ -266,6 +282,9 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/products') || path.startsWith('/admin/categories')) {
       return ['products'];
     }
+    if (path.startsWith('/admin/health-news')) {
+      return ['health-news'];
+    }
     if (path.startsWith('/admin/orders')) {
       return ['orders'];
     }
@@ -283,6 +302,9 @@ const AdminLayout = () => {
     const path = location.pathname;
     if (path.startsWith('/admin/products') || path.startsWith('/admin/categories')) {
       return ['products'];
+    }
+    if (path.startsWith('/admin/health-news')) {
+      return ['health-news'];
     }
     if (path.startsWith('/admin/orders')) {
       return ['orders'];

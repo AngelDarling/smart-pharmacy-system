@@ -4,6 +4,7 @@ const orderItemSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
     nameSnapshot: { type: String, required: true },
+    imageSnapshot: { type: String }, // Product image URL
     priceSnapshot: { type: Number, required: true }, // Giá đã giảm (finalPrice)
     originalPriceSnapshot: { type: Number }, // Giá gốc (nếu có giảm giá)
     quantity: { type: Number, required: true },

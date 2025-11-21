@@ -27,6 +27,8 @@ import chatRoutes from "./routes/chat.js";
 import staffRoutes from "./routes/staff.js";
 import customerRoutes from "./routes/customer.js";
 import paymentRoutes from "./routes/payment.js";
+import healthNewsCategoryRoutes from "./routes/healthNewsCategoryRoutes.js";
+import healthNewsRoutes from "./routes/healthNewsRoutes.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -66,6 +68,8 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/health-news-categories", healthNewsCategoryRoutes);
+app.use("/api/health-news", healthNewsRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });

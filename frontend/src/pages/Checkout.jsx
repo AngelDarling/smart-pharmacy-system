@@ -491,6 +491,7 @@ export default function Checkout() {
         return {
           productId: i.id,
           nameSnapshot: i.name,
+          imageSnapshot: i.image, // Add product image
           priceSnapshot: itemPrice, // Giá đã giảm
           originalPriceSnapshot: originalPrice, // Giá gốc (nếu có giảm giá)
           quantity: i.qty,

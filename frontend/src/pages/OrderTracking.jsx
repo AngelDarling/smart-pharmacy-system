@@ -221,12 +221,27 @@ export default function OrderTracking() {
             <div style={styles.productsList}>
               {(order.items || []).map((item, idx) => (
                 <div key={idx} style={styles.productItem}>
+                  <div style={styles.productImageWrapper}>
+                    <img
+                      src={item.imageSnapshot || '/placeholder-product.png'}
+                      alt={item.nameSnapshot}
+                      style={styles.productImage}
+                      onError={(e) => {
+                        e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"%3E%3Crect fill="%23f3f4f6" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%239ca3af"%3E📦%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
                   <div style={styles.productInfo}>
                     <div style={styles.productName}>{item.nameSnapshot}</div>
-                    <div style={styles.productQuantity}>x{item.quantity}</div>
+                    <div style={styles.productMeta}>
+                      <span style={styles.productQuantity}>Số lượng: {item.quantity}</span>
+                      <span style={styles.productUnitPrice}>
+                        {(item.priceSnapshot || 0).toLocaleString('vi-VN')}₫/sp
+                      </span>
+                    </div>
                   </div>
                   <div style={styles.productPrice}>
-                    {(item.priceSnapshot || 0).toLocaleString('vi-VN')}₫
+                    {((item.priceSnapshot || 0) * item.quantity).toLocaleString('vi-VN')}₫
                   </div>
                 </div>
               ))}
@@ -235,25 +250,53 @@ export default function OrderTracking() {
 
           {/* Total */}
           <div style={styles.totalSection}>
-            <div style={styles.totalRow}>
-              <span>Tạm tính:</span>
-              <span>{(order.totals?.items || 0).toLocaleString('vi-VN')}₫</span>
+            <div style={styles.subtotalCard}>
+              <div style={styles.subtotalIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 2v4m6-4v4M4 8h16M4 8v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M4 8h16" />
+                </svg>
+              </div>
+              <div style={styles.subtotalContent}>
+                <span style={styles.subtotalLabel}>Tạm tính</span>
+                <span style={styles.subtotalValue}>{(order.totals?.items || 0).toLocaleString('vi-VN')}₫</span>
+              </div>
             </div>
+
             {order.totals?.discount > 0 && (
-              <div style={styles.totalRow}>
-                <span>Giảm giá:</span>
-                <span style={{ color: '#16a34a' }}>
+              <div style={styles.discountRow}>
+                <div style={styles.discountIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01" />
+                  </svg>
+                </div>
+                <span style={styles.discountLabel}>Giảm giá</span>
+                <span style={styles.discountValue}>
                   -{(order.totals.discount || 0).toLocaleString('vi-VN')}₫
                 </span>
               </div>
             )}
-            <div style={styles.totalRow}>
-              <span>Phí vận chuyển:</span>
-              <span>{(order.totals?.shipping || 0).toLocaleString('vi-VN')}₫</span>
+
+            <div style={styles.shippingCard}>
+              <div style={styles.shippingIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="1" y="3" width="15" height="13" />
+                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                  <circle cx="5.5" cy="18.5" r="2.5" />
+                  <circle cx="18.5" cy="18.5" r="2.5" />
+                </svg>
+              </div>
+              <div style={styles.shippingContent}>
+                <span style={styles.shippingLabel}>Phí vận chuyển</span>
+                <span style={styles.shippingValue}>
+                  {order.totals?.shipping === 0 ? 'Miễn phí' : `${(order.totals?.shipping || 0).toLocaleString('vi-VN')}₫`}
+                </span>
+              </div>
             </div>
+
             <div style={styles.grandTotal}>
-              <span>Tổng cộng:</span>
-              <span>{(order.totals?.grand || 0).toLocaleString('vi-VN')}₫</span>
+              <span style={styles.grandTotalLabel}>Tổng cộng</span>
+              <span style={styles.grandTotalValue}>{(order.totals?.grand || 0).toLocaleString('vi-VN')}₫</span>
             </div>
           </div>
         </div>
@@ -438,55 +481,192 @@ const styles = {
   productsList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px'
+    gap: '16px'
   },
   productItem: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px',
+    gap: '16px',
+    padding: '16px',
+    backgroundColor: '#ffffff',
+    border: '2px solid #f3f4f6',
+    borderRadius: '12px',
+    transition: 'all 0.2s'
+  },
+  productImageWrapper: {
+    width: '80px',
+    height: '80px',
+    flexShrink: 0,
+    borderRadius: '8px',
+    overflow: 'hidden',
     backgroundColor: '#f8fafc',
-    borderRadius: '8px'
+    border: '1px solid #e5e7eb'
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover'
   },
   productInfo: {
+    flex: 1,
     display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    flex: 1
+    flexDirection: 'column',
+    gap: '8px'
   },
   productName: {
-    fontSize: '15px',
+    fontSize: '16px',
+    fontWeight: '600',
     color: '#1f2937',
-    flex: 1
+    lineHeight: '1.4'
+  },
+  productMeta: {
+    display: 'flex',
+    gap: '16px',
+    alignItems: 'center'
   },
   productQuantity: {
     fontSize: '14px',
     color: '#6b7280',
     fontWeight: '500'
   },
+  productUnitPrice: {
+    fontSize: '14px',
+    color: '#9ca3af',
+    fontWeight: '400'
+  },
   productPrice: {
-    fontSize: '15px',
-    fontWeight: '600',
-    color: '#1f2937'
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#2563eb',
+    flexShrink: 0
   },
   totalSection: {
-    padding: '24px'
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
   },
-  totalRow: {
+  subtotalCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    padding: '16px 20px',
+    backgroundColor: '#eff6ff',
+    borderRadius: '12px',
+    border: '2px solid #dbeafe'
+  },
+  subtotalIcon: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '10px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  subtotalContent: {
+    flex: 1,
     display: 'flex',
     justifyContent: 'space-between',
-    padding: '8px 0',
+    alignItems: 'center'
+  },
+  subtotalLabel: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#1e40af'
+  },
+  subtotalValue: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#1e40af'
+  },
+  discountRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    backgroundColor: '#f0fdf4',
+    borderRadius: '10px',
+    border: '1px solid #bbf7d0'
+  },
+  discountIcon: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    backgroundColor: '#16a34a',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  discountLabel: {
+    flex: 1,
     fontSize: '15px',
-    color: '#6b7280'
+    fontWeight: '500',
+    color: '#166534'
+  },
+  discountValue: {
+    fontSize: '17px',
+    fontWeight: '700',
+    color: '#16a34a'
+  },
+  shippingCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    padding: '16px 20px',
+    backgroundColor: '#fef3c7',
+    borderRadius: '12px',
+    border: '2px solid #fde68a'
+  },
+  shippingIcon: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '10px',
+    backgroundColor: '#f59e0b',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  shippingContent: {
+    flex: 1,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  shippingLabel: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#92400e'
+  },
+  shippingValue: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#92400e'
   },
   grandTotal: {
     display: 'flex',
     justifyContent: 'space-between',
-    padding: '16px 0 0',
-    marginTop: '12px',
-    borderTop: '2px solid #f3f4f6',
-    fontSize: '20px',
+    alignItems: 'center',
+    padding: '20px',
+    marginTop: '8px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '12px',
+    border: '2px solid #e5e7eb'
+  },
+  grandTotalLabel: {
+    fontSize: '18px',
     fontWeight: '700',
+    color: '#1f2937'
+  },
+  grandTotalValue: {
+    fontSize: '24px',
+    fontWeight: '800',
     color: '#1f2937'
   }
 };

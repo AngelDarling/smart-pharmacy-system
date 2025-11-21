@@ -49,6 +49,12 @@ import HealthCheckPage from "./pages/HealthCheckPage.jsx";
 import HealthCheckResultPage from "./pages/HealthCheckResultPage.jsx";
 import ImageSearchResults from "./pages/ImageSearchResults.jsx";
 import { HealthChecks, HealthCheckDetail, QuestionManagement, ResultManagement } from "./pages/admin/healthChecks";
+import HealthNewsCategoryManagement from "./pages/admin/healthNews/CategoryManagement.jsx";
+import HealthNewsAnalytics from './pages/admin/healthNews/HealthNewsAnalytics.jsx';
+import HealthNewsManagement from './pages/admin/healthNews/HealthNewsManagement.jsx';
+import HealthNewsEditor from "./pages/admin/healthNews/HealthNewsEditor.jsx";
+import HealthNews from "./pages/healthNews/HealthNews.jsx";
+import HealthNewsDetail from "./pages/healthNews/HealthNewsDetail.jsx";
 
 // Landing move to its own file with full storefront sections
 
@@ -1180,6 +1186,22 @@ function App() {
                     )}
                   </Link>
                 ))}
+                <Link to="/health-news" style={{
+                  color: "#374151",
+                  textDecoration: "none",
+                  fontWeight: 500,
+                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "10px 14px",
+                  transition: "all 0.2s",
+                  fontSize: 14,
+                  position: "relative",
+                  borderBottom: "3px solid transparent"
+                }}>
+                  <span>Tin tức sức khỏe</span>
+                </Link>
               </nav>
               {/* Category Mega Dropdown */}
               {showCategoryDropdown && activeRootCategory && (
@@ -1298,7 +1320,10 @@ function App() {
         <Route path="/image-search-results" element={<ImageSearchResults />} />
         <Route path="/tra-cuu/dia-chinh-moi" element={<AddressLookup />} />
         <Route path="/health-check/:slug" element={<HealthCheckPage />} />
+        <Route path="/health-check/:slug" element={<HealthCheckPage />} />
         <Route path="/health-check/:slug/result" element={<HealthCheckResultPage />} />
+        <Route path="/health-news" element={<HealthNews />} />
+        <Route path="/health-news/:slug" element={<HealthNewsDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -1381,6 +1406,33 @@ function App() {
           <Route path="health-checks/:id/results" element={<ResultManagement />} />
           <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Settings />} />
+
+          {/* Health News Routes */}
+          <Route path="health-news/analytics" element={
+            <ProtectedRoute requiredPermission="manage_content">
+              <HealthNewsAnalytics />
+            </ProtectedRoute>
+          } />
+          <Route path="health-news" element={
+            <ProtectedRoute requiredPermission="manage_content">
+              <HealthNewsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="health-news/new" element={
+            <ProtectedRoute requiredPermission="manage_content">
+              <HealthNewsEditor />
+            </ProtectedRoute>
+          } />
+          <Route path="health-news/edit/:id" element={
+            <ProtectedRoute requiredPermission="manage_content">
+              <HealthNewsEditor />
+            </ProtectedRoute>
+          } />
+          <Route path="health-news/categories" element={
+            <ProtectedRoute requiredPermission="manage_content">
+              <HealthNewsCategoryManagement />
+            </ProtectedRoute>
+          } />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
@@ -1407,6 +1459,46 @@ function App() {
         onClose={() => setShowImageSearchModal(false)}
         onSearch={handleImageSearch}
       />
+
+      {/* Floating Order Tracking Button */}
+      {!isAdminRoute && (
+        <Link
+          to="/track-order"
+          style={{
+            position: "fixed",
+            bottom: "100px",
+            right: "24px",
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+            transition: "all 0.3s ease",
+            zIndex: 999,
+            cursor: "pointer"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "scale(1.1)";
+            e.currentTarget.style.boxShadow = "0 6px 20px rgba(102, 126, 234, 0.6)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+            e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+          }}
+          title="Theo dõi đơn hàng"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+        </Link>
+      )}
     </div>
   );
 }
