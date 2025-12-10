@@ -1,9 +1,9 @@
 import React from 'react';
 import { Tabs, Typography } from 'antd';
-import { ShoppingOutlined, HistoryOutlined, AlertOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ShoppingOutlined, HistoryOutlined, AlertOutlined, FileTextOutlined, ImportOutlined } from '@ant-design/icons';
 import CurrentStockTab from './tabs/CurrentStockTab';
-import StockMovementTab from './tabs/StockMovementTab';
-import GoodsReceiptTab from './tabs/GoodsReceiptTab';
+import GoodsReceiptFormTab from './tabs/GoodsReceiptFormTab';
+import GoodsReceiptHistoryTab from './tabs/GoodsReceiptHistoryTab';
 import AlertsTab from './tabs/AlertsTab';
 
 const { Title, Text } = Typography;
@@ -24,21 +24,21 @@ export default function InventoryManagement() {
       key: '2',
       label: (
         <span>
-          <HistoryOutlined />
-          Nhập/Xuất kho
+          <ImportOutlined />
+          Nhập kho
         </span>
       ),
-      children: <StockMovementTab />
+      children: <GoodsReceiptFormTab />
     },
     {
       key: '3',
       label: (
         <span>
           <FileTextOutlined />
-          Phiếu nhập
+          Lịch sử phiếu nhập
         </span>
       ),
-      children: <GoodsReceiptTab />
+      children: <GoodsReceiptHistoryTab />
     },
     {
       key: '4',
@@ -60,7 +60,7 @@ export default function InventoryManagement() {
           Quản lý tồn kho
         </Title>
         <Text type="secondary">
-          Quản lý nhập/xuất, phiếu nhập, theo dõi hạn sử dụng và cảnh báo tồn kho
+          Quản lý nhập kho, lịch sử phiếu nhập, theo dõi hạn sử dụng và cảnh báo tồn kho
         </Text>
       </div>
 

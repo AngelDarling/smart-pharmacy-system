@@ -324,24 +324,62 @@ const AdminLayout = () => {
         trigger={null}
         collapsible
         collapsed={collapsed}
+        width={260}
         style={{
-          background: colorBgContainer,
-          boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+          background: 'linear-gradient(180deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%)',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.12)',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
+        {/* Decorative background pattern */}
         <div style={{
-          height: 64,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Logo section */}
+        <div style={{
+          height: 80,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: '1px solid rgba(255,255,255,0.15)',
           marginBottom: 16,
+          padding: '16px',
+          position: 'relative',
         }}>
-          <Text strong style={{ fontSize: collapsed ? 16 : 18, color: '#1890ff' }}>
-            {collapsed ? 'SP' : 'Smart Pharmacy'}
-          </Text>
+          {!collapsed && (
+            <Text strong style={{
+              fontSize: 20,
+              color: '#67e8f9',
+              letterSpacing: '1px',
+              textShadow: '0 2px 8px rgba(103, 232, 249, 0.4)',
+              fontWeight: 700,
+            }}>
+              Smart Pharmacy
+            </Text>
+          )}
+          {collapsed && (
+            <Text strong style={{
+              fontSize: 18,
+              color: '#67e8f9',
+              letterSpacing: '0.5px',
+              textShadow: '0 2px 8px rgba(103, 232, 249, 0.4)',
+              fontWeight: 700,
+            }}>
+              SP
+            </Text>
+          )}
         </div>
 
+        {/* Menu */}
         <Menu
           mode="inline"
           selectedKeys={getSelectedKeys()}
@@ -351,8 +389,66 @@ const AdminLayout = () => {
           style={{
             border: 'none',
             background: 'transparent',
+            color: '#fff',
           }}
+          theme="dark"
+          className="custom-sidebar-menu"
         />
+
+        {/* Add custom CSS for menu styling */}
+        <style>{`
+          .custom-sidebar-menu .ant-menu-item,
+          .custom-sidebar-menu .ant-menu-submenu-title {
+            border-radius: 8px;
+            margin: 4px 8px;
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.95) !important;
+          }
+          
+          .custom-sidebar-menu .ant-menu-item:hover,
+          .custom-sidebar-menu .ant-menu-submenu-title:hover {
+            background: rgba(255,255,255,0.2) !important;
+            transform: translateX(4px);
+            color: #fff !important;
+          }
+          
+          .custom-sidebar-menu .ant-menu-item-selected {
+            background: rgba(255,255,255,0.25) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            color: #fff !important;
+          }
+          
+          .custom-sidebar-menu .ant-menu-item-selected::after {
+            border-right: 3px solid #60a5fa;
+          }
+          
+          .custom-sidebar-menu .ant-menu-submenu-open > .ant-menu-submenu-title {
+            background: rgba(255,255,255,0.15) !important;
+            color: #fff !important;
+          }
+          
+          .custom-sidebar-menu .ant-menu-sub {
+            background: rgba(0,0,0,0.15) !important;
+          }
+          
+          .custom-sidebar-menu .ant-menu-sub .ant-menu-item {
+            color: rgba(255,255,255,0.9) !important;
+          }
+          
+          .custom-sidebar-menu .ant-menu-item .ant-menu-item-icon,
+          .custom-sidebar-menu .ant-menu-submenu-title .ant-menu-item-icon {
+            font-size: 18px;
+            color: rgba(255,255,255,0.95) !important;
+          }
+          
+          .custom-sidebar-menu .ant-badge {
+            color: #fff;
+          }
+          
+          .custom-sidebar-menu .ant-menu-submenu-arrow {
+            color: rgba(255,255,255,0.8) !important;
+          }
+        `}</style>
       </Sider>
 
       <Layout>

@@ -37,12 +37,14 @@ import {
   ShoppingOutlined,
   StarOutlined,
   TagsOutlined,
-  DollarOutlined
+  DollarOutlined,
+  InboxOutlined
 } from '@ant-design/icons';
 import { useProducts } from '../../../hooks/admin/useProducts';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import { useCategories } from '../../../hooks/admin/useCategories';
 import ProductForm from '../../../components/admin/ProductForm';
+import ProductBatchModal from '../../../components/admin/ProductBatchModal';
 
 const { Option } = Select;
 
@@ -76,6 +78,8 @@ const ProductManagement = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [viewingProduct, setViewingProduct] = useState(null);
+  const [isBatchModalVisible, setIsBatchModalVisible] = useState(false);
+  const [batchProduct, setBatchProduct] = useState(null);
 
   // Fetch brands for filter
   useEffect(() => {
@@ -212,6 +216,18 @@ const ProductManagement = () => {
   const handleProductFormClose = () => {
     setIsProductFormVisible(false);
     setEditingProduct(null);
+  };
+
+  // Handle view product batches
+  const handleViewBatches = (product) => {
+    setBatchProduct(product);
+    setIsBatchModalVisible(true);
+  };
+
+  // Handle close batch modal
+  const handleCloseBatchModal = () => {
+    setIsBatchModalVisible(false);
+    setBatchProduct(null);
   };
 
   // Table columns
@@ -403,7 +419,7 @@ const ProductManagement = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 120,
+      width: 160,
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="Xem chi tiết">
@@ -416,6 +432,19 @@ const ProductManagement = () => {
               style={{
                 color: '#1890ff',
                 border: '1px solid #91d5ff'
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Xem lô hàng">
+            <Button
+              type="text"
+              size="small"
+              shape="circle"
+              icon={<InboxOutlined />}
+              onClick={() => handleViewBatches(record)}
+              style={{
+                color: '#722ed1',
+                border: '1px solid #d3adf7'
               }}
             />
           </Tooltip>
@@ -1010,6 +1039,14 @@ const ProductManagement = () => {
           </div>
         )}
       </Modal>
+
+      {/* Product Batch Modal */}
+      <ProductBatchModal
+        visible={isBatchModalVisible}
+        onClose={handleCloseBatchModal}
+        productId={batchProduct?._id}
+        productName={batchProduct?.name}
+      />
     </div>
   );
 };

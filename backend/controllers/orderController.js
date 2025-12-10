@@ -1,10 +1,12 @@
 import Order from "../models/Order.js";
 import Shipment from "../models/Shipment.js";
 import Product from "../models/Product.js";
+import ProductBatch from "../models/ProductBatch.js";
 import InventoryTransaction from "../models/InventoryTransaction.js";
 import ProductSalesDaily from "../models/ProductSalesDaily.js";
 import Coupon from "../models/Coupon.js";
 import Payment from "../models/Payment.js";
+import { allocateStockFromBatches } from "./productBatchController.js";
 import mongoose from "mongoose";
 
 // Generate unique order code
@@ -192,74 +194,96 @@ export async function updateStatus(req, res) {
       });
     }
 
-    // If switching from pending to processing/shipping/completed, reduce inventory
+    // If switching from pending to processing/shipping/completed, reduce inventory using FIFO
     if (oldStatus === "pending" && ["processing", "shipping", "completed"].includes(newStatus)) {
       for (const item of order.items) {
-        const product = await Product.findById(item.productId);
-        if (product) {
-          // Reduce stock from variants or totalStock
-          if (product.variants && product.variants.length > 0) {
-            // If product has variants, reduce from first active variant
-            const activeVariant = product.variants.find(v => v.isActive);
-            if (activeVariant && activeVariant.stockOnHand >= item.quantity) {
-              activeVariant.stockOnHand -= item.quantity;
-              // Update totalStock
-              product.totalStock = product.variants.reduce((total, v) => {
-                return total + (v.isActive ? v.stockOnHand : 0);
-              }, 0);
+        try {
+          // 1. Allocate stock from batches using FIFO (oldest first)
+          const allocations = await allocateStockFromBatches(
+            item.productId, 
+            item.quantity
+          );
+          
+          // 2. Deduct from each batch's remainingQuantity
+          for (const allocation of allocations) {
+            const batch = await ProductBatch.findById(allocation.batchId);
+            if (batch) {
+              batch.remainingQuantity -= allocation.quantity;
+              await batch.save(); // Will auto-update status via pre-save hook
             }
-          } else {
-            // If no variants, reduce from totalStock
-            if (product.totalStock >= item.quantity) {
-              product.totalStock -= item.quantity;
-            }
+            
+            // 3. Create inventory transaction with batch info
+            const transaction = new InventoryTransaction({
+              productId: item.productId,
+              type: "sale",
+              quantity: -allocation.quantity,
+              batchNumber: allocation.batchNumber,
+              unitCost: allocation.unitCost,
+              reason: `Order ${order.code} - FIFO allocation from batch ${allocation.batchNumber}`,
+              orderId: order._id,
+              performedBy: req.user?.id || null
+            });
+            await transaction.save();
           }
-          await product.save();
-
-          // Create inventory transaction
-          const transaction = new InventoryTransaction({
-            productId: item.productId,
-            type: "sale",
-            quantity: -item.quantity,
-            reason: `Order ${order.code} status change: ${oldStatus} → ${newStatus}`,
-            orderId: order._id,
-            performedBy: req.user?.id || null
+          
+          // 4. Update Product.totalStock
+          const product = await Product.findById(item.productId);
+          if (product) {
+            product.totalStock -= item.quantity;
+            await product.save();
+          }
+          
+        } catch (error) {
+          // If not enough stock in batches, rollback and return error
+          console.error(`FIFO allocation error for product ${item.productId}:`, error);
+          return res.status(400).json({ 
+            message: `Không đủ hàng trong kho cho sản phẩm: ${item.nameSnapshot || item.productId}. ${error.message}` 
           });
-          await transaction.save();
         }
       }
     }
 
-    // If switching to cancelled from processing/shipping/completed, restore inventory
+    // If switching to cancelled from processing/shipping/completed, restore inventory to original batches
     if (newStatus === "cancelled" && ["processing", "shipping", "completed"].includes(oldStatus)) {
       for (const item of order.items) {
+        // Query InventoryTransactions to find which batches were used
+        const transactions = await InventoryTransaction.find({
+          orderId: order._id,
+          productId: item.productId,
+          type: "sale"
+        });
+
+        // Restore to the batches that were originally allocated
+        for (const tx of transactions) {
+          if (tx.batchNumber) {
+            const batch = await ProductBatch.findOne({
+              productId: item.productId,
+              batchNumber: tx.batchNumber
+            });
+            if (batch) {
+              batch.remainingQuantity += Math.abs(tx.quantity);
+              await batch.save(); // Will auto-update status via pre-save hook
+            }
+          }
+        }
+
+        // Update Product.totalStock
         const product = await Product.findById(item.productId);
         if (product) {
-          // Restore stock
-          if (product.variants && product.variants.length > 0) {
-            const activeVariant = product.variants.find(v => v.isActive);
-            if (activeVariant) {
-              activeVariant.stockOnHand += item.quantity;
-              product.totalStock = product.variants.reduce((total, v) => {
-                return total + (v.isActive ? v.stockOnHand : 0);
-              }, 0);
-            }
-          } else {
-            product.totalStock += item.quantity;
-          }
+          product.totalStock += item.quantity;
           await product.save();
-
-          // Create inventory transaction for restoration
-          const transaction = new InventoryTransaction({
-            productId: item.productId,
-            type: "return",
-            quantity: item.quantity,
-            reason: `Order ${order.code} cancelled - stock restoration`,
-            orderId: order._id,
-            performedBy: req.user?.id || null
-          });
-          await transaction.save();
         }
+
+        // Create inventory transaction for restoration
+        const transaction = new InventoryTransaction({
+          productId: item.productId,
+          type: "return",
+          quantity: item.quantity,
+          reason: `Order ${order.code} cancelled - stock restoration to original batches`,
+          orderId: order._id,
+          performedBy: req.user?.id || null
+        });
+        await transaction.save();
       }
     }
 
@@ -496,37 +520,48 @@ export async function deleteOrder(req, res) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // If order status is processing/shipping/completed, restore inventory
+    // If order status is processing/shipping/completed, restore inventory to original batches
     if (["processing", "shipping", "completed"].includes(order.status)) {
       console.log(`[OrderController] Restoring inventory for order: ${order.code}`);
       for (const item of order.items) {
+        // Query InventoryTransactions to find which batches were used
+        const transactions = await InventoryTransaction.find({
+          orderId: order._id,
+          productId: item.productId,
+          type: "sale"
+        });
+
+        // Restore to the batches that were originally allocated
+        for (const tx of transactions) {
+          if (tx.batchNumber) {
+            const batch = await ProductBatch.findOne({
+              productId: item.productId,
+              batchNumber: tx.batchNumber
+            });
+            if (batch) {
+              batch.remainingQuantity += Math.abs(tx.quantity);
+              await batch.save();
+            }
+          }
+        }
+
+        // Update Product.totalStock
         const product = await Product.findById(item.productId);
         if (product) {
-          // Restore stock
-          if (product.variants && product.variants.length > 0) {
-            const activeVariant = product.variants.find(v => v.isActive);
-            if (activeVariant) {
-              activeVariant.stockOnHand += item.quantity;
-              product.totalStock = product.variants.reduce((total, v) => {
-                return total + (v.isActive ? v.stockOnHand : 0);
-              }, 0);
-            }
-          } else {
-            product.totalStock += item.quantity;
-          }
+          product.totalStock += item.quantity;
           await product.save();
-
-          // Create inventory transaction for restoration
-          const transaction = new InventoryTransaction({
-            productId: item.productId,
-            type: "return",
-            quantity: item.quantity,
-            reason: `Order ${order.code} deleted - stock restoration`,
-            orderId: order._id,
-            performedBy: req.user?.id || null
-          });
-          await transaction.save();
         }
+
+        // Create inventory transaction for restoration
+        const transaction = new InventoryTransaction({
+          productId: item.productId,
+          type: "return",
+          quantity: item.quantity,
+          reason: `Order ${order.code} deleted - stock restoration to original batches`,
+          orderId: order._id,
+          performedBy: req.user?.id || null
+        });
+        await transaction.save();
       }
     }
 

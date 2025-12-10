@@ -58,8 +58,10 @@ button:focus {
   line-height: 1.5;
   font-weight: 400;
 
-  --primary: #22c55e; /* xanh lá đậm hơn */
-  --primary-soft: #a7f3d0; /* pastel nhạt */
+  --primary: #22c55e;
+  /* xanh lá đậm hơn */
+  --primary-soft: #a7f3d0;
+  /* pastel nhạt */
   --primary-dark: #16a34a;
   --text: #0f172a;
   --muted: #6b7280;
@@ -81,6 +83,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -106,7 +109,7 @@ body {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   padding: 28px;
 }
 
@@ -127,8 +130,16 @@ body {
   margin-bottom: 10px;
 }
 
-.auth-title { font-size: 22px; font-weight: 700; color: #065f46; }
-.auth-subtitle { font-size: 13px; color: #6b7280; }
+.auth-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+}
 
 .auth-alert {
   background: #fee2e2;
@@ -139,12 +150,35 @@ body {
   margin: 12px 0;
 }
 
-.auth-form { display: flex; flex-direction: column; gap: 14px; }
-.form-row { display: flex; flex-direction: column; gap: 6px; }
-.form-row label { font-size: 13px; color: #374151; font-weight: 600; }
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
-.password-field { position: relative; display: flex; align-items: center; }
-.password-field input { width: 100%; padding-right: 72px; }
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-row label {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 72px;
+}
+
 .toggle-visibility {
   position: absolute;
   right: 8px;
@@ -156,11 +190,18 @@ body {
   padding: 6px 10px;
 }
 
-.form-actions { margin-top: 6px; }
-.btn-block { width: 100%; }
+.form-actions {
+  margin-top: 6px;
+}
+
+.btn-block {
+  width: 100%;
+}
 
 /* Form controls light theme */
-input, select, textarea {
+input,
+select,
+textarea {
   background: #ffffff;
   color: #111827;
   border: 1px solid var(--border);
@@ -169,9 +210,14 @@ input, select, textarea {
   font-size: 14px;
 }
 
-input::placeholder, textarea::placeholder { color: #9ca3af; }
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+}
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
@@ -194,22 +240,28 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: var(--primary-dark);
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
 /* Palette xanh lá pastel cho admin */
-.btn-primary { background: var(--primary); color: #ffffff; border-color: var(--primary-dark); }
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary-dark);
+}
 
 .card {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .admin-header {
@@ -218,14 +270,38 @@ button:focus-visible {
 }
 
 /* Tables */
-table { border-collapse: collapse; background: #fff; }
-th, td { padding: 12px 14px; border: 1px solid var(--border); }
-th { background: #dcfce7; color: #065f46; font-weight: 600; }
+table {
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th,
+td {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+}
+
+th {
+  background: #dcfce7;
+  color: #065f46;
+  font-weight: 600;
+}
 
 /* Headings */
-h1 { font-size: 28px; font-weight: 700; }
-h2 { font-size: 22px; font-weight: 600; }
-h3 { font-size: 18px; font-weight: 600; }
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
 
 /* Sidebar buttons and links */
 .icon-button {
@@ -237,9 +313,13 @@ h3 { font-size: 18px; font-weight: 600; }
   border-radius: 12px;
   background: var(--primary);
   color: #ffffff;
-  border: 2px solid #0ea5a5; /* subtle edge to match screenshot */
+  border: 2px solid #0ea5a5;
+  /* subtle edge to match screenshot */
 }
-.icon-button:hover { filter: brightness(0.95); }
+
+.icon-button:hover {
+  filter: brightness(0.95);
+}
 
 .nav-link {
   color: #0f766e;
@@ -250,17 +330,34 @@ h3 { font-size: 18px; font-weight: 600; }
   height: 40px;
   transition: background .15s ease, color .15s ease;
 }
-.nav-link:hover { background: #f0fdfa; color: #065f46; }
-.nav-link.active { background: #dcfce7; color: #065f46; font-weight: 600; }
+
+.nav-link:hover {
+  background: #f0fdfa;
+  color: #065f46;
+}
+
+.nav-link.active {
+  background: #dcfce7;
+  color: #065f46;
+  font-weight: 600;
+}
 
 /* Group titles */
-.group-title { font-size: 12px; color: #6b7280; margin: 8px 0; }
+.group-title {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 8px 0;
+}
 
 /* Collapsed sidebar flyout */
-.sidebar.collapsed .nav-group { position: relative; }
+.sidebar.collapsed .nav-group {
+  position: relative;
+}
+
 .sidebar.collapsed .group-items:hover .flyout {
   display: block;
 }
+
 .flyout {
   display: none;
   position: absolute;
@@ -270,11 +367,31 @@ h3 { font-size: 18px; font-weight: 600; }
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   padding: 8px;
   z-index: 50;
 }
-.flyout-title { font-size: 12px; color: #6b7280; margin: 6px 8px; }
-.flyout-link { display: block; padding: 8px 10px; border-radius: 8px; color: #0f766e; }
-.flyout-link:hover { background: #f0fdfa; color: #065f46; }
-.flyout-link.active { background: #dcfce7; color: #065f46; font-weight: 600; }
+
+.flyout-title {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 6px 8px;
+}
+
+.flyout-link {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #0f766e;
+}
+
+.flyout-link:hover {
+  background: #f0fdfa;
+  color: #065f46;
+}
+
+.flyout-link.active {
+  background: #dcfce7;
+  color: #065f46;
+  font-weight: 600;
+}

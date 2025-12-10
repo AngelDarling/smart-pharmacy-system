@@ -56,6 +56,20 @@ import HealthNewsEditor from "./pages/admin/healthNews/HealthNewsEditor.jsx";
 import HealthNews from "./pages/healthNews/HealthNews.jsx";
 import HealthNewsDetail from "./pages/healthNews/HealthNewsDetail.jsx";
 
+// Static Pages
+import About from "./pages/static/About.jsx";
+import License from "./pages/static/License.jsx";
+import Privacy from "./pages/static/Privacy.jsx";
+import ReturnPolicy from "./pages/static/ReturnPolicy.jsx";
+import Terms from "./pages/static/Terms.jsx";
+import ShippingPolicy from "./pages/static/ShippingPolicy.jsx";
+import WarrantyPolicy from "./pages/static/WarrantyPolicy.jsx";
+import Help from "./pages/static/Help.jsx";
+import FAQ from "./pages/static/FAQ.jsx";
+import Contact from "./pages/static/Contact.jsx";
+import HealthAdvice from "./pages/static/HealthAdvice.jsx";
+import DrugLookup from "./pages/static/DrugLookup.jsx";
+
 // Landing move to its own file with full storefront sections
 
 function Login() {
@@ -1326,6 +1340,21 @@ function App() {
         <Route path="/health-news/:slug" element={<HealthNewsDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* Static Pages */}
+        <Route path="/about" element={<About />} />
+        <Route path="/license" element={<License />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/return-policy" element={<ReturnPolicy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/shipping" element={<ShippingPolicy />} />
+        <Route path="/warranty" element={<WarrantyPolicy />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/health-advice" element={<HealthAdvice />} />
+        <Route path="/drug-lookup" element={<DrugLookup />} />
+
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboard />} />

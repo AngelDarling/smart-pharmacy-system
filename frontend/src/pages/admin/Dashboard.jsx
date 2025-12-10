@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { showSuccess } from "../../api/alert.js";
@@ -10,15 +10,10 @@ import {
   Statistic,
   Typography,
   Space,
-  Avatar,
   Tag,
   Progress,
-  List,
-  Badge,
-  Divider,
-  Alert,
-  Button,
-  Tooltip
+  Tooltip,
+  Divider
 } from 'antd';
 import {
   UserOutlined,
@@ -28,19 +23,17 @@ import {
   TeamOutlined,
   DollarOutlined,
   WarningOutlined,
-  CalendarOutlined,
   TrophyOutlined,
-  BarChartOutlined,
-  EyeOutlined,
-  EditOutlined,
   MedicineBoxOutlined,
   ShoppingCartOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CarOutlined,
-  FileTextOutlined,
-  FireOutlined,
-  LinkOutlined
+  RiseOutlined,
+  FallOutlined,
+  LineChartOutlined,
+  BarChartOutlined,
+  PieChartOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
@@ -54,11 +47,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [userStats, setUserStats] = useState(null);
   const [orderStats, setOrderStats] = useState(null);
-  const [recentOrders, setRecentOrders] = useState([]);
-  
-  // Force reload stats when component mounts
-  const [reloadTrigger, setReloadTrigger] = useState(0);
-  
+
   useEffect(() => {
     const flag = localStorage.getItem("flash");
     if (flag === "login_success") {
@@ -66,38 +55,27 @@ export default function AdminDashboard() {
       localStorage.removeItem("flash");
     }
   }, []);
-  
-  // Force reload when component mounts
-  useEffect(() => {
-    setReloadTrigger(prev => prev + 1);
-  }, []);
+
   useEffect(() => {
     let mounted = true;
     const loadStats = async () => {
       try {
         setLoading(true);
-        
-        // Load general stats if user has permission
+
         if (permissions.canReadProducts() || permissions.canReadInventory()) {
           const statsRes = await api.get("/admin/stats");
           if (mounted) setStats(statsRes.data);
         }
-        
-        // Load user stats if user has permission
+
         if (permissions.canReadUsers()) {
           const userRes = await api.get("/users/stats");
           if (mounted) setUserStats(userRes.data);
         }
-        
-        // Load order stats if user has permission
+
         if (permissions.canReadOrders()) {
           try {
             const orderRes = await api.get("/orders/stats");
             if (mounted) setOrderStats(orderRes.data);
-            
-            // Load recent orders
-            const recentRes = await api.get("/orders?limit=5&sort=-createdAt");
-            if (mounted) setRecentOrders(recentRes.data?.items || []);
           } catch (error) {
             console.error('Error loading order stats:', error);
           }
@@ -108,23 +86,24 @@ export default function AdminDashboard() {
         if (mounted) setLoading(false);
       }
     };
-    
-    // Load stats when component mounts or when permissions change
+
     loadStats();
-    
     return () => { mounted = false; };
-  }, [permissions, reloadTrigger]); // Depend on permissions and reload trigger
+  }, [permissions]);
 
   const monthRevenue = stats?.month?.revenue || 0;
   const todayRevenue = stats?.today?.revenue || 0;
   const todayInvoices = stats?.today?.invoices || 0;
   const lowStock = stats?.inventory?.lowStockCount || 0;
 
+  // Use real data from API - ensure they are always arrays
+  const last7DaysData = Array.isArray(stats?.last7Days) ? stats.last7Days : [];
+  const topProductsData = Array.isArray(stats?.topProducts) ? stats.topProducts : [];
+
   function formatMoney(v) {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(v || 0);
   }
 
-  // Get role display info
   const getRoleInfo = (role) => {
     const roleMap = {
       admin: { color: 'purple', icon: <TrophyOutlined />, name: 'Quản trị viên' },
@@ -139,463 +118,476 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '400px' 
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
         <Text>Đang tải thống kê...</Text>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* Welcome Section */}
-      <Card style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none' }}>
+    <div style={{ padding: '16px' }}>
+      {/* Compact Welcome Section */}
+      <Card
+        size="small"
+        style={{
+          marginBottom: '16px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          border: 'none',
+          padding: '12px'
+        }}
+      >
         <Row align="middle" justify="space-between">
           <Col>
-            <Space size="large">
-              <Avatar size={64} icon={<MedicineBoxOutlined />} style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }} />
+            <Space>
               <div>
-                <Title level={2} style={{ margin: 0, color: 'white' }}>
+                <Title level={4} style={{ margin: 0, color: 'white' }}>
                   Xin chào, {user?.name || 'Quản trị viên'}!
                 </Title>
-                <Space style={{ marginTop: '8px' }}>
-                  <Tag color={roleInfo.color} icon={roleInfo.icon} style={{ background: 'white' }}>
+                <Space style={{ marginTop: '4px' }}>
+                  <Tag color={roleInfo.color} icon={roleInfo.icon} style={{ background: 'white', fontSize: '11px' }}>
                     {roleInfo.name}
                   </Tag>
-                  {user?.department && (
-                    <Tag color="blue" style={{ background: 'white' }}>{user.department}</Tag>
-                  )}
-                </Space>
-                <div style={{ marginTop: '12px' }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.9)' }}>
-                    📅 {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: '12px' }}>
+                    📅 {new Date().toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' })}
                   </Text>
-                </div>
+                </Space>
               </div>
-            </Space>
-          </Col>
-          <Col>
-            <Space direction="vertical" align="end">
-              <Text strong style={{ color: 'white', fontSize: '16px' }}>
-                🏥 Smart Pharmacy System
-              </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)' }}>
-                Hệ thống quản lý nhà thuốc
-              </Text>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      {/* Quick Stats - Main Metrics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+      {/* Compact Stats Grid - 6 per row */}
+      <Row gutter={[12, 12]} style={{ marginBottom: '16px' }}>
         {permissions.canReadProducts() && (
-          <Col xs={24} sm={12} lg={6}>
-            <Card 
-              hoverable
-              onClick={() => navigate('/admin/products')}
-              style={{ cursor: 'pointer' }}
-            >
+          <Col xs={12} sm={8} lg={4}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/products')} style={{ cursor: 'pointer' }}>
               <Statistic
-                title="Tổng sản phẩm"
+                title={<Text style={{ fontSize: 11 }}>Sản phẩm</Text>}
                 value={stats?.products?.total || 0}
-                prefix={<MedicineBoxOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a', fontSize: '28px' }}
+                prefix={<MedicineBoxOutlined style={{ color: '#52c41a', fontSize: 16 }} />}
+                valueStyle={{ color: '#52c41a', fontSize: '20px' }}
               />
-              <div style={{ marginTop: '8px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  Sản phẩm đang hoạt động
-                </Text>
-              </div>
             </Card>
           </Col>
         )}
-        
+
         {permissions.canReadCategories() && (
-          <Col xs={24} sm={12} lg={6}>
-            <Card 
-              hoverable
-              onClick={() => navigate('/admin/categories')}
-              style={{ cursor: 'pointer' }}
-            >
+          <Col xs={12} sm={8} lg={4}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/categories')} style={{ cursor: 'pointer' }}>
               <Statistic
-                title="Danh mục sản phẩm"
+                title={<Text style={{ fontSize: 11 }}>Danh mục</Text>}
                 value={stats?.categories?.total || 0}
-                prefix={<FolderOutlined style={{ color: '#1890ff' }} />}
-                valueStyle={{ color: '#1890ff', fontSize: '28px' }}
+                prefix={<FolderOutlined style={{ color: '#1890ff', fontSize: 16 }} />}
+                valueStyle={{ color: '#1890ff', fontSize: '20px' }}
               />
-              <div style={{ marginTop: '8px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  Phân loại thuốc & TPCN
-                </Text>
-              </div>
             </Card>
           </Col>
         )}
 
         {permissions.canReadInventory() && (
-          <Col xs={24} sm={12} lg={6}>
-            <Card 
-              hoverable
-              onClick={() => navigate('/admin/inventory')}
-              style={{ cursor: 'pointer', borderColor: lowStock > 0 ? '#ff4d4f' : undefined }}
-            >
+          <Col xs={12} sm={8} lg={4}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/inventory')} style={{ cursor: 'pointer', borderColor: lowStock > 0 ? '#ff4d4f' : undefined }}>
               <Statistic
-                title="Cảnh báo tồn kho"
+                title={<Text style={{ fontSize: 11 }}>Cảnh báo</Text>}
                 value={lowStock}
-                prefix={<WarningOutlined style={{ color: lowStock > 0 ? '#ff4d4f' : '#52c41a' }} />}
-                valueStyle={{ color: lowStock > 0 ? '#ff4d4f' : '#52c41a', fontSize: '28px' }}
-                suffix="sản phẩm"
+                prefix={<WarningOutlined style={{ color: lowStock > 0 ? '#ff4d4f' : '#52c41a', fontSize: 16 }} />}
+                valueStyle={{ color: lowStock > 0 ? '#ff4d4f' : '#52c41a', fontSize: '20px' }}
               />
-              <div style={{ marginTop: '8px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {lowStock > 0 ? 'Cần nhập hàng ngay' : 'Đủ hàng trong kho'}
-                </Text>
-              </div>
             </Card>
           </Col>
         )}
 
         {permissions.canReadUsers() && (
-          <Col xs={24} sm={12} lg={6}>
-            <Card 
-              hoverable
-              onClick={() => navigate('/admin/users')}
-              style={{ cursor: 'pointer' }}
-            >
+          <Col xs={12} sm={8} lg={4}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
               <Statistic
-                title="Nhân viên"
+                title={<Text style={{ fontSize: 11 }}>Nhân viên</Text>}
                 value={userStats?.totalUsers || 0}
-                prefix={<TeamOutlined style={{ color: '#722ed1' }} />}
-                valueStyle={{ color: '#722ed1', fontSize: '28px' }}
-              />
-              <div style={{ marginTop: '8px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {userStats?.activeUsers || 0} đang hoạt động
-                </Text>
-              </div>
-            </Card>
-          </Col>
-        )}
-      </Row>
-
-      {/* Revenue Stats (if user has permission) */}
-      {(permissions.canReadOrders() || permissions.canReadReports()) && (
-        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-          <Col xs={24} sm={12} lg={8}>
-            <Card hoverable>
-              <Statistic
-                title="Doanh số tháng này"
-                value={monthRevenue}
-                prefix={<DollarOutlined style={{ color: '#52c41a' }} />}
-                formatter={(value) => formatMoney(value)}
-                valueStyle={{ color: '#52c41a', fontSize: '24px' }}
-              />
-              <div style={{ marginTop: '8px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  📊 Tổng doanh thu trong tháng
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <Card hoverable>
-              <Statistic
-                title="Hóa đơn hôm nay"
-                value={todayInvoices}
-                prefix={<ShoppingCartOutlined style={{ color: '#1890ff' }} />}
-                valueStyle={{ color: '#1890ff', fontSize: '24px' }}
-              />
-              <div style={{ marginTop: '8px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  🛒 Số đơn hàng đã hoàn thành
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <Card hoverable>
-              <Statistic
-                title="Doanh số hôm nay"
-                value={todayRevenue}
-                prefix={<DollarOutlined style={{ color: '#722ed1' }} />}
-                formatter={(value) => formatMoney(value)}
-                valueStyle={{ color: '#722ed1', fontSize: '24px' }}
-              />
-              <div style={{ marginTop: '8px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  💰 Doanh thu trong ngày
-                </Text>
-              </div>
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* Order Status Stats */}
-      {permissions.canReadOrders() && orderStats && (
-        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable onClick={() => navigate('/admin/orders?status=pending')} style={{ cursor: 'pointer' }}>
-              <Statistic
-                title="Đơn chờ xử lý"
-                value={orderStats.statusBreakdown?.find(s => s._id === 'pending')?.count || 0}
-                prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
-                valueStyle={{ color: '#faad14', fontSize: '24px' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable onClick={() => navigate('/admin/orders?status=processing')} style={{ cursor: 'pointer' }}>
-              <Statistic
-                title="Đang xử lý"
-                value={orderStats.statusBreakdown?.find(s => s._id === 'processing')?.count || 0}
-                prefix={<EditOutlined style={{ color: '#1890ff' }} />}
-                valueStyle={{ color: '#1890ff', fontSize: '24px' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable onClick={() => navigate('/admin/orders?status=shipping')} style={{ cursor: 'pointer' }}>
-              <Statistic
-                title="Đang giao hàng"
-                value={orderStats.statusBreakdown?.find(s => s._id === 'shipping')?.count || 0}
-                prefix={<CarOutlined style={{ color: '#13c2c2' }} />}
-                valueStyle={{ color: '#13c2c2', fontSize: '24px' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable onClick={() => navigate('/admin/orders?status=completed')} style={{ cursor: 'pointer' }}>
-              <Statistic
-                title="Đã hoàn thành"
-                value={orderStats.statusBreakdown?.find(s => s._id === 'completed')?.count || 0}
-                prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a', fontSize: '24px' }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* User Statistics (if user has permission) */}
-      {permissions.canReadUsers() && userStats && (
-        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-          <Col xs={24} lg={12}>
-            <Card title="Thống kê người dùng" extra={<TeamOutlined />}>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Statistic
-                    title="Tổng người dùng"
-                    value={userStats.totalUsers}
-                    valueStyle={{ color: '#1890ff' }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="Người dùng hoạt động"
-                    value={userStats.activeUsers}
-                    valueStyle={{ color: '#3f8600' }}
-                  />
-                </Col>
-              </Row>
-              <Divider />
-              <div>
-                <Text strong>Phân bố theo vai trò:</Text>
-                <div style={{ marginTop: '12px' }}>
-                  {Object.entries(userStats.usersByRole || {}).map(([role, count]) => (
-                    <div key={role} style={{ marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <Text>{role === 'admin' ? 'Admin' : role === 'manager' ? 'Quản lý' : role === 'pharmacist' ? 'Dược sĩ' : 'Nhân viên'}</Text>
-                        <Text strong>{count}</Text>
-                      </div>
-                      <Progress 
-                        percent={Math.round((count / userStats.totalUsers) * 100)} 
-                        size="small" 
-                        strokeColor={role === 'admin' ? '#722ed1' : role === 'manager' ? '#fa8c16' : role === 'pharmacist' ? '#1890ff' : '#52c41a'}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} lg={12}>
-            <Card title="Nhân viên gần đây" extra={<CalendarOutlined />}>
-              <List
-                dataSource={userStats.recentUsers || []}
-                renderItem={(item) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      avatar={<Avatar icon={<UserOutlined />} />}
-                      title={item.name}
-                      description={
-                        <Space>
-                          <Tag color={getRoleInfo(item.role).color}>{getRoleInfo(item.role).name}</Tag>
-                          <Text type="secondary">
-                            {item.lastLogin ? new Date(item.lastLogin).toLocaleDateString('vi-VN') : 'Chưa đăng nhập'}
-                          </Text>
-                        </Space>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* Charts and Recent Orders */}
-      <Row gutter={[16, 16]}>
-        {permissions.canReadReports() && stats?.chart?.daily && (
-          <Col xs={24} lg={16}>
-            <Card 
-              title={<><BarChartOutlined /> Doanh số bán hàng tháng này</>}
-              extra={
-                <Button type="link" icon={<LinkOutlined />} onClick={() => navigate('/admin/reports')}>
-                  Xem báo cáo
-                </Button>
-              }
-            >
-              <DashboardChart data={stats.chart.daily} />
-            </Card>
-          </Col>
-        )}
-        
-        {permissions.canReadOrders() && recentOrders.length > 0 && (
-          <Col xs={24} lg={permissions.canReadReports() && stats?.chart?.daily ? 8 : 24}>
-            <Card 
-              title={<><ShoppingCartOutlined /> Đơn hàng gần đây</>}
-              extra={
-                <Button type="link" icon={<LinkOutlined />} onClick={() => navigate('/admin/orders')}>
-                  Xem tất cả
-                </Button>
-              }
-            >
-              <List
-                dataSource={recentOrders}
-                renderItem={(order) => {
-                  const statusColors = {
-                    pending: 'orange',
-                    processing: 'blue',
-                    shipping: 'cyan',
-                    completed: 'green',
-                    cancelled: 'red'
-                  };
-                  const statusNames = {
-                    pending: 'Chờ xử lý',
-                    processing: 'Đang xử lý',
-                    shipping: 'Đang giao',
-                    completed: 'Hoàn thành',
-                    cancelled: 'Đã hủy'
-                  };
-                  return (
-                    <List.Item 
-                      style={{ cursor: 'pointer', padding: '12px' }}
-                      onClick={() => navigate(`/admin/orders/${order._id}`)}
-                    >
-                      <List.Item.Meta
-                        avatar={<Avatar icon={<FileTextOutlined />} style={{ backgroundColor: statusColors[order.status] || 'gray' }} />}
-                        title={
-                          <Space>
-                            <Text strong>#{order.code || order._id.slice(-6)}</Text>
-                            <Tag color={statusColors[order.status]}>{statusNames[order.status] || order.status}</Tag>
-                          </Space>
-                        }
-                        description={
-                          <Space direction="vertical" size={2}>
-                            <Text type="secondary" style={{ fontSize: '12px' }}>
-                              {order.customer?.name || order.shippingAddress?.name || 'Khách hàng'}
-                            </Text>
-                            <Text strong style={{ color: '#52c41a' }}>
-                              {formatMoney(order.totals?.grand || 0)}
-                            </Text>
-                            <Text type="secondary" style={{ fontSize: '11px' }}>
-                              {new Date(order.createdAt).toLocaleString('vi-VN')}
-                            </Text>
-                          </Space>
-                        }
-                      />
-                    </List.Item>
-                  );
-                }}
+                prefix={<TeamOutlined style={{ color: '#722ed1', fontSize: 16 }} />}
+                valueStyle={{ color: '#722ed1', fontSize: '20px' }}
               />
             </Card>
           </Col>
         )}
-      </Row>
 
-      {/* Recent Activities */}
-      {stats?.activities && stats.activities.length > 0 && (
-        <Card title="Hoạt động gần đây" style={{ marginTop: '24px' }}>
-          <List
-            dataSource={stats.activities}
-            renderItem={(activity) => (
-              <List.Item>
-                <List.Item.Meta
-                  avatar={<Avatar icon={<EditOutlined />} />}
-                  title={activity.action}
-                  description={new Date(activity.createdAt).toLocaleString('vi-VN')}
+        {(permissions.canReadOrders() || permissions.canReadReports()) && (
+          <>
+            <Col xs={12} sm={8} lg={4}>
+              <Card size="small" hoverable>
+                <Statistic
+                  title={<Text style={{ fontSize: 11 }}>Doanh thu tháng</Text>}
+                  value={monthRevenue / 1000000}
+                  prefix={<DollarOutlined style={{ color: '#52c41a', fontSize: 16 }} />}
+                  suffix="M"
+                  valueStyle={{ color: '#52c41a', fontSize: '20px' }}
+                  precision={1}
                 />
-              </List.Item>
-            )}
-          />
-        </Card>
+              </Card>
+            </Col>
+            <Col xs={12} sm={8} lg={4}>
+              <Card size="small" hoverable>
+                <Statistic
+                  title={<Text style={{ fontSize: 11 }}>Đơn hôm nay</Text>}
+                  value={todayInvoices}
+                  prefix={<ShoppingCartOutlined style={{ color: '#1890ff', fontSize: 16 }} />}
+                  valueStyle={{ color: '#1890ff', fontSize: '20px' }}
+                />
+              </Card>
+            </Col>
+          </>
+        )}
+      </Row>
+
+      {/* Order Status - Compact */}
+      {permissions.canReadOrders() && orderStats && (
+        <Row gutter={[12, 12]} style={{ marginBottom: '16px' }}>
+          <Col xs={12} sm={6}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/orders?status=pending')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title={<Text style={{ fontSize: 11 }}>Chờ xử lý</Text>}
+                value={orderStats.statusBreakdown?.find(s => s._id === 'pending')?.count || 0}
+                prefix={<ClockCircleOutlined style={{ color: '#faad14', fontSize: 16 }} />}
+                valueStyle={{ color: '#faad14', fontSize: '18px' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/orders?status=processing')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title={<Text style={{ fontSize: 11 }}>Đang xử lý</Text>}
+                value={orderStats.statusBreakdown?.find(s => s._id === 'processing')?.count || 0}
+                prefix={<ShoppingOutlined style={{ color: '#1890ff', fontSize: 16 }} />}
+                valueStyle={{ color: '#1890ff', fontSize: '18px' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/orders?status=shipping')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title={<Text style={{ fontSize: 11 }}>Đang giao</Text>}
+                value={orderStats.statusBreakdown?.find(s => s._id === 'shipping')?.count || 0}
+                prefix={<CarOutlined style={{ color: '#13c2c2', fontSize: 16 }} />}
+                valueStyle={{ color: '#13c2c2', fontSize: '18px' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/orders?status=completed')} style={{ cursor: 'pointer' }}>
+              <Statistic
+                title={<Text style={{ fontSize: 11 }}>Hoàn thành</Text>}
+                value={orderStats.statusBreakdown?.find(s => s._id === 'completed')?.count || 0}
+                prefix={<CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16 }} />}
+                valueStyle={{ color: '#52c41a', fontSize: '18px' }}
+              />
+            </Card>
+          </Col>
+        </Row>
       )}
+
+      {/* Charts Row */}
+      <Row gutter={[12, 12]}>
+        {/* 7-Day Revenue Chart */}
+        <Col xs={24} lg={12}>
+          <Card
+            size="small"
+            title={<><LineChartOutlined /> Doanh thu 7 ngày gần nhất</>}
+            extra={<Text type="secondary" style={{ fontSize: 11 }}>VNĐ</Text>}
+          >
+            <Line7DaysChart data={last7DaysData} />
+          </Card>
+        </Col>
+
+        {/* Top Products Chart */}
+        <Col xs={24} lg={12}>
+          <Card
+            size="small"
+            title={<><BarChartOutlined /> Top 5 sản phẩm bán chạy</>}
+            extra={<Text type="secondary" style={{ fontSize: 11 }}>Số lượng</Text>}
+          >
+            <HorizontalBarChart data={topProductsData} />
+          </Card>
+        </Col>
+
+        {/* Order Distribution Pie Chart */}
+        {permissions.canReadOrders() && orderStats && (
+          <Col xs={24} lg={12}>
+            <Card
+              size="small"
+              title={<><PieChartOutlined /> Phân bố đơn hàng</>}
+            >
+              <SimplePieChart data={orderStats.statusBreakdown || []} />
+            </Card>
+          </Col>
+        )}
+
+        {/* Quick Stats Summary */}
+        <Col xs={24} lg={12}>
+          <Card size="small" title="Tổng quan nhanh">
+            <Row gutter={[8, 8]}>
+              <Col span={12}>
+                <div style={{ padding: '8px', background: '#f0f9ff', borderRadius: '6px' }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>Tổng doanh thu tháng</Text>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
+                    {formatMoney(monthRevenue)}
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ padding: '8px', background: '#f6ffed', borderRadius: '6px' }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>Doanh thu hôm nay</Text>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#52c41a' }}>
+                    {formatMoney(todayRevenue)}
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ padding: '8px', background: '#fff7e6', borderRadius: '6px' }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>Đơn hàng tháng</Text>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fa8c16' }}>
+                    {orderStats?.totalOrders || 0}
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ padding: '8px', background: '#fff1f0', borderRadius: '6px' }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>Tồn kho thấp</Text>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}>
+                    {lowStock} SP
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 }
 
-function DashboardChart({ data }) {
-  // Enhanced bar chart using Ant Design components
-  const max = Math.max(1, ...data.map((d) => d.total));
-  
+// Line Chart Component for 7 Days Revenue
+function Line7DaysChart({ data }) {
+  // Safety check for empty or invalid data
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center', color: '#8c8c8c' }}>
+        <Text type="secondary">Chưa có dữ liệu doanh thu</Text>
+      </div>
+    );
+  }
+
+  const max = Math.max(...data.map(d => d.revenue));
+  const min = Math.min(...data.map(d => d.revenue));
+  const range = max - min || 1;
+
   return (
-    <div style={{ marginTop: 12 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 200, padding: '16px 0' }}>
-        {data.map((d) => (
-          <Tooltip key={d.day} title={`Ngày ${d.day}: ${d.total.toLocaleString("vi-VN")} VNĐ`}>
-            <div 
-              style={{ 
-                background: "linear-gradient(to top, #52c41a, #73d13d)", 
-                width: 20, 
-                height: Math.round((d.total / max) * 180),
-                borderRadius: '4px 4px 0 0',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'scale(1.05)';
-                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'scale(1)';
-                e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-              }}
+    <div style={{ padding: '8px 0' }}>
+      <div style={{ height: 160, position: 'relative' }}>
+        <svg width="100%" height="100%" viewBox="0 0 400 160" preserveAspectRatio="none">
+          {/* Grid lines */}
+          {[0, 1, 2, 3, 4].map(i => (
+            <line
+              key={i}
+              x1="0"
+              y1={i * 40}
+              x2="400"
+              y2={i * 40}
+              stroke="#f0f0f0"
+              strokeWidth="1"
             />
-          </Tooltip>
+          ))}
+
+          {/* Area fill */}
+          <path
+            d={`M 0 160 ${data.map((d, i) => {
+              const x = (i / (data.length - 1)) * 400;
+              const y = 160 - ((d.revenue - min) / range) * 140;
+              return `L ${x} ${y}`;
+            }).join(' ')} L 400 160 Z`}
+            fill="url(#gradient)"
+            opacity="0.3"
+          />
+
+          {/* Line */}
+          <polyline
+            points={data.map((d, i) => {
+              const x = (i / (data.length - 1)) * 400;
+              const y = 160 - ((d.revenue - min) / range) * 140;
+              return `${x},${y}`;
+            }).join(' ')}
+            fill="none"
+            stroke="#1890ff"
+            strokeWidth="2"
+          />
+
+          {/* Data points */}
+          {data.map((d, i) => {
+            const x = (i / (data.length - 1)) * 400;
+            const y = 160 - ((d.revenue - min) / range) * 140;
+            return (
+              <circle
+                key={i}
+                cx={x}
+                cy={y}
+                r="4"
+                fill="#1890ff"
+                style={{ cursor: 'pointer' }}
+              >
+                <title>{`${d.day}/12: ${(d.revenue / 1000000).toFixed(1)}M VNĐ`}</title>
+              </circle>
+            );
+          })}
+
+          {/* Gradient definition */}
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1890ff" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#1890ff" stopOpacity="0.1" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* X-axis labels */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: 11, color: '#8c8c8c' }}>
+        {data.map(d => (
+          <span key={d.date}>{d.day}/12</span>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8, fontSize: 12, color: "#8c8c8c", marginTop: 12, justifyContent: 'space-between' }}>
-        {data.map((d) => (
-          <div key={d.day} style={{ width: 20, textAlign: "center", fontWeight: 500 }}>
-            {d.day}
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop: 16, padding: '12px', backgroundColor: '#f6ffed', borderRadius: '6px', border: '1px solid #b7eb8f' }}>
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          💡 Tổng doanh số: {data.reduce((sum, d) => sum + d.total, 0).toLocaleString("vi-VN")} VNĐ
+
+      {/* Summary */}
+      <div style={{ marginTop: '12px', padding: '8px', backgroundColor: '#e6f7ff', borderRadius: '4px', border: '1px solid #91d5ff' }}>
+        <Text style={{ fontSize: '11px', color: '#0050b3' }}>
+          💰 Tổng: {(data.reduce((sum, d) => sum + d.revenue, 0) / 1000000).toFixed(1)}M VNĐ |
+          📊 TB: {(data.reduce((sum, d) => sum + d.revenue, 0) / data.length / 1000000).toFixed(1)}M VNĐ/ngày
         </Text>
       </div>
     </div>
   );
 }
 
+// Horizontal Bar Chart for Top Products
+function HorizontalBarChart({ data }) {
+  // Safety check for empty or invalid data
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center', color: '#8c8c8c' }}>
+        <Text type="secondary">Chưa có dữ liệu sản phẩm</Text>
+      </div>
+    );
+  }
 
+  const max = Math.max(...data.map(d => d.sales));
+
+  return (
+    <div style={{ padding: '8px 0' }}>
+      {data.map((item, i) => (
+        <div key={i} style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <Text style={{ fontSize: 12 }} ellipsis={{ tooltip: item.name }}>{item.name}</Text>
+            <Text strong style={{ fontSize: 12, color: '#52c41a' }}>{item.sales}</Text>
+          </div>
+          <Progress
+            percent={(item.sales / max) * 100}
+            showInfo={false}
+            strokeColor={{
+              '0%': '#52c41a',
+              '100%': '#73d13d',
+            }}
+            size="small"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Simple Pie Chart for Order Distribution
+function SimplePieChart({ data }) {
+  const total = data.reduce((sum, d) => sum + d.count, 0);
+  const colors = {
+    pending: '#faad14',
+    processing: '#1890ff',
+    shipping: '#13c2c2',
+    completed: '#52c41a',
+    cancelled: '#ff4d4f'
+  };
+  const names = {
+    pending: 'Chờ xử lý',
+    processing: 'Đang xử lý',
+    shipping: 'Đang giao',
+    completed: 'Hoàn thành',
+    cancelled: 'Đã hủy'
+  };
+
+  let currentAngle = 0;
+  const segments = data.map(item => {
+    const percentage = (item.count / total) * 100;
+    const angle = (percentage / 100) * 360;
+    const segment = {
+      ...item,
+      percentage,
+      startAngle: currentAngle,
+      endAngle: currentAngle + angle,
+      color: colors[item._id] || '#d9d9d9'
+    };
+    currentAngle += angle;
+    return segment;
+  });
+
+  return (
+    <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '8px 0' }}>
+      {/* Pie chart */}
+      <div style={{ position: 'relative', width: 120, height: 120 }}>
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          {segments.map((seg, i) => {
+            const startAngle = (seg.startAngle - 90) * (Math.PI / 180);
+            const endAngle = (seg.endAngle - 90) * (Math.PI / 180);
+            const largeArc = seg.percentage > 50 ? 1 : 0;
+
+            const x1 = 60 + 50 * Math.cos(startAngle);
+            const y1 = 60 + 50 * Math.sin(startAngle);
+            const x2 = 60 + 50 * Math.cos(endAngle);
+            const y2 = 60 + 50 * Math.sin(endAngle);
+
+            return (
+              <path
+                key={i}
+                d={`M 60 60 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                fill={seg.color}
+                stroke="#fff"
+                strokeWidth="2"
+                style={{ cursor: 'pointer' }}
+              >
+                <title>{`${names[seg._id]}: ${seg.count} (${seg.percentage.toFixed(1)}%)`}</title>
+              </path>
+            );
+          })}
+          {/* Center circle */}
+          <circle cx="60" cy="60" r="25" fill="white" />
+          <text x="60" y="55" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#262626">{total}</text>
+          <text x="60" y="70" textAnchor="middle" fontSize="10" fill="#8c8c8c">Đơn hàng</text>
+        </svg>
+      </div>
+
+      {/* Legend */}
+      <div style={{ flex: 1 }}>
+        {data.map(item => (
+          <div key={item._id} style={{ display: 'flex', alignItems: 'center', marginBottom: 8, justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{
+                width: 12,
+                height: 12,
+                background: colors[item._id],
+                marginRight: 8,
+                borderRadius: '2px'
+              }} />
+              <Text style={{ fontSize: 12 }}>{names[item._id]}</Text>
+            </div>
+            <Text strong style={{ fontSize: 12 }}>{item.count}</Text>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -30,13 +30,20 @@ export async function getAdminStats(req, res, next) {
     const sMonth = startOfMonth(now);
     const eMonth = endOfMonth(now);
 
+    // Calculate 7 days ago
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    const s7Days = startOfDay(sevenDaysAgo);
+
     const [
       todayOrders, 
       monthOrders, 
       dailySales,
       totalProducts,
       totalCategories,
-      lowStockProducts
+      lowStockProducts,
+      last7DaysSales,
+      topProducts
     ] = await Promise.all([
       Order.aggregate([
         { $match: { status: "completed", createdAt: { $gte: sToday, $lte: eToday } } },
@@ -54,13 +61,94 @@ export async function getAdminStats(req, res, next) {
       ]),
       Product.countDocuments({ isActive: true }),
       Category.countDocuments({ isActive: true }),
-      Product.countDocuments({ isActive: true, stock: { $lte: 10 } }) // Low stock threshold
+      Product.countDocuments({ isActive: true, totalStock: { $lte: 10 } }), // Low stock threshold
+      // Last 7 days revenue
+      Order.aggregate([
+        { $match: { status: "completed", createdAt: { $gte: s7Days, $lte: eToday } } },
+        { 
+          $group: { 
+            _id: { 
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+              day: { $dayOfMonth: "$createdAt" }
+            }, 
+            revenue: { $sum: "$totals.grand" },
+            orders: { $sum: 1 }
+          } 
+        },
+        { 
+          $project: { 
+            date: {
+              $dateFromParts: {
+                year: "$_id.year",
+                month: "$_id.month",
+                day: "$_id.day"
+              }
+            },
+            revenue: 1,
+            orders: 1,
+            _id: 0
+          }
+        },
+        { $sort: { date: 1 } }
+      ]),
+      // Top 5 products by sales
+      Order.aggregate([
+        { $match: { status: "completed", createdAt: { $gte: sMonth, $lte: eMonth } } },
+        { $unwind: "$items" },
+        { 
+          $group: { 
+            _id: "$items.productId", 
+            sales: { $sum: "$items.quantity" },
+            revenue: { $sum: { $multiply: ["$items.quantity", "$items.priceSnapshot"] } }
+          } 
+        },
+        { $sort: { sales: -1 } },
+        { $limit: 5 },
+        { 
+          $lookup: {
+            from: "products",
+            localField: "_id",
+            foreignField: "_id",
+            as: "product"
+          }
+        },
+        { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            name: { $ifNull: ["$product.name", "Sản phẩm đã xóa"] },
+            sales: 1,
+            revenue: 1
+          }
+        }
+      ])
     ]);
 
     // Build an array for all days in month
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const dayToValue = new Map(dailySales.map((d) => [d.day, d.total]));
     const daily = Array.from({ length: daysInMonth }, (_, i) => ({ day: i + 1, total: Number(dayToValue.get(i + 1) || 0) }));
+
+    // Build array for last 7 days (fill missing days with 0)
+    const last7DaysData = [];
+    const last7DaysArray = Array.isArray(last7DaysSales) ? last7DaysSales : [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const existing = last7DaysArray.find(d => {
+        const dStr = new Date(d.date).toISOString().split('T')[0];
+        return dStr === dateStr;
+      });
+      
+      last7DaysData.push({
+        date: dateStr,
+        day: date.getDate(),
+        revenue: Number(existing?.revenue || 0),
+        orders: Number(existing?.orders || 0)
+      });
+    }
 
     res.json({
       today: {
@@ -74,6 +162,12 @@ export async function getAdminStats(req, res, next) {
       chart: {
         daily
       },
+      last7Days: last7DaysData,
+      topProducts: topProducts.map(p => ({
+        name: p.name,
+        sales: Number(p.sales),
+        revenue: Number(p.revenue)
+      })),
       products: {
         total: totalProducts
       },
@@ -86,6 +180,8 @@ export async function getAdminStats(req, res, next) {
       activities: [] // Placeholder for future activities
     });
   } catch (err) {
+    console.error('[AdminStats Error]', err);
+    console.error('[AdminStats Error Stack]', err.stack);
     next(err);
   }
 }

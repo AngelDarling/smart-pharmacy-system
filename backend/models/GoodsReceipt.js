@@ -15,6 +15,11 @@ const goodsReceiptSchema = new mongoose.Schema({
     ref: 'Supplier',
     required: true
   },
+  batchNumber: {
+    type: String,
+    required: true,
+    maxlength: 100
+  },
   items: [{
     productId: {
       type: mongoose.Schema.Types.ObjectId,

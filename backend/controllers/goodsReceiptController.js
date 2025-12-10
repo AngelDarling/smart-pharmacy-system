@@ -2,6 +2,7 @@ import GoodsReceipt from '../models/GoodsReceipt.js';
 import InventoryTransaction from '../models/InventoryTransaction.js';
 import Product from '../models/Product.js';
 import Supplier from '../models/Supplier.js';
+import ProductBatch from '../models/ProductBatch.js';
 import { z } from 'zod';
 
 /**
@@ -13,12 +14,11 @@ import { z } from 'zod';
 const goodsReceiptSchema = z.object({
   code: z.string().min(1, 'Mã phiếu không được để trống').max(50, 'Mã phiếu không được quá 50 ký tự'),
   supplierId: z.string().min(1, 'Nhà cung cấp không được để trống'),
+  batchNumber: z.string().min(1, 'Số lô không được để trống').max(100, 'Số lô không được quá 100 ký tự'),
   items: z.array(z.object({
     productId: z.string().min(1, 'Sản phẩm không được để trống'),
-    variantId: z.string().optional(),
     quantity: z.number().min(1, 'Số lượng phải lớn hơn 0'),
     unitCost: z.number().min(0, 'Đơn giá không được âm'),
-    batchNumber: z.string().optional(),
     expiryDate: z.string().optional()
   })).min(1, 'Phải có ít nhất 1 sản phẩm'),
   discount: z.number().min(0, 'Giảm giá không được âm').optional(),
@@ -63,15 +63,25 @@ export async function createGoodsReceipt(req, res) {
     }
 
     // Tạo phiếu nhập
+    const items = parsed.items.map(item => ({
+      ...item,
+      totalCost: item.unitCost * item.quantity,
+      expiryDate: item.expiryDate ? new Date(item.expiryDate) : undefined
+    }));
+
+    // Tính totalAmount và finalAmount
+    const totalAmount = items.reduce((sum, item) => sum + item.totalCost, 0);
+    const discount = parsed.discount || 0;
+    const tax = parsed.tax || 0;
+    const finalAmount = totalAmount - discount + tax;
+
     const goodsReceipt = new GoodsReceipt({
       ...parsed,
       createdBy: userId,
       expectedDate: parsed.expectedDate ? new Date(parsed.expectedDate) : undefined,
-      items: parsed.items.map(item => ({
-        ...item,
-        totalCost: item.unitCost * item.quantity,
-        expiryDate: item.expiryDate ? new Date(item.expiryDate) : undefined
-      }))
+      items,
+      totalAmount,
+      finalAmount
     });
 
     await goodsReceipt.save();
@@ -222,7 +232,7 @@ export async function updateGoodsReceipt(req, res) {
 export async function approveGoodsReceipt(req, res) {
   try {
     const { id } = req.params;
-    const { note } = req.body;
+    const { note } = req.body || {}; // Handle undefined req.body
     const userId = req.user.id;
 
     const goodsReceipt = await GoodsReceipt.findById(id);
@@ -230,8 +240,9 @@ export async function approveGoodsReceipt(req, res) {
       return res.status(404).json({ message: 'Không tìm thấy phiếu nhập' });
     }
 
-    if (goodsReceipt.status !== 'pending') {
-      return res.status(400).json({ message: 'Chỉ có thể duyệt phiếu nhập ở trạng thái chờ duyệt' });
+    // Chỉ cho phép duyệt phiếu ở trạng thái draft hoặc pending
+    if (goodsReceipt.status !== 'pending' && goodsReceipt.status !== 'draft') {
+      return res.status(400).json({ message: 'Chỉ có thể duyệt phiếu nhập ở trạng thái nháp hoặc chờ duyệt' });
     }
 
     // Cập nhật trạng thái
@@ -240,16 +251,32 @@ export async function approveGoodsReceipt(req, res) {
     goodsReceipt.approvedAt = new Date();
     goodsReceipt.receivedDate = new Date();
 
-    // Tạo giao dịch tồn kho cho từng item
+    // Tạo giao dịch tồn kho và ProductBatch cho từng item
     for (const item of goodsReceipt.items) {
+      // 1. Tạo ProductBatch
+      const productBatch = new ProductBatch({
+        productId: item.productId,
+        batchNumber: goodsReceipt.batchNumber, // Số lô chung từ phiếu nhập
+        goodsReceiptId: goodsReceipt._id,
+        supplierId: goodsReceipt.supplierId,
+        quantity: item.quantity,
+        remainingQuantity: item.quantity,
+        unitCost: item.unitCost,
+        importDate: goodsReceipt.receivedDate,
+        expiryDate: item.expiryDate ? new Date(item.expiryDate) : undefined,
+        status: 'active',
+        createdBy: userId
+      });
+      await productBatch.save();
+
+      // 2. Tạo InventoryTransaction
       const transaction = new InventoryTransaction({
         productId: item.productId,
-        variantId: item.variantId,
         type: 'import',
         quantity: item.quantity,
         unitCost: item.unitCost,
         totalCost: item.totalCost,
-        batchNumber: item.batchNumber,
+        batchNumber: goodsReceipt.batchNumber,
         expiryDate: item.expiryDate,
         supplierId: goodsReceipt.supplierId,
         goodsReceiptId: goodsReceipt._id,
@@ -258,8 +285,13 @@ export async function approveGoodsReceipt(req, res) {
         performedBy: userId,
         warehouse: 'main'
       });
-
       await transaction.save();
+
+      // 3. Cập nhật totalStock của Product
+      await Product.findByIdAndUpdate(
+        item.productId,
+        { $inc: { totalStock: item.quantity } }
+      );
     }
 
     await goodsReceipt.save();
