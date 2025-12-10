@@ -1,14 +1,16 @@
 /**
  * Models Index - Tổng hợp tất cả các models
  * Export tất cả schemas và models để sử dụng trong ứng dụng
+ * Updated: 10/12/2025 - Exported all 32 models
  */
 
-// Reference Schemas
+// ==================== REFERENCE SCHEMAS ====================
 import Category from './Category.js';
 import Brand from './Brand.js';
 import Attribute from './Attribute.js';
 import ActiveSubstance from './ActiveSubstance.js';
 
+// ==================== PRODUCT SCHEMAS ====================
 // Product Base Schema
 import Product from './Product.js';
 
@@ -18,52 +20,139 @@ import Cosmeceutical from './Cosmeceutical.js';
 import MedicalDevice from './MedicalDevice.js';
 import FunctionalFood from './FunctionalFood.js';
 
-// Core Business Schemas
-import Supplier from './Supplier.js';
-import User from './User.js';
-import Order from './Order.js';
-import Cart from './Cart.js';
+// Product Related
+import ProductBatch from './ProductBatch.js';
+import ProductSalesDaily from './ProductSalesDaily.js';
 
-// Export tất cả models
+// ==================== USER MANAGEMENT ====================
+import User from './User.js';
+import Customer from './Customer.js';
+import Staff from './Staff.js';
+
+// ==================== ORDER & PAYMENT ====================
+import Cart from './Cart.js';
+import Order from './Order.js';
+import Payment from './Payment.js';
+import Shipment from './Shipment.js';
+
+// ==================== INVENTORY MANAGEMENT ====================
+import GoodsReceipt from './GoodsReceipt.js';
+import InventoryTransaction from './InventoryTransaction.js';
+import InventoryAlert from './InventoryAlert.js';
+
+// ==================== MARKETING & ENGAGEMENT ====================
+import Coupon from './Coupon.js';
+import Review from './Review.js';
+import HealthNews from './HealthNews.js';
+import HealthNewsCategory from './HealthNewsCategory.js';
+
+// ==================== HEALTH SERVICES ====================
+import HealthCheck from './HealthCheck.js';
+import HealthCheckResult from './HealthCheckResult.js';
+import Question from './Question.js';
+import AnswerOption from './AnswerOption.js';
+
+// ==================== SYSTEM ====================
+import Supplier from './Supplier.js';
+import Settings from './Settings.js';
+
+// ==================== EXPORTS ====================
+// Named exports - Import như: import { Product, Order } from './models/index.js'
 export {
-  // Reference Schemas
+  // Reference Schemas (4)
   Category,
   Brand,
   Attribute,
   ActiveSubstance,
   
-  // Product Schemas
+  // Product Schemas (7)
   Product,
   Drug,
   Cosmeceutical,
   MedicalDevice,
   FunctionalFood,
+  ProductBatch,
+  ProductSalesDaily,
   
-  // Core Business Schemas
-  Supplier,
+  // User Management (3)
   User,
+  Customer,
+  Staff,
+  
+  // Order & Payment (4)
+  Cart,
   Order,
-  Cart
+  Payment,
+  Shipment,
+  
+  // Inventory Management (3)
+  GoodsReceipt,
+  InventoryTransaction,
+  InventoryAlert,
+  
+  // Marketing & Engagement (4)
+  Coupon,
+  Review,
+  HealthNews,
+  HealthNewsCategory,
+  
+  // Health Services (4)
+  HealthCheck,
+  HealthCheckResult,
+  Question,
+  AnswerOption,
+  
+  // System (2)
+  Supplier,
+  Settings
 };
 
-// Export mặc định
+// Default export - Import như: import models from './models/index.js'
 export default {
-  // Reference Schemas
+  // Reference Schemas (4)
   Category,
   Brand,
   Attribute,
   ActiveSubstance,
   
-  // Product Schemas
+  // Product Schemas (7)
   Product,
   Drug,
   Cosmeceutical,
   MedicalDevice,
   FunctionalFood,
+  ProductBatch,
+  ProductSalesDaily,
   
-  // Core Business Schemas
-  Supplier,
+  // User Management (3)
   User,
+  Customer,
+  Staff,
+  
+  // Order & Payment (4)
+  Cart,
   Order,
-  Cart
+  Payment,
+  Shipment,
+  
+  // Inventory Management (3)
+  GoodsReceipt,
+  InventoryTransaction,
+  InventoryAlert,
+  
+  // Marketing & Engagement (4)
+  Coupon,
+  Review,
+  HealthNews,
+  HealthNewsCategory,
+  
+  // Health Services (4)
+  HealthCheck,
+  HealthCheckResult,
+  Question,
+  AnswerOption,
+  
+  // System (2)
+  Supplier,
+  Settings
 };

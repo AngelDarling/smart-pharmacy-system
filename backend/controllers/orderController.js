@@ -1,11 +1,13 @@
-import Order from "../models/Order.js";
-import Shipment from "../models/Shipment.js";
-import Product from "../models/Product.js";
-import ProductBatch from "../models/ProductBatch.js";
-import InventoryTransaction from "../models/InventoryTransaction.js";
-import ProductSalesDaily from "../models/ProductSalesDaily.js";
-import Coupon from "../models/Coupon.js";
-import Payment from "../models/Payment.js";
+import { 
+  Order, 
+  Shipment, 
+  Product, 
+  ProductBatch, 
+  InventoryTransaction, 
+  ProductSalesDaily, 
+  Coupon, 
+  Payment 
+} from "../models/index.js";
 import { allocateStockFromBatches } from "./productBatchController.js";
 import mongoose from "mongoose";
 

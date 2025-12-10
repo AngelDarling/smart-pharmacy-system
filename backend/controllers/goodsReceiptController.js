@@ -1,8 +1,10 @@
-import GoodsReceipt from '../models/GoodsReceipt.js';
-import InventoryTransaction from '../models/InventoryTransaction.js';
-import Product from '../models/Product.js';
-import Supplier from '../models/Supplier.js';
-import ProductBatch from '../models/ProductBatch.js';
+import { 
+  GoodsReceipt, 
+  InventoryTransaction, 
+  Product, 
+  Supplier, 
+  ProductBatch 
+} from '../models/index.js';
 import { z } from 'zod';
 
 /**

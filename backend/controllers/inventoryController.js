@@ -1,7 +1,5 @@
 import mongoose from 'mongoose';
-import InventoryTransaction from '../models/InventoryTransaction.js';
-import InventoryAlert from '../models/InventoryAlert.js';
-import Product from '../models/Product.js';
+import { InventoryTransaction, InventoryAlert, Product } from '../models/index.js';
 import { z } from 'zod';
 
 /**

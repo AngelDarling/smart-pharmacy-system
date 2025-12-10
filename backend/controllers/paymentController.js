@@ -1,9 +1,6 @@
-import Payment from '../models/Payment.js';
-import Order from '../models/Order.js';
+import { Payment, Order, Product, InventoryTransaction } from '../models/index.js';
 import { createPaymentRequest, verifySignature, checkTransactionStatus } from '../utils/momo.js';
 import vnpay from '../utils/vnpay.js';
-import Product from '../models/Product.js';
-import InventoryTransaction from '../models/InventoryTransaction.js';
 
 /**
  * Create MoMo payment

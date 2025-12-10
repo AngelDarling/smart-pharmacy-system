@@ -1,6 +1,5 @@
 // healthNewsController.js
-import HealthNews from '../models/HealthNews.js';
-import HealthNewsCategory from '../models/HealthNewsCategory.js';
+import { HealthNews, HealthNewsCategory } from '../models/index.js';
 
 // Get all news (public) - WITHOUT content field to reduce payload
 export const getAll = async (req, res) => {

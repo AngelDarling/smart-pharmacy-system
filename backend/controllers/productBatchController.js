@@ -1,5 +1,4 @@
-import ProductBatch from '../models/ProductBatch.js';
-import Product from '../models/Product.js';
+import { ProductBatch, Product } from '../models/index.js';
 
 /**
  * Product Batch Controller

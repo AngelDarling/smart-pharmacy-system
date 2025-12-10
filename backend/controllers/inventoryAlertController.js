@@ -1,5 +1,4 @@
-import InventoryAlert from '../models/InventoryAlert.js';
-import Product from '../models/Product.js';
+import { InventoryAlert, Product } from '../models/index.js';
 import { z } from 'zod';
 
 /**
