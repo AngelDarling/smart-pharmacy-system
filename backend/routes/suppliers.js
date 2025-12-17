@@ -4,10 +4,13 @@ import { create, list, remove, update } from "../controllers/supplierController.
 
 const router = Router();
 
-router.get("/", authRequired, requireRole("admin"), list);
-router.post("/", authRequired, requireRole("admin"), create);
-router.put("/:id", authRequired, requireRole("admin"), update);
-router.delete("/:id", authRequired, requireRole("admin"), remove);
+// View - All staff
+router.get("/", authRequired, requireRole("admin", "manager", "pharmacist", "staff"), list);
+
+// Create/Edit/Delete - Admin, Manager only
+router.post("/", authRequired, requireRole("admin", "manager"), create);
+router.put("/:id", authRequired, requireRole("admin", "manager"), update);
+router.delete("/:id", authRequired, requireRole("admin", "manager"), remove);
 
 export default router;
 

@@ -21,7 +21,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
-  EyeOutlined
+  EyeOutlined,
+  StarOutlined
 } from '@ant-design/icons';
 import api from '../../../api/client';
 import Swal from 'sweetalert2';
@@ -57,7 +58,7 @@ const ReviewManagement = () => {
         page: page.toString(),
         limit: pagination.pageSize.toString()
       });
-      
+
       if (filters.status) params.append('status', filters.status);
       if (filters.rating) params.append('rating', filters.rating);
       if (filters.q) params.append('q', filters.q);
@@ -106,13 +107,13 @@ const ReviewManagement = () => {
       await api.put(`/reviews/admin/${selectedReview._id}`, {
         adminReply: values.adminReply
       });
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Thành công',
         text: 'Đã phản hồi đánh giá thành công'
       });
-      
+
       setReplyModalVisible(false);
       replyForm.resetFields();
       fetchReviews(pagination.current);
@@ -358,10 +359,33 @@ const ReviewManagement = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý đánh giá</h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<StarOutlined />}
+            style={{
+              backgroundColor: '#faad14',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý đánh giá sản phẩm
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý và phản hồi đánh giá từ khách hàng
+            </div>
+          </div>
+        </div>
       </div>
-      
+
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <Select

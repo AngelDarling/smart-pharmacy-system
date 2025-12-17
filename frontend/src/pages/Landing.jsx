@@ -11,7 +11,7 @@ import FeaturedCategoriesSection from "../components/landing/FeaturedCategoriesS
 import FavoriteBrandsSection from "../components/landing/FavoriteBrandsSection.jsx";
 import TodayFeaturedSection from "../components/landing/TodayFeaturedSection.jsx";
 import HealthCheckSection from "../components/landing/HealthCheckSection.jsx";
-import DiseaseLookupSection from "../components/landing/DiseaseLookupSection.jsx";
+
 import HealthNewsSection from "../components/landing/HealthNewsSection.jsx";
 
 export default function Landing() {
@@ -99,7 +99,7 @@ export default function Landing() {
         onBuyClick={handleBuyClick}
       />
       <HealthCheckSection healthChecks={healthChecks} />
-      <DiseaseLookupSection />
+
       <HealthNewsSection />
       {selectedProduct && (
         <SelectPurchaseModal

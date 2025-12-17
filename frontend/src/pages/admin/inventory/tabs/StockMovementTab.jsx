@@ -40,9 +40,9 @@ export default function StockMovementTab() {
         total: 0
     });
     const [filters, setFilters] = useState({
-        productId: '',
-        type: '',
-        supplierId: '',
+        productId: undefined,
+        type: undefined,
+        supplierId: undefined,
         startDate: null,
         endDate: null
     });

@@ -102,19 +102,44 @@ export default function Products() {
   const isLevel0Category = currentCategory && currentCategory.level === 0;
   const isLevel1Category = currentCategory && currentCategory.level === 1;
 
-  // Load recently viewed products from localStorage
+  // Load recently viewed products from localStorage and validate them
   useEffect(() => {
     const saved = localStorage.getItem('recentlyViewed');
     if (saved) {
       try {
         const savedProducts = JSON.parse(saved);
-        const validProducts = savedProducts.map(p => ({
-          ...p,
-          discount: (p.discount && p.discount > 0) ? p.discount : 0
-        }));
-        setRecentlyViewed(validProducts);
+
+        // Validate products against database
+        const validateProducts = async () => {
+          const validatedProducts = [];
+
+          for (const product of savedProducts) {
+            try {
+              // Check if product still exists
+              const response = await axios.get(`/api/products/slug/${product.slug}`);
+              if (response.data) {
+                // Product exists, add to valid list
+                validatedProducts.push({
+                  ...response.data,
+                  discount: (response.data.discount && response.data.discount > 0) ? response.data.discount : 0
+                });
+              }
+            } catch (error) {
+              // Product doesn't exist (404) or error - skip it
+              console.log(`Product ${product.slug} no longer exists, removing from recently viewed`);
+            }
+          }
+
+          // Update state and localStorage with only valid products
+          setRecentlyViewed(validatedProducts);
+          localStorage.setItem('recentlyViewed', JSON.stringify(validatedProducts));
+        };
+
+        validateProducts();
       } catch (error) {
         console.error('Error parsing recently viewed products:', error);
+        // Clear invalid data
+        localStorage.removeItem('recentlyViewed');
       }
     }
   }, []);

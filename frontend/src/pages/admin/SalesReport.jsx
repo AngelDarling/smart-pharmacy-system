@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../api/client';
-import { Table, Input, Button, Space, Typography, Statistic, Row, Col, message, Select, Card } from 'antd';
+import { Table, Input, Button, Space, Typography, Statistic, Row, Col, message, Select, Card, Avatar } from 'antd';
+import { BarChartOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -77,7 +78,7 @@ export default function SalesReport() {
     setMonth(m);
     if (!m) return;
     const y = dayjs().year();
-    const start = dayjs(`${y}-${String(m).padStart(2,'0')}-01`);
+    const start = dayjs(`${y}-${String(m).padStart(2, '0')}-01`);
     const nf = start.startOf('month').format('YYYY-MM-DD');
     const nt = start.endOf('month').format('YYYY-MM-DD');
     setFrom(nf);
@@ -90,7 +91,7 @@ export default function SalesReport() {
     if (!q) return;
     const y = dayjs().year();
     const startMonth = (q - 1) * 3 + 1;
-    const start = dayjs(`${y}-${String(startMonth).padStart(2,'0')}-01`);
+    const start = dayjs(`${y}-${String(startMonth).padStart(2, '0')}-01`);
     const nf = start.startOf('quarter').format('YYYY-MM-DD');
     const nt = start.endOf('quarter').format('YYYY-MM-DD');
     setFrom(nf);
@@ -114,7 +115,7 @@ export default function SalesReport() {
     },
     {
       title: 'Sản phẩm',
-      dataIndex: ['productId','name'],
+      dataIndex: ['productId', 'name'],
       render: (_, r) => {
         const name = r.productId?.name || '—';
         const slug = r.productId?.slug;
@@ -137,30 +138,55 @@ export default function SalesReport() {
   const summaryCols = [
     { title: 'Nhóm', dataIndex: 'label' },
     { title: 'SL', dataIndex: 'quantity', align: 'right' },
-    { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', render: v => (v||0).toLocaleString('vi-VN') + '₫' },
+    { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', render: v => (v || 0).toLocaleString('vi-VN') + '₫' },
   ];
 
   return (
     <div>
-      <Title level={3}>Báo cáo bán hàng</Title>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<BarChartOutlined />}
+            style={{
+              backgroundColor: '#fa8c16',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Báo cáo bán hàng
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Thống kê doanh thu và sản phẩm bán chạy
+            </div>
+          </div>
+        </div>
+      </div>
       <Space style={{ marginBottom: 16 }} size={12} wrap>
-        <Input type="date" value={from} onChange={(e)=>setFrom(e.target.value)} size={controlSize} style={{ ...controlStyle, width: 170 }} />
-        <Input type="date" value={to} onChange={(e)=>setTo(e.target.value)} size={controlSize} style={{ ...controlStyle, width: 170 }} />
-        <Select value={groupBy} onChange={setGroupBy} size={controlSize} style={{ ...controlStyle, width: 180 }} options={[{value:'day',label:'Theo ngày'},{value:'week',label:'Theo tuần'},{value:'month',label:'Theo tháng'}]} />
-        <Button type="primary" size={controlSize} onClick={()=>load()} loading={loading}>Lọc</Button>
+        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} size={controlSize} style={{ ...controlStyle, width: 170 }} />
+        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} size={controlSize} style={{ ...controlStyle, width: 170 }} />
+        <Select value={groupBy} onChange={setGroupBy} size={controlSize} style={{ ...controlStyle, width: 180 }} options={[{ value: 'day', label: 'Theo ngày' }, { value: 'week', label: 'Theo tuần' }, { value: 'month', label: 'Theo tháng' }]} />
+        <Button type="primary" size={controlSize} onClick={() => load()} loading={loading}>Lọc</Button>
         <Button size={controlSize} onClick={() => applyQuick('today')}>Hôm nay</Button>
         <Button size={controlSize} onClick={() => applyQuick('7d')}>7 ngày</Button>
         <Button size={controlSize} onClick={() => applyQuick('thisMonth')}>Tháng này</Button>
         <Button size={controlSize} onClick={() => applyQuick('thisQuarter')}>Quý này</Button>
-        <Button size={controlSize} onClick={async()=>{
-          try{
-            const params=new URLSearchParams();
-            if(from)params.set('from',new Date(from+'T00:00:00').toISOString());
-            if(to)params.set('to',new Date(to+'T23:59:59.999').toISOString());
-            params.set('groupBy',groupBy);
-            const url=`/sales/export.xlsx?${params.toString()}`;
-            window.open(api.defaults.baseURL + url,'_blank');
-          }catch(e){ message.error('Xuất Excel thất bại'); }
+        <Button size={controlSize} onClick={async () => {
+          try {
+            const params = new URLSearchParams();
+            if (from) params.set('from', new Date(from + 'T00:00:00').toISOString());
+            if (to) params.set('to', new Date(to + 'T23:59:59.999').toISOString());
+            params.set('groupBy', groupBy);
+            const url = `/sales/export.xlsx?${params.toString()}`;
+            window.open(api.defaults.baseURL + url, '_blank');
+          } catch (e) { message.error('Xuất Excel thất bại'); }
         }}>Xuất Excel</Button>
         <Button size={controlSize} onClick={resetFilters}>Reset</Button>
       </Space>
@@ -169,9 +195,9 @@ export default function SalesReport() {
       <Title level={5} style={{ margin: '8px 0' }}>Lọc theo tháng / quý</Title>
       <Space size={12} wrap style={{ marginBottom: 16 }}>
         <Text style={{ fontSize: 14, fontWeight: 600, marginRight: 4 }}>Tháng</Text>
-        <Select placeholder="Tháng" value={month} onChange={applyMonth} size={controlSize} style={{ ...controlStyle, width: 160 }} allowClear options={Array.from({length:12},(_,i)=>({value:i+1,label:`Tháng ${i+1}`}))} />
+        <Select placeholder="Tháng" value={month} onChange={applyMonth} size={controlSize} style={{ ...controlStyle, width: 160 }} allowClear options={Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Tháng ${i + 1}` }))} />
         <Text style={{ fontSize: 14, fontWeight: 600, margin: '0 4px 0 12px' }}>Quý</Text>
-        <Select placeholder="Quý" value={quarter} onChange={applyQuarter} size={controlSize} style={{ ...controlStyle, width: 140 }} allowClear options={[{value:1,label:'Quý 1'},{value:2,label:'Quý 2'},{value:3,label:'Quý 3'},{value:4,label:'Quý 4'}]} />
+        <Select placeholder="Quý" value={quarter} onChange={applyQuarter} size={controlSize} style={{ ...controlStyle, width: 140 }} allowClear options={[{ value: 1, label: 'Quý 1' }, { value: 2, label: 'Quý 2' }, { value: 3, label: 'Quý 3' }, { value: 4, label: 'Quý 4' }]} />
       </Space>
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -188,7 +214,7 @@ export default function SalesReport() {
       />
 
       <Card title="Tổng hợp" style={{ marginTop: 16 }}>
-        <Table rowKey={(r, i)=>i} columns={summaryCols} dataSource={summary} pagination={{ pageSize: 10 }} size="small" />
+        <Table rowKey={(r, i) => i} columns={summaryCols} dataSource={summary} pagination={{ pageSize: 10 }} size="small" />
       </Card>
 
       <Card title="Top sản phẩm bán chạy" style={{ marginTop: 16 }}>
@@ -211,7 +237,7 @@ function TopProducts({ from, to }) {
         params.set('limit', '10');
         const res = await api.get(`/sales/top-products?${params.toString()}`);
         setRows(res.data.items || []);
-      } catch {}
+      } catch { }
       finally { setLoading(false); }
     };
     run();
@@ -220,10 +246,10 @@ function TopProducts({ from, to }) {
   const cols = [
     { title: 'Sản phẩm', dataIndex: 'name', render: (v, r) => <a href={`/p/${r.slug}`} target="_blank" rel="noreferrer">{v}</a> },
     { title: 'SL', dataIndex: 'quantity', align: 'right' },
-    { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', render: v => (v||0).toLocaleString('vi-VN') + '₫' }
+    { title: 'Doanh thu', dataIndex: 'revenue', align: 'right', render: v => (v || 0).toLocaleString('vi-VN') + '₫' }
   ];
 
-  return <Table size="small" rowKey={(r)=>r._id} columns={cols} dataSource={rows} loading={loading} pagination={false} />;
+  return <Table size="small" rowKey={(r) => r._id} columns={cols} dataSource={rows} loading={loading} pagination={false} />;
 }
 
 

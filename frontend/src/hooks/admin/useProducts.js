@@ -384,6 +384,7 @@ export const useProducts = () => {
     loading,
     error,
     pagination,
+    setPagination,
     stats,
     fetchProducts,
     createProduct,

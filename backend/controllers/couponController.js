@@ -17,12 +17,31 @@ export async function list(req, res, next) {
 export async function create(req, res, next) {
   try {
     const data = req.body;
+    
+    // Validate required fields
+    if (!data.code || !data.discountType || data.discountValue === undefined || data.discountValue === null) {
+      return res.status(400).json({ 
+        message: 'Thiếu thông tin bắt buộc: mã, loại giảm giá, và giá trị giảm' 
+      });
+    }
+    
     data.code = String(data.code || '').toUpperCase().trim();
+    
+    // Check if code already exists
     const exists = await Coupon.findOne({ code: data.code });
     if (exists) return res.status(400).json({ message: 'Mã đã tồn tại' });
+    
+    // Create coupon
     const doc = await Coupon.create(data);
     res.json({ success: true, item: doc });
-  } catch (err) { next(err); }
+  } catch (err) { 
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    next(err); 
+  }
 }
 
 export async function update(req, res, next) {
@@ -59,27 +78,61 @@ export async function validate(req, res, next) {
 export async function getDirectApply(req, res, next) {
   try {
     const { productSlug } = req.params;
+    const { orderTotal = 0 } = req.query; // Lấy orderTotal từ query parameter
     const now = new Date();
     
+    // Lấy TẤT CẢ mã khuyến mãi cho sản phẩm
     const coupons = await Coupon.find({
       isDirectApply: true,
       productSlug: productSlug,
       isActive: true
-    }).sort({ createdAt: -1 });
+    }).sort({ discountValue: -1, minOrder: 1 }); // Sort theo giá trị giảm (cao -> thấp) và minOrder (thấp -> cao)
 
-    // Tìm coupon hợp lệ về thời gian và số lần sử dụng
-    const validCoupon = coupons.find(coupon => {
+    // Lọc các mã hợp lệ về thời gian và số lần sử dụng
+    const validByTime = coupons.filter(coupon => {
       if (coupon.startDate && now < new Date(coupon.startDate)) return false;
       if (coupon.endDate && now > new Date(coupon.endDate)) return false;
       if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) return false;
       return true;
     });
 
-    if (!validCoupon) {
-      return res.json({ success: true, coupon: null });
+    // Tìm mã không có điều kiện (minOrder = 0 hoặc undefined)
+    const noConditionCoupon = validByTime.find(c => !c.minOrder || c.minOrder === 0);
+
+    // Nếu không có orderTotal (trang danh sách), trả về mã không điều kiện
+    if (!orderTotal || orderTotal === 0 || orderTotal === '0') {
+      return res.json({ 
+        success: true, 
+        coupon: noConditionCoupon || null,
+        allValidCoupons: validByTime,
+        noConditionCoupon: noConditionCoupon || null
+      });
     }
 
-    res.json({ success: true, coupon: validCoupon });
+    // Có orderTotal (trang chi tiết) - lọc theo điều kiện minOrder
+    const applicableCoupons = validByTime.filter(coupon => {
+      if (coupon.minOrder && Number(orderTotal) < coupon.minOrder) return false;
+      return true;
+    });
+
+    // Chọn mã tốt nhất (giảm nhiều nhất trong các mã đủ điều kiện)
+    const bestCoupon = applicableCoupons.length > 0 ? applicableCoupons[0] : null;
+
+    // Tìm mã tốt hơn tiếp theo (nếu có)
+    const betterCoupon = validByTime.find(c => {
+      if (!c.minOrder || c.minOrder === 0) return false; // Bỏ qua mã không điều kiện
+      if (Number(orderTotal) >= c.minOrder) return false; // Bỏ qua mã đã đủ điều kiện
+      return c.discountValue > (bestCoupon?.discountValue || 0);
+    });
+
+    res.json({ 
+      success: true, 
+      coupon: bestCoupon,
+      allValidCoupons: validByTime,
+      noConditionCoupon: noConditionCoupon || null,
+      betterCoupon: betterCoupon || null, // Mã tốt hơn nếu mua thêm
+      currentOrderTotal: Number(orderTotal)
+    });
   } catch (err) {
     next(err);
   }

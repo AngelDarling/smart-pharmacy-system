@@ -4,13 +4,15 @@ import { listDaily, upsertDaily, removeDaily, report, topProducts, exportExcel }
 
 const router = Router();
 
-// Only admin/manager can manage sales records
-router.get("/daily", authRequired, requireRole("admin"), listDaily);
-router.post("/daily", authRequired, requireRole("admin"), upsertDaily);
-router.delete("/daily/:id", authRequired, requireRole("admin"), removeDaily);
-router.get("/report", authRequired, requireRole("admin"), report);
-router.get("/top-products", authRequired, requireRole("admin"), topProducts);
-router.get("/export.xlsx", authRequired, requireRole("admin"), exportExcel);
+// View reports - Admin, Manager, Pharmacist
+router.get("/daily", authRequired, requireRole("admin", "manager", "pharmacist"), listDaily);
+router.get("/report", authRequired, requireRole("admin", "manager", "pharmacist"), report);
+router.get("/top-products", authRequired, requireRole("admin", "manager", "pharmacist"), topProducts);
+router.get("/export.xlsx", authRequired, requireRole("admin", "manager"), exportExcel);
+
+// Edit - Admin, Manager only
+router.post("/daily", authRequired, requireRole("admin", "manager"), upsertDaily);
+router.delete("/daily/:id", authRequired, requireRole("admin", "manager"), removeDaily);
 
 export default router;
 

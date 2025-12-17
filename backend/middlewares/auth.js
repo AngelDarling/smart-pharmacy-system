@@ -71,7 +71,39 @@ export function requireRole(...roles) {
   };
 }
 
-// New granular permission middleware
+// New granular permission middleware (resource-based)
+export function requireResourcePermission(resource, action) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Admin has all permissions
+    if (req.user.role === 'admin') {
+      return next();
+    }
+    
+    // Check granular permissions (Map-based)
+    if (req.user.permissions) {
+      // Convert Map to object if needed
+      const perms = req.user.permissions instanceof Map 
+        ? Object.fromEntries(req.user.permissions)
+        : req.user.permissions;
+      
+      const resourcePerms = perms[resource] || [];
+      
+      if (resourcePerms.includes(action) || resourcePerms.includes('manage')) {
+        return next();
+      }
+    }
+    
+    return res.status(403).json({ 
+      message: `Không có quyền ${action} cho ${resource}` 
+    });
+  };
+}
+
+// Legacy permission middleware (for backward compatibility)
 export function requirePermission(permission) {
   return (req, res, next) => {
     if (!req.user) {
@@ -83,7 +115,7 @@ export function requirePermission(permission) {
       return next();
     }
     
-    // Check if user has the specific permission
+    // Check if user has the specific permission (old array-based)
     if (!req.user.permissions || !req.user.permissions.includes(permission)) {
       return res.status(403).json({ 
         message: `Không có quyền truy cập: ${permission}` 

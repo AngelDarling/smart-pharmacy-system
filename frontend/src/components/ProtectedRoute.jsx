@@ -1,30 +1,36 @@
 /**
  * ProtectedRoute Component
- * Route protection based on permissions
+ * Route protection based on granular resource permissions
  */
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Result, Button } from 'antd';
+import { LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { usePermissions } from '../hooks/usePermissions';
 
-const ProtectedRoute = ({ 
-  children, 
-  requiredPermission, 
-  requiredPermissions = [], 
+const ProtectedRoute = ({
+  children,
+  resource,
+  action = 'view',
+  // Legacy props for backward compatibility
+  requiredPermission,
+  requiredPermissions = [],
   requireAll = false,
-  fallback = null 
+  fallback = null
 }) => {
   const { user, loading } = useAuth();
+  const { hasPermission, isAdmin } = usePermissions();
 
   // Show loading while checking auth
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
       }}>
         Đang kiểm tra quyền truy cập...
       </div>
@@ -37,27 +43,29 @@ const ProtectedRoute = ({
   }
 
   // Check permissions
-  const hasPermission = () => {
+  const checkPermission = () => {
     // Admin has all permissions
-    if (user.role === 'admin') {
+    if (isAdmin) {
       return true;
     }
 
-    // Single permission check
+    // New granular permission check (resource-based)
+    if (resource) {
+      return hasPermission(resource, action);
+    }
+
+    // Legacy permission checks (for backward compatibility)
     if (requiredPermission) {
       return user.permissions && user.permissions.includes(requiredPermission);
     }
 
-    // Multiple permissions check
     if (requiredPermissions.length > 0) {
       if (requireAll) {
-        // User needs ALL permissions
-        return requiredPermissions.every(permission => 
+        return requiredPermissions.every(permission =>
           user.permissions && user.permissions.includes(permission)
         );
       } else {
-        // User needs ANY permission
-        return requiredPermissions.some(permission => 
+        return requiredPermissions.some(permission =>
           user.permissions && user.permissions.includes(permission)
         );
       }
@@ -66,22 +74,31 @@ const ProtectedRoute = ({
     return true;
   };
 
-  if (!hasPermission()) {
+  if (!checkPermission()) {
     if (fallback) {
       return fallback;
     }
 
     return (
-      <Result
-        status="403"
-        title="403"
-        subTitle="Xin lỗi, bạn không có quyền truy cập trang này."
-        extra={
-          <Button type="primary" onClick={() => window.history.back()}>
-            Quay lại
-          </Button>
-        }
-      />
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '60vh',
+        padding: '20px'
+      }}>
+        <Result
+          status="403"
+          title="403"
+          subTitle="Xin lỗi, bạn không có quyền truy cập trang này."
+          icon={<LockOutlined style={{ fontSize: 72, color: '#ff4d4f' }} />}
+          extra={
+            <Button type="primary" onClick={() => window.history.back()}>
+              Quay lại
+            </Button>
+          }
+        />
+      </div>
     );
   }
 

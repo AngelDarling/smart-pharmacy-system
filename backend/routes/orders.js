@@ -21,14 +21,18 @@ router.post("/", optionalAuth, create); // Allow guest checkout
 router.get("/", authRequired, list); // User's orders
 router.get("/public/by-code/:code", getByCodePublic);
 
-// Protected routes
-router.get("/stats", authRequired, requireRole("admin"), getStats);
-router.get("/admin", authRequired, requireRole("admin"), adminList);
+// Protected routes - View: All staff
+router.get("/stats", authRequired, requireRole("admin", "manager", "pharmacist", "staff"), getStats);
+router.get("/admin", authRequired, requireRole("admin", "manager", "pharmacist", "staff"), adminList);
 router.get("/:orderId", optionalAuth, getById);
-router.patch("/:orderId/status", authRequired, requireRole("admin"), updateStatus);
-router.post("/:orderId/ship", authRequired, requireRole("admin"), shipOrder);
+
+// Update status/ship - Admin, Manager, Pharmacist
+router.patch("/:orderId/status", authRequired, requireRole("admin", "manager", "pharmacist"), updateStatus);
+router.post("/:orderId/ship", authRequired, requireRole("admin", "manager", "pharmacist"), shipOrder);
 router.patch("/:orderId/cancel", authRequired, cancel);
-router.delete("/:orderId", authRequired, requireRole("admin"), deleteOrder);
+
+// Delete - Admin, Manager only
+router.delete("/:orderId", authRequired, requireRole("admin", "manager"), deleteOrder);
 
 // Manual cleanup endpoint (admin only, for testing)
 router.post("/cleanup/expired", authRequired, requireRole("admin"), async (req, res) => {

@@ -243,6 +243,39 @@ export async function updateRole(req, res) {
   }
 }
 
+// Update staff permissions
+export async function updatePermissions(req, res) {
+  try {
+    const { permissions } = req.body;
+    
+    if (!permissions || typeof permissions !== 'object') {
+      return res.status(400).json({ message: "Dữ liệu permissions không hợp lệ" });
+    }
+    
+    // Convert permissions object to Map
+    const permissionsMap = new Map(Object.entries(permissions));
+    
+    const staff = await Staff.findByIdAndUpdate(
+      req.params.id,
+      { permissions: permissionsMap },
+      { new: true }
+    ).select('-passwordHash');
+    
+    if (!staff) {
+      return res.status(404).json({ message: "Không tìm thấy nhân viên" });
+    }
+    
+    res.json({
+      success: true,
+      message: "Cập nhật quyền thành công",
+      staff
+    });
+  } catch (error) {
+    console.error("Staff updatePermissions error:", error);
+    res.status(500).json({ message: "Lỗi khi cập nhật quyền" });
+  }
+}
+
 // Delete staff
 export async function remove(req, res) {
   try {

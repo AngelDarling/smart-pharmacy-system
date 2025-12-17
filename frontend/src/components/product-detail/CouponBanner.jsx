@@ -1,4 +1,4 @@
-export default function CouponBanner({ coupon, formatPrice }) {
+export default function CouponBanner({ coupon, betterCoupon, formatPrice }) {
     if (!coupon) return null;
 
     return (
@@ -57,6 +57,24 @@ export default function CouponBanner({ coupon, formatPrice }) {
                     )}
                 </div>
             </div>
+
+            {/* Better coupon suggestion */}
+            {betterCoupon && (
+                <div style={{
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                    </svg>
+                    <span style={{ color: 'white', fontWeight: 600, fontSize: 14, flex: 1 }}>
+                        💡 Mua đủ {formatPrice(betterCoupon.minOrder)}₫ để được giảm {betterCoupon.discountValue}%!
+                    </span>
+                </div>
+            )}
         </div>
     );
 }

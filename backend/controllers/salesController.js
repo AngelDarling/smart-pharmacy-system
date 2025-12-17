@@ -1,9 +1,10 @@
 import { z } from "zod";
 import mongoose from "mongoose";
-import ProductSalesDaily from "../models/ProductSalesDaily.js";
+import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import xlsx from "xlsx";
 
+// Calculate sales from Orders collection
 export async function listDaily(req, res, next) {
   try {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || "20", 10)));
@@ -19,19 +20,67 @@ export async function listDaily(req, res, next) {
     const start = parseDate(req.query.from, new Date(now.getFullYear(), now.getMonth(), 1));
     const end = parseDate(req.query.to, new Date(now.getFullYear(), now.getMonth() + 1, 1));
 
-    const match = { date: { $gte: start, $lt: end } };
-    if (req.query.productId && mongoose.Types.ObjectId.isValid(req.query.productId)) {
-      match.productId = new mongoose.Types.ObjectId(req.query.productId);
-    }
+    // Aggregate from Orders
+    const pipeline = [
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: { $gte: start, $lt: end }
+        }
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            productId: '$items.productId'
+          },
+          quantity: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } }
+        }
+      },
+      { $sort: { '_id.date': -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    ];
 
-    const [items, total] = await Promise.all([
-      ProductSalesDaily.find(match)
-        .sort({ date: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('productId', 'name slug price imageUrls').lean(),
-      ProductSalesDaily.countDocuments(match)
-    ]);
+    const results = await Order.aggregate(pipeline);
+    
+    // Fetch product details
+    const productIds = [...new Set(results.map(r => r._id.productId))];
+    const products = await Product.find({ _id: { $in: productIds } }).select('name slug price imageUrls').lean();
+    const productMap = new Map(products.map(p => [String(p._id), p]));
+
+    const items = results.map(r => ({
+      _id: `${r._id.date}_${r._id.productId}`,
+      date: new Date(r._id.date),
+      productId: productMap.get(String(r._id.productId)),
+      quantity: r.quantity,
+      revenue: r.revenue
+    }));
+
+    // Count total
+    const countPipeline = [
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: { $gte: start, $lt: end }
+        }
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            productId: '$items.productId'
+          }
+        }
+      },
+      { $count: 'total' }
+    ];
+    
+    const countResult = await Order.aggregate(countPipeline);
+    const total = countResult[0]?.total || 0;
 
     res.json({ items, page, limit, total });
   } catch (err) {
@@ -52,29 +101,23 @@ export async function report(req, res, next) {
     const end = parseDate(req.query.to, new Date(now.getFullYear(), now.getMonth() + 1, 1));
     const groupBy = ["day", "week", "month"].includes(req.query.groupBy) ? req.query.groupBy : "day";
 
-    const match = { date: { $gte: start, $lt: end } };
-    if (req.query.productId && mongoose.Types.ObjectId.isValid(req.query.productId)) {
-      match.productId = new mongoose.Types.ObjectId(req.query.productId);
-    }
-
-    const tz = "+07:00"; // Vietnam timezone
-    const localDate = { $dateAdd: { startDate: "$date", unit: "hour", amount: 7 } };
-    let groupStage; let projectStage; let sortStage;
+    let groupStage;
+    let projectStage;
+    let sortStage;
+    
     if (groupBy === "day") {
       groupStage = {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: localDate, timezone: tz } },
-          quantity: { $sum: "$quantity" },
-          revenue: { $sum: "$revenue" }
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          quantity: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } }
         }
       };
       projectStage = {
         $project: {
           _id: 0,
-          label: { $dateToString: { format: "%d/%m/%Y", date: { $toDate: "$_id" }, timezone: tz } },
+          label: { $dateToString: { format: "%d/%m/%Y", date: { $toDate: "$_id" } } },
           sortKey: { $toDate: "$_id" },
-          start: { $toDate: "$_id" },
-          end: { $toDate: "$_id" },
           quantity: 1,
           revenue: 1
         }
@@ -83,9 +126,12 @@ export async function report(req, res, next) {
     } else if (groupBy === "week") {
       groupStage = {
         $group: {
-          _id: { y: { $isoWeekYear: localDate }, w: { $isoWeek: localDate } },
-          quantity: { $sum: "$quantity" },
-          revenue: { $sum: "$revenue" }
+          _id: { 
+            y: { $isoWeekYear: "$createdAt" }, 
+            w: { $isoWeek: "$createdAt" } 
+          },
+          quantity: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } }
         }
       };
       projectStage = {
@@ -101,9 +147,12 @@ export async function report(req, res, next) {
     } else { // month
       groupStage = {
         $group: {
-          _id: { y: { $year: localDate }, m: { $month: localDate } },
-          quantity: { $sum: "$quantity" },
-          revenue: { $sum: "$revenue" }
+          _id: { 
+            y: { $year: "$createdAt" }, 
+            m: { $month: "$createdAt" } 
+          },
+          quantity: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } }
         }
       };
       projectStage = {
@@ -118,8 +167,21 @@ export async function report(req, res, next) {
       sortStage = { $sort: { "sortKey.0": 1, "sortKey.1": 1 } };
     }
 
-    const pipeline = [ { $match: match }, groupStage, projectStage, sortStage, { $limit: limit } ];
-    const items = await ProductSalesDaily.aggregate(pipeline);
+    const pipeline = [
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: { $gte: start, $lt: end }
+        }
+      },
+      { $unwind: '$items' },
+      groupStage,
+      projectStage,
+      sortStage,
+      { $limit: limit }
+    ];
+
+    const items = await Order.aggregate(pipeline);
 
     res.json({ items, groupBy, from: start, to: end });
   } catch (err) {
@@ -139,11 +201,21 @@ export async function topProducts(req, res, next) {
     const end = parseDate(req.query.to, new Date(now.getFullYear(), now.getMonth() + 1, 1));
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit || "10", 10)));
 
-    const match = { date: { $gte: start, $lt: end } };
-
-    const agg = await ProductSalesDaily.aggregate([
-      { $match: match },
-      { $group: { _id: "$productId", quantity: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } },
+    const agg = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: { $gte: start, $lt: end }
+        }
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: "$items.productId",
+          quantity: { $sum: "$items.quantity" },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } }
+        }
+      },
       { $sort: { quantity: -1, revenue: -1 } },
       { $limit: limit }
     ]);
@@ -180,32 +252,70 @@ export async function exportExcel(req, res, next) {
     const groupBy = ["day", "week", "month"].includes(req.query.groupBy) ? req.query.groupBy : "day";
 
     // Detailed
-    const detailed = await ProductSalesDaily.find({ date: { $gte: start, $lt: end } })
-      .sort({ date: 1 })
-      .populate('productId', 'name');
+    const detailedPipeline = [
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: { $gte: start, $lt: end }
+        }
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            productId: '$items.productId'
+          },
+          quantity: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } }
+        }
+      },
+      { $sort: { '_id.date': 1 } }
+    ];
 
-    // Summary using existing report
-    req.query.from = start.toISOString();
-    req.query.to = end.toISOString();
-    req.query.groupBy = groupBy;
-    const tz = "+07:00";
-    const localDate = { $dateAdd: { startDate: "$date", unit: "hour", amount: 7 } };
+    const detailed = await Order.aggregate(detailedPipeline);
+    
+    // Fetch product names
+    const productIds = [...new Set(detailed.map(d => d._id.productId))];
+    const products = await Product.find({ _id: { $in: productIds } }).select('name');
+    const productMap = new Map(products.map(p => [String(p._id), p.name]));
+
+    // Summary - reuse report logic
     let groupStage;
-    if (groupBy === "day") groupStage = { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: localDate, timezone: tz } }, quantity: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } };
-    else if (groupBy === "week") groupStage = { $group: { _id: { y: { $isoWeekYear: localDate }, w: { $isoWeek: localDate } }, quantity: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } };
-    else groupStage = { $group: { _id: { y: { $year: localDate }, m: { $month: localDate } }, quantity: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } };
+    if (groupBy === "day") {
+      groupStage = { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, quantity: { $sum: '$items.quantity' }, revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } } } };
+    } else if (groupBy === "week") {
+      groupStage = { $group: { _id: { y: { $isoWeekYear: "$createdAt" }, w: { $isoWeek: "$createdAt" } }, quantity: { $sum: '$items.quantity' }, revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } } } };
+    } else {
+      groupStage = { $group: { _id: { y: { $year: "$createdAt" }, m: { $month: "$createdAt" } }, quantity: { $sum: '$items.quantity' }, revenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } } } };
+    }
 
-    const summary = await ProductSalesDaily.aggregate([
-      { $match: { date: { $gte: start, $lt: end } } },
+    const summary = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: { $gte: start, $lt: end }
+        }
+      },
+      { $unwind: '$items' },
       groupStage
     ]);
 
     const wb = xlsx.utils.book_new();
-    const detailRows = detailed.map(d => ({ Date: d.date, Product: d.productId?.name || '', Quantity: d.quantity, Revenue: d.revenue }));
+    const detailRows = detailed.map(d => ({ 
+      Date: d._id.date, 
+      Product: productMap.get(String(d._id.productId)) || '', 
+      Quantity: d.quantity, 
+      Revenue: d.revenue 
+    }));
     const wsDetail = xlsx.utils.json_to_sheet(detailRows);
     xlsx.utils.book_append_sheet(wb, wsDetail, 'Detailed');
 
-    const sumRows = summary.map(s => ({ Group: typeof s._id === 'string' ? s._id : JSON.stringify(s._id), Quantity: s.quantity, Revenue: s.revenue }));
+    const sumRows = summary.map(s => ({ 
+      Group: typeof s._id === 'string' ? s._id : JSON.stringify(s._id), 
+      Quantity: s.quantity, 
+      Revenue: s.revenue 
+    }));
     const wsSum = xlsx.utils.json_to_sheet(sumRows);
     xlsx.utils.book_append_sheet(wb, wsSum, 'Summary');
 
@@ -218,43 +328,11 @@ export async function exportExcel(req, res, next) {
   }
 }
 
+// Keep these for backward compatibility but they won't be used
 export async function upsertDaily(req, res, next) {
-  try {
-    const schema = z.object({
-      productId: z.string(),
-      date: z.string().or(z.date()).optional(),
-      quantity: z.number().int().positive(),
-      price: z.number().nonnegative().optional()
-    });
-    const parsed = schema.parse(req.body);
-    const day = parsed.date ? new Date(parsed.date) : new Date();
-    day.setHours(0, 0, 0, 0);
-
-    // Ensure product exists
-    const exists = await Product.exists({ _id: parsed.productId });
-    if (!exists) return res.status(400).json({ message: 'Sản phẩm không tồn tại' });
-
-    const price = parsed.price ?? (await Product.findById(parsed.productId).select('price')).price ?? 0;
-
-    const result = await ProductSalesDaily.updateOne(
-      { productId: parsed.productId, date: day },
-      { $inc: { quantity: parsed.quantity, revenue: parsed.quantity * price } },
-      { upsert: true }
-    );
-    res.json({ success: true, result });
-  } catch (err) {
-    next(err);
-  }
+  res.status(501).json({ message: 'This endpoint is deprecated. Sales are calculated from orders.' });
 }
 
 export async function removeDaily(req, res, next) {
-  try {
-    const doc = await ProductSalesDaily.findByIdAndDelete(req.params.id);
-    if (!doc) return res.status(404).json({ message: 'Không tìm thấy' });
-    res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
+  res.status(501).json({ message: 'This endpoint is deprecated. Sales are calculated from orders.' });
 }
-
-

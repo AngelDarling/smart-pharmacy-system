@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import { useCategories } from '../../hooks/admin/useCategories';
 import { useProducts } from '../../hooks/admin/useProducts';
+import ImageUpload from './ImageUpload';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -77,12 +78,8 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
         // Ensure categoryId and brandId are strings
         categoryId: initialValues.categoryId?._id || initialValues.categoryId,
         brandId: initialValues.brandId?._id || initialValues.brandId,
-        // Convert imageUrls array to textarea string
-        imageUrls: initialValues.imageUrls
-          ? Array.isArray(initialValues.imageUrls)
-            ? initialValues.imageUrls.join('\n')
-            : initialValues.imageUrls
-          : ''
+        // imageUrls is already an array, no conversion needed
+        imageUrls: initialValues.imageUrls || []
       });
     } else {
       form.resetFields();
@@ -107,14 +104,11 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
         ...(isEditing ? {} : { totalStock: 0 }),
         minStockLevel: Number(values.minStockLevel) || 0,
         maxStockLevel: Number(values.maxStockLevel) || 0,
-        safetyStock: Number(values.safetyStock) || 0,
-        leadTimeDays: Number(values.leadTimeDays) || 0,
-        expiryThresholdDays: Number(values.expiryThresholdDays) || 0,
         isActive: values.isActive !== false,
-        // Convert imageUrls from textarea to array
-        imageUrls: values.imageUrls
-          ? values.imageUrls.split('\n').filter(url => url.trim() !== '')
-          : []
+        isFeatured: values.isFeatured === true,
+        isNewProduct: values.isNewProduct === true,
+        // imageUrls is already an array from ImageUpload component
+        imageUrls: values.imageUrls || []
       };
 
       await onSubmit(productData);
@@ -151,30 +145,18 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
           costPrice: 0,
           minStockLevel: 0,
           maxStockLevel: 0,
-          safetyStock: 0,
-          leadTimeDays: 0,
-          expiryThresholdDays: 30,
           unit: 'hộp'
         }}
       >
         <Card title="Thông tin cơ bản" size="small" style={{ marginBottom: 16 }}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={24}>
               <Form.Item
                 name="name"
                 label="Tên sản phẩm"
                 rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
               >
                 <Input placeholder="Nhập tên sản phẩm" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="slug"
-                label="Slug (URL)"
-                rules={[{ required: true, message: 'Vui lòng nhập slug' }]}
-              >
-                <Input placeholder="slug-san-pham" />
               </Form.Item>
             </Col>
           </Row>
@@ -238,13 +220,10 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
 
           <Form.Item
             name="imageUrls"
-            label="URL ảnh sản phẩm"
-            help="Nhập URL ảnh sản phẩm (có thể nhập nhiều URL, mỗi URL một dòng)"
+            label="Ảnh sản phẩm"
+            help="Upload ảnh sản phẩm (tối đa 10 ảnh)"
           >
-            <TextArea
-              rows={3}
-              placeholder="Nhập URL ảnh sản phẩm&#10;Ví dụ:&#10;https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-            />
+            <ImageUpload maxCount={10} />
           </Form.Item>
         </Card>
 
@@ -335,38 +314,13 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="safetyStock" label="Hệ số an toàn (Safety Stock)">
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 5" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="leadTimeDays" label="Thời gian cung ứng (ngày)">
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 3" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="expiryThresholdDays" label="Cảnh báo hết hạn (ngày)">
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="VD: 30" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
                 name="sku"
-                label="SKU"
+                label="SKU (Mã sản phẩm)"
+                tooltip="SKU sẽ được tự động tạo theo định dạng: {Thương hiệu}-{Danh mục}-{Số ngẫu nhiên}"
               >
-                <Input placeholder="Mã SKU" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="barcode"
-                label="Barcode"
-              >
-                <Input placeholder="Mã vạch" />
+                <Input placeholder="Tự động tạo khi lưu sản phẩm" disabled />
               </Form.Item>
             </Col>
           </Row>
@@ -402,20 +356,6 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item
-            name="usage"
-            label="Cách sử dụng"
-          >
-            <TextArea rows={3} placeholder="Hướng dẫn sử dụng sản phẩm" />
-          </Form.Item>
-
-          <Form.Item
-            name="storage"
-            label="Bảo quản"
-          >
-            <TextArea rows={2} placeholder="Hướng dẫn bảo quản sản phẩm" />
-          </Form.Item>
         </Card>
       </Form>
     </Modal>

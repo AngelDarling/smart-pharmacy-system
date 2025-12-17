@@ -165,10 +165,6 @@ router.put('/:id', authRequired, requireRole('admin'), async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const pipeline = [
-      { $match: { _id: new Brand.mongo.ObjectId(id) } }
-    ];
-    // Fallback: use simple findById if ObjectId helper above is not available
     const brand = await Brand.findById(id).lean();
     if (!brand) return res.status(404).json({ message: 'Không tìm thấy thương hiệu' });
     const productCount = await Product.countDocuments({ brandId: brand._id });

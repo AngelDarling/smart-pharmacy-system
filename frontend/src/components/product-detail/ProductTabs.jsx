@@ -68,7 +68,7 @@ export default function ProductTabs({ product, activeTab, onTabChange }) {
             </div>
 
             {/* Tab Content */}
-            <div style={{ padding: 30, fontSize: 15, color: '#374151', lineHeight: 1.8 }}>
+            <div style={{ padding: 30, fontSize: 15, color: '#374151', lineHeight: 1.8, textAlign: 'justify' }}>
                 {getTabContent()}
             </div>
         </div>

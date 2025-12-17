@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart";
+import { updateGlobalCartItems } from "../hooks/useCart";
 import { getImageUrl, handleImageError } from "../utils/imageUtils";
 import Swal from "sweetalert2";
 import api from "../api/client.js";
@@ -18,7 +19,7 @@ export default function Cart() {
 
   // State để quản lý các sản phẩm được chọn
   const [selectedItems, setSelectedItems] = useState(() => items.map(item => item.id));
-  
+
   // State để lưu direct coupons cho mỗi sản phẩm
   const [directCoupons, setDirectCoupons] = useState({});
 
@@ -30,40 +31,99 @@ export default function Cart() {
     setSelectedItems(items.map(item => item.id));
   }, [items]);
 
-  // Fetch direct coupons cho các sản phẩm có giảm giá
+  // Fetch direct coupons cho các sản phẩm và cập nhật giá
   useEffect(() => {
     const fetchDirectCoupons = async () => {
       const couponsMap = {};
-      
-      // Lọc các sản phẩm có giảm giá và có slug
-      const discountedItems = items.filter(item => 
-        item.slug && 
-        item.finalPrice !== undefined && 
-        item.finalPrice < item.price && 
-        (item.discount > 0 || item.originalPrice > item.finalPrice)
-      );
+      const updatedItems = [];
 
-      // Fetch coupon cho từng sản phẩm
+      // Fetch coupon cho từng sản phẩm với orderTotal
       await Promise.all(
-        discountedItems.map(async (item) => {
+        items.map(async (item) => {
+          if (!item.slug) {
+            updatedItems.push(item);
+            return;
+          }
+
           try {
-            const res = await api.get(`/coupons/direct-apply/${item.slug}`);
+            // Tính orderTotal cho sản phẩm này
+            const orderTotal = item.price * item.qty;
+
+            // Fetch coupon với orderTotal
+            const res = await api.get(`/coupons/direct-apply/${item.slug}?orderTotal=${orderTotal}`);
+
             if (res.data.success && res.data.coupon) {
-              couponsMap[item.id] = res.data.coupon;
+              const coupon = res.data.coupon;
+              couponsMap[item.id] = coupon;
+
+              // Tính lại finalPrice dựa trên coupon hiện tại
+              let discountAmount = 0;
+              if (coupon.discountType === 'percent') {
+                discountAmount = Math.round(item.price * coupon.discountValue / 100);
+                if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
+                  discountAmount = coupon.maxDiscount;
+                }
+              } else {
+                discountAmount = coupon.discountValue;
+              }
+
+              const newFinalPrice = item.price - discountAmount;
+
+              // Chỉ cập nhật nếu giá thay đổi
+              if (item.finalPrice !== newFinalPrice || item.discount !== coupon.discountValue) {
+                updatedItems.push({
+                  ...item,
+                  finalPrice: newFinalPrice,
+                  originalPrice: item.price,
+                  discount: coupon.discountValue,
+                  discountType: coupon.discountType
+                });
+              } else {
+                updatedItems.push(item);
+              }
+            } else {
+              // Không có coupon, dùng giá gốc
+              if (item.finalPrice !== item.price || item.discount !== 0) {
+                updatedItems.push({
+                  ...item,
+                  finalPrice: item.price,
+                  originalPrice: item.price,
+                  discount: 0
+                });
+              } else {
+                updatedItems.push(item);
+              }
             }
           } catch (error) {
-            // Ignore errors
+            // Lỗi khi fetch, dùng giá gốc
+            updatedItems.push({
+              ...item,
+              finalPrice: item.price,
+              originalPrice: item.price,
+              discount: 0
+            });
           }
         })
       );
 
       setDirectCoupons(couponsMap);
+
+      // Chỉ cập nhật nếu có thay đổi giá
+      const hasChanges = updatedItems.some((newItem, index) => {
+        const oldItem = items[index];
+        return newItem.finalPrice !== oldItem.finalPrice ||
+          newItem.discount !== oldItem.discount;
+      });
+
+      if (hasChanges && updatedItems.length > 0) {
+        updateGlobalCartItems(updatedItems);
+      }
     };
 
     if (items.length > 0) {
       fetchDirectCoupons();
     }
-  }, [items]);
+  }, [items.length, items.map(i => `${i.id}-${i.qty}`).join(',')]);
 
   // Tính toán tổng tiền chỉ dựa trên các sản phẩm đã được chọn
   const selectedTotal = useMemo(() => {
@@ -175,7 +235,7 @@ export default function Cart() {
       cancelButtonText: 'Hủy',
       reverseButtons: true
     });
-    
+
     if (result.isConfirmed) {
       remove(id);
       Swal.fire({
@@ -199,16 +259,16 @@ export default function Cart() {
       });
       return;
     }
-    
+
     // Lưu selectedItems vào localStorage để Checkout có thể đọc
     localStorage.setItem('checkoutSelectedItems', JSON.stringify(selectedItems));
     console.log("Checkout with selected items:", selectedItems);
     navigate("/checkout");
   }
-  
+
   // Xử lý chọn/bỏ chọn một sản phẩm
   const handleSelectItem = (id) => {
-    setSelectedItems(prev => 
+    setSelectedItems(prev =>
       prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
     );
   };
@@ -234,9 +294,9 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <div style={{ maxWidth: 1200, margin: "24px auto", padding: 16, textAlign: "center" }}>
-        <img src="/empty-cart.png" alt="Giỏ hàng trống" style={{width: 150, height: 150, marginBottom: 5}} />
+        <img src="/empty-cart.png" alt="Giỏ hàng trống" style={{ width: 150, height: 150, marginBottom: 5 }} />
         <h3>Giỏ hàng của bạn còn trống</h3>
-        <p style={{color: '#6b7280', marginBottom: 24}}>Hãy lựa chọn thêm sản phẩm để mua sắm nhé!</p>
+        <p style={{ color: '#6b7280', marginBottom: 24 }}>Hãy lựa chọn thêm sản phẩm để mua sắm nhé!</p>
         <button onClick={() => navigate('/')} style={styles.checkoutButton}>
           Về trang chủ
         </button>
@@ -245,7 +305,7 @@ export default function Cart() {
   }
 
   return (
-    <div style={{...styles.pageContainer, marginTop: 'auto'}}>
+    <div style={{ ...styles.pageContainer, marginTop: 'auto' }}>
       <div style={{ marginBottom: 16 }}>
         <a href="/" style={styles.continueLink}>← Tiếp tục mua sắm</a>
       </div>
@@ -258,16 +318,16 @@ export default function Cart() {
         {/* Cột bên trái: Danh sách sản phẩm */}
         <div style={styles.productListContainer}>
           <div style={styles.cartHeader}>
-            <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-              <input 
-                type="checkbox" 
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <input
+                type="checkbox"
                 checked={isAllSelected}
                 onChange={handleSelectAll}
-                style={{width: 18, height: 18}}
+                style={{ width: 18, height: 18 }}
               />
               <span>Chọn tất cả ({items.length} sản phẩm)</span>
             </div>
-            <button 
+            <button
               onClick={async () => {
                 const result = await Swal.fire({
                   title: 'Xóa tất cả sản phẩm?',
@@ -280,7 +340,7 @@ export default function Cart() {
                   cancelButtonText: 'Hủy',
                   reverseButtons: true
                 });
-                
+
                 if (result.isConfirmed) {
                   clear();
                   Swal.fire({
@@ -306,15 +366,15 @@ export default function Cart() {
               Xóa tất cả
             </button>
           </div>
-          
-          <div style={{backgroundColor: 'white', borderRadius: '0 0 8px 8px'}}>
+
+          <div style={{ backgroundColor: 'white', borderRadius: '0 0 8px 8px' }}>
             {/* *** DÒNG TIÊU ĐỀ MỚI THÊM VÀO *** */}
             <div style={styles.gridHeader}>
-                <div style={{...styles.headerCell, gridColumn: 'span 2'}}>Sản phẩm</div>
-                <div style={styles.headerCell}>Đơn giá</div>
-                <div style={styles.headerCell}>Số lượng</div>
-                <div style={styles.headerCell}>Thành tiền</div>
-                <div style={styles.headerCell}></div>
+              <div style={{ ...styles.headerCell, gridColumn: 'span 2' }}>Sản phẩm</div>
+              <div style={styles.headerCell}>Đơn giá</div>
+              <div style={styles.headerCell}>Số lượng</div>
+              <div style={styles.headerCell}>Thành tiền</div>
+              <div style={styles.headerCell}></div>
             </div>
 
             {/* List các sản phẩm */}
@@ -322,25 +382,25 @@ export default function Cart() {
               <div key={item.id} style={styles.productItem}>
                 {/* Checkbox */}
                 <div style={styles.cellCenter}>
-                   <input 
-                     type="checkbox" 
-                     checked={selectedItems.includes(item.id)}
-                     onChange={() => handleSelectItem(item.id)}
-                     style={{width: 18, height: 18}}
-                   />
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.includes(item.id)}
+                    onChange={() => handleSelectItem(item.id)}
+                    style={{ width: 18, height: 18 }}
+                  />
                 </div>
                 {/* Thông tin sản phẩm */}
                 <div style={styles.productInfo}>
-                  <img 
-                    src={getImageUrl(item.image, "/default-product.svg")} 
-                    alt={item.name} 
-                    style={{...styles.productImage, cursor: 'pointer'}}
+                  <img
+                    src={getImageUrl(item.image, "/default-product.svg")}
+                    alt={item.name}
+                    style={{ ...styles.productImage, cursor: 'pointer' }}
                     onError={(e) => handleImageError(e, "/default-product.svg")}
                     onClick={() => handleProductClick(item)}
                   />
                   <div style={{ flex: 1 }}>
-                    <div 
-                      style={{...styles.productName, cursor: 'pointer'}}
+                    <div
+                      style={{ ...styles.productName, cursor: 'pointer' }}
                       onClick={() => handleProductClick(item)}
                     >
                       {item.name}
@@ -362,7 +422,7 @@ export default function Cart() {
                           gap: 8
                         }}>
                           <div style={{ flexShrink: 0 }}>
-                            <img 
+                            <img
                               src={getImageUrl('/uploads/introduce/fast-delivery.png')}
                               alt="Mã giảm giá"
                               style={{
@@ -394,8 +454,8 @@ export default function Cart() {
                           <div style={{ flex: 1, fontSize: 12, color: '#1f2937', lineHeight: 1.4 }}>
                             {coupon.description || (
                               <>
-                                Giảm ngay {coupon.discountType === 'percent' 
-                                  ? `${coupon.discountValue}%` 
+                                Giảm ngay {coupon.discountType === 'percent'
+                                  ? `${coupon.discountValue}%`
                                   : `${formatPrice(coupon.discountValue)}₫`}
                                 {coupon.endDate && (
                                   <span style={{ color: '#6b7280' }}>
@@ -428,16 +488,16 @@ export default function Cart() {
                 {/* Số lượng */}
                 <div style={styles.cellCenter}>
                   <div style={styles.quantityControl}>
-                    <button 
-                      onClick={() => handleQtyChange(item.id, item.qty - 1)} 
+                    <button
+                      onClick={() => handleQtyChange(item.id, item.qty - 1)}
                       style={styles.quantityButton}
                       disabled={checkingStock.has(item.id)}
                     >
                       -
                     </button>
-                    <input value={item.qty} style={styles.quantityInput} readOnly/>
-                    <button 
-                      onClick={() => handleQtyChange(item.id, item.qty + 1)} 
+                    <input value={item.qty} style={styles.quantityInput} readOnly />
+                    <button
+                      onClick={() => handleQtyChange(item.id, item.qty + 1)}
                       style={{
                         ...styles.quantityButton,
                         cursor: checkingStock.has(item.id) ? 'not-allowed' : 'pointer',
@@ -450,7 +510,7 @@ export default function Cart() {
                   </div>
                 </div>
                 {/* Thành tiền */}
-                <div style={{...styles.cellCenter, ...styles.totalPrice}}>
+                <div style={{ ...styles.cellCenter, ...styles.totalPrice }}>
                   {(() => {
                     const hasDiscount = item.finalPrice !== undefined && item.finalPrice < item.price && (item.discount > 0 || item.originalPrice > item.finalPrice);
                     const itemPrice = hasDiscount ? item.finalPrice : item.price;
@@ -471,19 +531,19 @@ export default function Cart() {
         {/* Cột bên phải: Tóm tắt đơn hàng */}
         <div style={styles.summaryContainer}>
           <div style={styles.summaryCard}>
-             <div style={styles.summaryRow}>
-               <span>Tạm tính</span>
-               <span>{selectedTotal.toLocaleString('vi-VN')}₫</span>
-             </div>
-             <div style={styles.summaryRow}>
-               <span>Giảm giá</span>
-               <span>0₫</span>
-             </div>
-             <div style={{borderTop: '1px dashed #e5e7eb', margin: '12px 0'}}></div>
-             <div style={{...styles.summaryRow, fontWeight: 'bold', fontSize: 18}}>
-               <span>Tổng cộng</span>
-               <span style={{color: '#d92d20'}}>{selectedTotal.toLocaleString('vi-VN')}₫</span>
-             </div>
+            <div style={styles.summaryRow}>
+              <span>Tạm tính</span>
+              <span>{selectedTotal.toLocaleString('vi-VN')}₫</span>
+            </div>
+            <div style={styles.summaryRow}>
+              <span>Giảm giá</span>
+              <span>0₫</span>
+            </div>
+            <div style={{ borderTop: '1px dashed #e5e7eb', margin: '12px 0' }}></div>
+            <div style={{ ...styles.summaryRow, fontWeight: 'bold', fontSize: 18 }}>
+              <span>Tổng cộng</span>
+              <span style={{ color: '#d92d20' }}>{selectedTotal.toLocaleString('vi-VN')}₫</span>
+            </div>
             <button onClick={handleCheckout} style={styles.checkoutButton} disabled={selectedItems.length === 0}>
               Mua hàng ({selectedItems.length})
             </button>

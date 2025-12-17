@@ -113,8 +113,7 @@ export default function FeaturedCategoriesSection() {
                                                 width: 48,
                                                 height: 48,
                                                 objectFit: "contain",
-                                                marginBottom: 12,
-                                                filter: "brightness(0) invert(1)"
+                                                marginBottom: 12
                                             }}
                                             onError={(e) => {
                                                 console.log('Failed to load icon:', iconSrc);

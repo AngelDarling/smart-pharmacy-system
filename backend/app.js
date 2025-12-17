@@ -30,6 +30,7 @@ import customerRoutes from "./routes/customer.js";
 import paymentRoutes from "./routes/payment.js";
 import healthNewsCategoryRoutes from "./routes/healthNewsCategoryRoutes.js";
 import healthNewsRoutes from "./routes/healthNewsRoutes.js";
+import uploadRoutes from "./routes/upload.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -72,6 +73,7 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/health-news-categories", healthNewsCategoryRoutes);
 app.use("/api/health-news", healthNewsRoutes);
+app.use("/api/upload", uploadRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });

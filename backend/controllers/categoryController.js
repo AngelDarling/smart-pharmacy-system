@@ -187,7 +187,21 @@ export async function tree(req, res) {
 
 export async function create(req, res, next) {
   try {
-    const parsed = upsertSchema.parse(req.body);
+    // Preprocess FormData values (convert strings to proper types)
+    const processedBody = { ...req.body };
+    
+    // Convert boolean strings to actual booleans
+    if (processedBody.isActive === 'true') processedBody.isActive = true;
+    if (processedBody.isActive === 'false') processedBody.isActive = false;
+    
+    // Convert empty string parent to null
+    if (processedBody.parent === '') processedBody.parent = null;
+    
+    const parsed = upsertSchema.parse(processedBody);
+    
+    // Extract Cloudinary icon URL from uploaded file
+    const iconUrl = req.file ? req.file.path : (parsed.iconUrl || "");
+    
     const doc = await Category.create({
       name: parsed.name,
       slug: parsed.slug,
@@ -195,7 +209,7 @@ export async function create(req, res, next) {
       description: parsed.description || "",
       isActive: parsed.isActive ?? true,
       sortOrder: 0, // Default sort order
-      iconUrl: parsed.iconUrl || "",
+      iconUrl: iconUrl,
       imageUrl: parsed.imageUrl || "",
       seoTitle: parsed.metaTitle || "",
       seoDescription: parsed.metaDescription || ""
@@ -210,7 +224,24 @@ export async function create(req, res, next) {
 
 export async function update(req, res, next) {
   try {
-    const parsed = upsertSchema.partial().parse(req.body);
+    console.log('=== Category Update Debug ===');
+    console.log('req.body:', req.body);
+    console.log('req.file:', req.file);
+    
+    // Preprocess FormData values (convert strings to proper types)
+    const processedBody = { ...req.body };
+    
+    // Convert boolean strings to actual booleans
+    if (processedBody.isActive === 'true') processedBody.isActive = true;
+    if (processedBody.isActive === 'false') processedBody.isActive = false;
+    
+    // Convert empty string parent to null
+    if (processedBody.parent === '') processedBody.parent = null;
+    
+    console.log('processedBody:', processedBody);
+    
+    const parsed = upsertSchema.partial().parse(processedBody);
+    console.log('parsed:', parsed);
     
     // Map frontend fields to backend fields
     const updateData = {};
@@ -219,10 +250,19 @@ export async function update(req, res, next) {
     if (parsed.parent !== undefined) updateData.parent = parsed.parent;
     if (parsed.description !== undefined) updateData.description = parsed.description;
     if (parsed.isActive !== undefined) updateData.isActive = parsed.isActive;
-    if (parsed.iconUrl !== undefined) updateData.iconUrl = parsed.iconUrl;
+    
+    // Extract Cloudinary icon URL from uploaded file if provided
+    if (req.file) {
+      updateData.iconUrl = req.file.path;
+    } else if (parsed.iconUrl !== undefined) {
+      updateData.iconUrl = parsed.iconUrl;
+    }
+    
     if (parsed.imageUrl !== undefined) updateData.imageUrl = parsed.imageUrl;
     if (parsed.metaTitle !== undefined) updateData.seoTitle = parsed.metaTitle;
     if (parsed.metaDescription !== undefined) updateData.seoDescription = parsed.metaDescription;
+    
+    console.log('updateData:', updateData);
     
     const doc = await Category.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!doc) return res.status(404).json({ message: "Không tìm thấy" });
@@ -240,6 +280,10 @@ export async function update(req, res, next) {
     const refreshed = await Category.findById(doc._id);
     res.json(refreshed);
   } catch (err) {
+    console.error('=== Category Update Error ===');
+    console.error('Error:', err);
+    console.error('Error message:', err.message);
+    console.error('Error stack:', err.stack);
     next(err);
   }
 }

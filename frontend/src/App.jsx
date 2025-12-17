@@ -17,7 +17,7 @@ import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import CategoryManagement from "./pages/admin/categories/CategoryManagement.jsx";
 import ProductManagement from "./pages/admin/products/ProductManagement.jsx";
 import BrandManagement from "./pages/admin/products/BrandManagement.jsx";
-import UserManagement from "./pages/admin/users/UserManagement.jsx";
+import CustomerManagement from "./pages/admin/users/CustomerManagement.jsx";
 import StaffManagement from "./pages/admin/staff/StaffManagement.jsx";
 import { InventoryManagement } from "./pages/admin/inventory";
 import AdminLogin from "./pages/admin/Login.jsx";
@@ -1373,9 +1373,9 @@ function App() {
               <BrandManagement />
             </ProtectedRoute>
           } />
-          <Route path="users" element={
+          <Route path="customers" element={
             <ProtectedRoute requiredPermission="read_users">
-              <UserManagement />
+              <CustomerManagement />
             </ProtectedRoute>
           } />
           <Route path="staff" element={
@@ -1496,7 +1496,7 @@ function App() {
           style={{
             position: "fixed",
             bottom: "100px",
-            right: "24px",
+            right: "20px",
             width: "60px",
             height: "60px",
             borderRadius: "50%",

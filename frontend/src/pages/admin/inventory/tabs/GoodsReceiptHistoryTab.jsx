@@ -39,8 +39,8 @@ export default function GoodsReceiptTab() {
         total: 0
     });
     const [filters, setFilters] = useState({
-        productId: '',
-        supplierId: '',
+        productId: undefined,
+        supplierId: undefined,
         dateRange: null
     });
     const [stats, setStats] = useState({
@@ -151,7 +151,6 @@ export default function GoodsReceiptTab() {
                     <Text type="secondary" style={{ fontSize: '12px' }}>{product?.sku}</Text>
                 </Space>
             ),
-            ellipsis: true,
             width: 200
         },
         {
@@ -215,16 +214,14 @@ export default function GoodsReceiptTab() {
             dataIndex: 'supplierId',
             key: 'supplierId',
             render: (supplier) => supplier?.name || '-',
-            width: 140,
-            ellipsis: true
+            width: 140
         },
         {
             title: 'Người nhập',
             dataIndex: 'performedBy',
             key: 'performedBy',
             render: (user) => user?.name || 'N/A',
-            width: 120,
-            ellipsis: true
+            width: 120
         }
     ];
 

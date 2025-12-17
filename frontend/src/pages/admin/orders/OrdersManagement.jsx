@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions } from 'antd';
-import { SearchOutlined, ReloadOutlined, ClearOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions, Avatar } from 'antd';
+import { SearchOutlined, ReloadOutlined, ClearOutlined, DeleteOutlined, ShoppingCartOutlined, CarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import Swal from 'sweetalert2';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
@@ -192,8 +192,42 @@ export default function OrdersManagement() {
   return (
     <div>
       {contextHolder}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0, color: '#1d4ed8' }}>Quản lý đơn hàng</h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<ShoppingCartOutlined />}
+            style={{
+              backgroundColor: '#1890ff',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý đơn hàng
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý và theo dõi đơn hàng từ khách hàng
+            </div>
+          </div>
+        </div>
+        <Button
+          type="default"
+          icon={<CarOutlined />}
+          onClick={() => window.location.href = '/admin/orders/shipping'}
+          style={{
+            borderColor: '#52c41a',
+            color: '#52c41a'
+          }}
+        >
+          Xem đơn đang giao
+        </Button>
       </div>
 
       {/* Filters */}

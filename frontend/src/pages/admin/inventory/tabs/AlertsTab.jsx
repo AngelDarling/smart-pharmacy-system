@@ -31,6 +31,11 @@ export default function AlertsTab() {
     const [loading, setLoading] = useState(false);
     const [alerts, setAlerts] = useState([]);
     const [filter, setFilter] = useState('all'); // all, low_stock, expiring, expired
+    const [pagination, setPagination] = useState({
+        current: 1,
+        pageSize: 20,
+        total: 0
+    });
     const [stats, setStats] = useState({
         lowStock: 0,
         expiring: 0,
@@ -232,7 +237,7 @@ export default function AlertsTab() {
                     <Text type="secondary" style={{ fontSize: '12px' }}>{product?.sku}</Text>
                 </Space>
             ),
-            ellipsis: true
+            width: 250
         },
         {
             title: 'Số lô',
@@ -281,7 +286,6 @@ export default function AlertsTab() {
             title: 'Thông báo',
             dataIndex: 'message',
             key: 'message',
-            ellipsis: true,
             render: (message) => <Text>{message}</Text>
         }
     ];
@@ -374,9 +378,20 @@ export default function AlertsTab() {
                         rowKey="id"
                         loading={loading}
                         pagination={{
-                            pageSize: 20,
+                            current: pagination.current,
+                            pageSize: pagination.pageSize,
+                            total: filteredAlerts.length,
                             showSizeChanger: true,
-                            showTotal: (total) => `Tổng ${total} cảnh báo`
+                            showQuickJumper: true,
+                            showTotal: (total) => `Tổng ${total} cảnh báo`,
+                            pageSizeOptions: ['10', '20', '50', '100']
+                        }}
+                        onChange={(paginationInfo) => {
+                            setPagination({
+                                current: paginationInfo.current,
+                                pageSize: paginationInfo.pageSize,
+                                total: filteredAlerts.length
+                            });
                         }}
                     />
                 )}

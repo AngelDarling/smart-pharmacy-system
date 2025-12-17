@@ -41,6 +41,9 @@ export default function ProductDetail() {
     guestPhone: ""
   });
   const [directCoupon, setDirectCoupon] = useState(null);
+  const [allValidCoupons, setAllValidCoupons] = useState([]);
+  const [betterCoupon, setBetterCoupon] = useState(null);
+  const [noConditionCoupon, setNoConditionCoupon] = useState(null);
   const { add } = useCart();
   const { user } = useAuth();
 
@@ -78,16 +81,7 @@ export default function ProductDetail() {
         loadReviews(res.data._id);
       }
 
-      // Load direct apply coupon
-      api.get(`/coupons/direct-apply/${slug}`).then((couponRes) => {
-        if (couponRes.data.success && couponRes.data.coupon) {
-          setDirectCoupon(couponRes.data.coupon);
-        } else {
-          setDirectCoupon(null);
-        }
-      }).catch(() => {
-        setDirectCoupon(null);
-      });
+
 
       // Build category breadcrumb
       if (res.data.categoryId) {
@@ -106,6 +100,34 @@ export default function ProductDetail() {
       }
     });
   }, [slug]);
+
+  // Fetch coupons dynamically based on quantity
+  useEffect(() => {
+    if (!product || !product.slug) return;
+
+    const orderTotal = product.price * quantity;
+
+    api.get(`/coupons/direct-apply/${product.slug}?orderTotal=${orderTotal}`)
+      .then((couponRes) => {
+        if (couponRes.data.success) {
+          setDirectCoupon(couponRes.data.coupon);
+          setAllValidCoupons(couponRes.data.allValidCoupons || []);
+          setBetterCoupon(couponRes.data.betterCoupon || null);
+          setNoConditionCoupon(couponRes.data.noConditionCoupon || null);
+        } else {
+          setDirectCoupon(null);
+          setAllValidCoupons([]);
+          setBetterCoupon(null);
+          setNoConditionCoupon(null);
+        }
+      })
+      .catch(() => {
+        setDirectCoupon(null);
+        setAllValidCoupons([]);
+        setBetterCoupon(null);
+        setNoConditionCoupon(null);
+      });
+  }, [product, quantity]);
 
   const buildCategoryBreadcrumb = async (category) => {
     try {
@@ -153,7 +175,40 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = () => {
-    add(product, quantity);
+    // Tính giá đúng dựa trên directCoupon hiện tại
+    let finalPrice = product.price;
+    let discount = 0;
+    let discountType = null;
+    let discountValue = 0;
+
+    if (directCoupon) {
+      if (directCoupon.discountType === 'percent') {
+        const discountAmount = Math.round(product.price * directCoupon.discountValue / 100);
+        const maxDiscount = directCoupon.maxDiscount || Infinity;
+        const actualDiscount = Math.min(discountAmount, maxDiscount);
+        finalPrice = product.price - actualDiscount;
+        discount = directCoupon.discountValue;
+        discountType = 'percent';
+        discountValue = directCoupon.discountValue;
+      } else {
+        finalPrice = product.price - directCoupon.discountValue;
+        discount = directCoupon.discountValue;
+        discountType = 'amount';
+        discountValue = directCoupon.discountValue;
+      }
+    }
+
+    // Tạo product object với giá đúng
+    const productToAdd = {
+      ...product,
+      finalPrice,
+      originalPrice: product.price,
+      discount,
+      discountType,
+      discountValue
+    };
+
+    add(productToAdd, quantity);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (window.showCartDropdown) {
       window.showCartDropdown();
@@ -336,7 +391,7 @@ export default function ProductDetail() {
 
               <ProductSpecs product={product} />
 
-              <CouponBanner coupon={directCoupon} formatPrice={formatPrice} />
+              <CouponBanner coupon={directCoupon} betterCoupon={betterCoupon} formatPrice={formatPrice} />
 
               <QuantitySelector
                 quantity={quantity}

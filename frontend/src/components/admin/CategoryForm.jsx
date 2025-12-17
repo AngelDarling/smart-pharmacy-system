@@ -70,7 +70,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
         metaTitle: initialValues.seoTitle || '', // Map seoTitle to metaTitle
         metaDescription: initialValues.seoDescription || '' // Map seoDescription to metaDescription
       };
-      
+
       form.setFieldsValue(mappedValues);
       setHasParent(!!initialValues.parent);
       setImageUrl(initialValues.iconUrl || '');
@@ -78,16 +78,16 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
       // Reset form first
       form.resetFields();
       setImageUrl('');
-      
+
       // Set default values
       form.setFieldsValue({
         isActive: true
       });
-      
+
       // If parentCategory is provided, set it as parent
       if (parentCategory) {
         setHasParent(true);
-        
+
         // Use setTimeout to ensure form is ready
         setTimeout(() => {
           form.setFieldsValue({
@@ -105,7 +105,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
     if (visible && parentCategory && !initialValues) {
       // Set hasParent first
       setHasParent(true);
-      
+
       // Force form to update
       setTimeout(() => {
         form.setFieldsValue({
@@ -114,7 +114,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
         });
         setForceUpdate(prev => prev + 1);
       }, 200);
-      
+
       // Force update again after a bit more time
       setTimeout(() => {
         setForceUpdate(prev => prev + 1);
@@ -134,7 +134,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
     if (visible && isEditing && initialValues) {
       // Reset form first
       form.resetFields();
-      
+
       // Map and set values
       const mappedValues = {
         name: initialValues.name || '',
@@ -146,14 +146,14 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
         metaTitle: initialValues.seoTitle || '',
         metaDescription: initialValues.seoDescription || ''
       };
-      
+
       // Use multiple timeouts to ensure form is ready
       setTimeout(() => {
         form.setFieldsValue(mappedValues);
         setHasParent(!!initialValues.parent);
         setImageUrl(initialValues.iconUrl || '');
       }, 50);
-      
+
       setTimeout(() => {
         form.setFieldsValue(mappedValues);
         setForceUpdate(prev => prev + 1);
@@ -162,15 +162,24 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
   }, [visible, isEditing, initialValues, form]);
 
 
+  // State for image preview and file
+  const [imageUrl, setImageUrl] = useState('');
+  const [iconFile, setIconFile] = useState(null);
+
   // Handle form submit
   const handleSubmit = async () => {
     try {
       setLoading(true);
       const values = await form.validateFields();
-      
+
       // Clean up the data before sending
       const cleanedValues = { ...values };
-      
+
+      // Add icon file if present
+      if (iconFile) {
+        cleanedValues.iconFile = iconFile;
+      }
+
       // If hasParent is false, remove parent field
       if (!hasParent) {
         delete cleanedValues.parent;
@@ -178,7 +187,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
       } else {
         delete cleanedValues.hasParent; // Remove the hasParent field as it's not needed in API
       }
-      
+
       await onSubmit(cleanedValues);
     } catch (error) {
       console.error('Form validation failed:', error);
@@ -191,6 +200,8 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
   const handleCancel = () => {
     form.resetFields();
     setHasParent(false);
+    setIconFile(null);
+    setImageUrl('');
     onCancel();
   };
 
@@ -199,6 +210,8 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
     if (!visible) {
       form.resetFields();
       setHasParent(false);
+      setIconFile(null);
+      setImageUrl('');
     }
   }, [visible, form]);
 
@@ -223,47 +236,59 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .trim();
-    
+
     form.setFieldValue('slug', slug);
   };
-
-  // State for image preview
-  const [imageUrl, setImageUrl] = useState('');
 
   // Update image preview when form values change
   useEffect(() => {
     const currentUrl = form.getFieldValue('iconUrl');
-    if (currentUrl) {
+    if (currentUrl && !iconFile) {
       setImageUrl(currentUrl);
     }
-  }, [form, visible, initialValues]);
+  }, [form, visible, initialValues, iconFile]);
 
-  // Upload props
+  // Handle file selection
+  const handleFileChange = (info) => {
+    const file = info.file.originFileObj || info.file;
+
+    if (file) {
+      // Store the file
+      setIconFile(file);
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImageUrl(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload props - now just for UI, not actual upload
   const uploadProps = {
     name: 'file',
     multiple: false,
-    action: '/api/upload',
     listType: 'picture-card',
     showUploadList: false,
-    onChange(info) {
-      const { status, response } = info.file;
-      if (status === 'uploading') {
-        // Show loading state
-      } else if (status === 'done') {
-        message.success(`${info.file.name} tải lên thành công`);
-        if (response && response.url) {
-          form.setFieldValue('iconUrl', response.url);
-          setImageUrl(response.url);
-        }
-      } else if (status === 'error') {
-        message.error(`${info.file.name} tải lên thất bại`);
-        console.error('Upload error:', info.file.error, info.file.response);
+    beforeUpload: (file) => {
+      // Validate file type
+      const isImage = file.type.startsWith('image/');
+      if (!isImage) {
+        message.error('Chỉ được tải lên file ảnh!');
+        return false;
       }
+
+      // Validate file size (5MB)
+      const isLt5M = file.size / 1024 / 1024 < 5;
+      if (!isLt5M) {
+        message.error('Kích thước file phải nhỏ hơn 5MB!');
+        return false;
+      }
+
+      return false; // Prevent auto upload
     },
-    onError(error) {
-      console.error('Upload error:', error);
-      message.error('Tải file lên thất bại');
-    }
+    onChange: handleFileChange
   };
 
   return (
@@ -284,8 +309,8 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
           <Button onClick={handleCancel}>
             Hủy
           </Button>
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             onClick={handleSubmit}
             loading={loading}
           >
@@ -320,8 +345,8 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                   { max: 100, message: 'Tên danh mục không được quá 100 ký tự' }
                 ]}
               >
-                <Input 
-                  placeholder="Nhập tên danh mục" 
+                <Input
+                  placeholder="Nhập tên danh mục"
                   onChange={handleNameChange}
                   size="large"
                 />
@@ -336,8 +361,8 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                   { pattern: /^[a-z0-9-]+$/, message: 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang' }
                 ]}
               >
-                <Input 
-                  placeholder="slug-danh-muc" 
+                <Input
+                  placeholder="slug-danh-muc"
                   size="large"
                   addonBefore="/"
                 />
@@ -353,7 +378,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
           <Title level={5} style={{ marginBottom: '16px', color: '#262626' }}>
             Cấu trúc danh mục
           </Title>
-          
+
           <Form.Item
             name="hasParent"
             valuePropName="checked"
@@ -366,7 +391,7 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
               unCheckedChildren="Danh mục gốc"
               size="default"
               key={`switch-${hasParent}-${forceUpdate}`}
-              style={{ 
+              style={{
                 opacity: hasParent ? 1 : 0.7,
                 transition: 'all 0.3s ease'
               }}
@@ -410,8 +435,8 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
               { max: 500, message: 'Mô tả không được quá 500 ký tự' }
             ]}
           >
-            <TextArea 
-              rows={3} 
+            <TextArea
+              rows={3}
               placeholder="Mô tả ngắn về danh mục"
               showCount
               maxLength={500}
@@ -434,9 +459,9 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                 label="Trạng thái"
                 valuePropName="checked"
               >
-                <Switch 
-                  checkedChildren="Hoạt động" 
-                  unCheckedChildren="Tạm dừng" 
+                <Switch
+                  checkedChildren="Hoạt động"
+                  unCheckedChildren="Tạm dừng"
                   size="default"
                 />
               </Form.Item>
@@ -458,10 +483,10 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
           >
             <div>
               {imageUrl ? (
-                <div style={{ 
+                <div style={{
                   display: 'inline-block',
                   position: 'relative',
-                  border: '1px solid #d9d9d9', 
+                  border: '1px solid #d9d9d9',
                   borderRadius: '8px',
                   overflow: 'hidden',
                   background: '#fff'
@@ -476,20 +501,20 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                     background: '#fafafa',
                     position: 'relative'
                   }}>
-                    <img 
-                      src={imageUrl} 
-                      alt="Preview" 
-                      style={{ 
-                        maxWidth: '100%', 
-                        maxHeight: '100%', 
+                    <img
+                      src={imageUrl}
+                      alt="Preview"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
                         objectFit: 'contain',
                         display: 'block'
-                      }} 
+                      }}
                     />
                   </div>
-                  
+
                   {/* Success Badge & Actions */}
-                  <div style={{ 
+                  <div style={{
                     padding: '12px',
                     background: '#f6ffed',
                     borderTop: '1px solid #b7eb8f',
@@ -503,9 +528,9 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                         Đã tải lên
                       </Text>
                     </Space>
-                    <Button 
-                      type="link" 
-                      size="small" 
+                    <Button
+                      type="link"
+                      size="small"
                       danger
                       onClick={() => {
                         setImageUrl('');
@@ -516,18 +541,18 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                       Xóa
                     </Button>
                   </div>
-                  
+
                   {/* URL Display */}
-                  <div style={{ 
+                  <div style={{
                     padding: '8px 12px',
                     background: '#fafafa',
                     borderTop: '1px solid #f0f0f0'
                   }}>
-                    <Text 
-                      ellipsis 
-                      copyable 
-                      style={{ 
-                        fontSize: '11px', 
+                    <Text
+                      ellipsis
+                      copyable
+                      style={{
+                        fontSize: '11px',
                         color: '#8c8c8c',
                         display: 'block',
                         maxWidth: '176px'
@@ -552,14 +577,14 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                     transition: 'all 0.3s',
                     background: '#fafafa'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#1890ff';
-                    e.currentTarget.style.background = '#f0f5ff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#d9d9d9';
-                    e.currentTarget.style.background = '#fafafa';
-                  }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#1890ff';
+                      e.currentTarget.style.background = '#f0f5ff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#d9d9d9';
+                      e.currentTarget.style.background = '#fafafa';
+                    }}
                   >
                     <UploadOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
                     <Text strong style={{ fontSize: '14px', color: '#262626', marginBottom: '8px' }}>
@@ -572,45 +597,6 @@ const CategoryForm = ({ visible, onCancel, onSubmit, initialValues, isEditing, c
                 </Upload>
               )}
             </div>
-          </Form.Item>
-        </div>
-
-        <Divider />
-
-        {/* SEO Section */}
-        <div style={{ marginBottom: '24px' }}>
-          <Title level={5} style={{ marginBottom: '16px', color: '#262626' }}>
-            SEO & Tối ưu hóa
-          </Title>
-          <Form.Item
-            name="metaTitle"
-            label="Meta Title (SEO)"
-            rules={[
-              { max: 160, message: 'Meta title không được quá 160 ký tự' }
-            ]}
-          >
-            <Input 
-              placeholder="Tiêu đề SEO cho danh mục"
-              showCount
-              maxLength={160}
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="metaDescription"
-            label="Meta Description (SEO)"
-            rules={[
-              { max: 300, message: 'Meta description không được quá 300 ký tự' }
-            ]}
-          >
-            <TextArea 
-              rows={2} 
-              placeholder="Mô tả SEO cho danh mục"
-              showCount
-              maxLength={300}
-              size="large"
-            />
           </Form.Item>
         </div>
       </Form>

@@ -69,16 +69,17 @@ const CategoryManagement = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteInfo, setDeleteInfo] = useState(null);
   const [deletingCategory, setDeletingCategory] = useState(null);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
 
 
   // Flatten tree data to flat list for table display
   const flattenTree = (nodes, level = 0, parentPath = []) => {
     let result = [];
     if (!nodes || !Array.isArray(nodes)) return result;
-    
+
     nodes.forEach((node) => {
       if (!node) return;
-      
+
       const flatNode = {
         ...node,
         key: node.key || node._id || node.id,
@@ -86,15 +87,15 @@ const CategoryManagement = () => {
         parentPath: parentPath,
         indent: level * 24 // 24px per level for indentation
       };
-      
+
       result.push(flatNode);
-      
+
       if (node.children && node.children.length > 0) {
         const childNodes = flattenTree(node.children, level + 1, [...parentPath, node.name]);
         result = result.concat(childNodes);
       }
     });
-    
+
     return result;
   };
 
@@ -104,7 +105,7 @@ const CategoryManagement = () => {
       if (categories && Array.isArray(categories) && categories.length > 0) {
         // API tree already returns tree structure
         setTreeData(categories);
-        
+
         // Flatten tree for table display
         const flattened = flattenTree(categories);
         setFlatData(flattened);
@@ -149,12 +150,12 @@ const CategoryManagement = () => {
   const findNodeAndPath = (data, searchText, ancestors = []) => {
     try {
       if (!data || !Array.isArray(data)) return null;
-      
+
       for (const item of data) {
         if (!item) continue;
-        
+
         const matches = item.name && item.name.toLowerCase().includes(searchText.toLowerCase());
-        
+
         if (matches) {
           // Found matching node, return it with its ancestors
           return {
@@ -163,14 +164,14 @@ const CategoryManagement = () => {
             path: [...ancestors, item]
           };
         }
-        
+
         // Search in children
         if (item.children && item.children.length > 0) {
           const found = findNodeAndPath(item.children, searchText, [...ancestors, item]);
           if (found) return found;
         }
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error finding node:', error);
@@ -182,40 +183,40 @@ const CategoryManagement = () => {
   const filterTreeData = (data, searchText) => {
     try {
       if (!searchText || !data || !Array.isArray(data)) return data || [];
-      
+
       const searchLower = searchText.toLowerCase();
-      
+
       // Recursive function to filter tree
       // Returns node if it matches or has matching descendants, or if it's a parent of a matching node
       const filterNode = (node) => {
         if (!node) return null;
-        
+
         const nodeMatches = node.name && node.name.toLowerCase().includes(searchLower);
-        
+
         // Filter children recursively first
         const filteredChildren = node.children && node.children.length > 0
           ? node.children.map(filterNode).filter(Boolean)
           : [];
-        
+
         const hasMatchingChildren = filteredChildren.length > 0;
-        
+
         // Include node if:
         // 1. Node itself matches (include all its children, but filter them too)
         // 2. Node has matching children (include as parent context)
         if (nodeMatches || hasMatchingChildren) {
           return {
             ...node,
-            children: nodeMatches 
+            children: nodeMatches
               ? (node.children && node.children.length > 0
-                  ? node.children.map(filterNode).filter(Boolean) // Filter children even if parent matches
-                  : [])
+                ? node.children.map(filterNode).filter(Boolean) // Filter children even if parent matches
+                : [])
               : filteredChildren // If only children match, show only filtered children
           };
         }
-        
+
         return null;
       };
-      
+
       return data.map(filterNode).filter(Boolean);
     } catch (error) {
       console.error('Error filtering tree data:', error);
@@ -226,7 +227,7 @@ const CategoryManagement = () => {
   // Filter flat data based on search
   const filterFlatData = (data, searchText) => {
     if (!searchText || !data || !Array.isArray(data)) return data || [];
-    
+
     const searchLower = searchText.toLowerCase();
     return data.filter(item => {
       if (!item) return false;
@@ -239,7 +240,7 @@ const CategoryManagement = () => {
   // Filter flat data based on level
   const filterFlatDataByLevel = (data, level) => {
     if (level === 'all' || !data || !Array.isArray(data)) return data || [];
-    
+
     const targetLevel = parseInt(level, 10);
     return data.filter(item => {
       if (!item) return false;
@@ -250,7 +251,7 @@ const CategoryManagement = () => {
   // Filter flat data based on status
   const filterFlatDataByStatus = (data, status) => {
     if (status === 'all' || !data || !Array.isArray(data)) return data || [];
-    
+
     return data.filter(item => {
       if (!item) return false;
       if (status === 'active') return item.isActive === true;
@@ -334,15 +335,15 @@ const CategoryManagement = () => {
 
   // Apply filters to flat data
   let filteredFlatData = flatData;
-  
+
   if (levelFilter !== 'all') {
     filteredFlatData = filterFlatDataByLevel(filteredFlatData, levelFilter);
   }
-  
+
   if (statusFilter !== 'all') {
     filteredFlatData = filterFlatDataByStatus(filteredFlatData, statusFilter);
   }
-  
+
   if (searchValue) {
     filteredFlatData = filterFlatData(filteredFlatData, searchValue);
   }
@@ -414,26 +415,26 @@ const CategoryManagement = () => {
 
         return (
           <div style={{ display: 'flex', alignItems: 'center', paddingLeft: record.indent || 0 }}>
-            <Avatar 
-              size="small" 
+            <Avatar
+              size="small"
               icon={record.level === 0 ? <FolderOpenOutlined /> : <FolderOutlined />}
-              style={{ 
+              style={{
                 backgroundColor: record.isActive ? '#52c41a' : '#ff4d4f',
                 marginRight: 12
               }}
             />
             <div style={{ flex: 1 }}>
-              <div style={{ 
-                fontSize: '14px', 
-                fontWeight: 500, 
+              <div style={{
+                fontSize: '14px',
+                fontWeight: 500,
                 color: '#262626',
                 marginBottom: 4
               }}>
                 {text || 'Unknown'}
               </div>
               {record.description && (
-                <div style={{ 
-                  fontSize: '12px', 
+                <div style={{
+                  fontSize: '12px',
                   color: '#8c8c8c',
                   fontStyle: 'italic'
                 }}>
@@ -565,17 +566,17 @@ const CategoryManagement = () => {
     return (
       <div>
         {/* Header Section */}
-        <div style={{ 
+        <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 24
         }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar 
-              size="large" 
+            <Avatar
+              size="large"
               icon={<FolderOutlined />}
-              style={{ 
+              style={{
                 backgroundColor: '#1890ff',
                 marginRight: '16px'
               }}
@@ -618,7 +619,7 @@ const CategoryManagement = () => {
         </div>
 
         {/* Search and Filter Section */}
-        <div style={{ 
+        <div style={{
           display: 'flex',
           gap: 16,
           marginBottom: 24,
@@ -659,8 +660,8 @@ const CategoryManagement = () => {
             <Option value="active">Hoạt động</Option>
             <Option value="inactive">Tạm dừng</Option>
           </Select>
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             alignItems: 'center',
             color: '#8c8c8c',
             fontSize: '14px',
@@ -674,7 +675,7 @@ const CategoryManagement = () => {
         </div>
 
         {/* Tree Section */}
-        <div style={{ 
+        <div style={{
           minHeight: '500px',
           background: '#fafafa',
           borderRadius: '8px',
@@ -682,8 +683,8 @@ const CategoryManagement = () => {
           border: '1px solid #f0f0f0'
         }}>
           {loading ? (
-            <div style={{ 
-              textAlign: 'center', 
+            <div style={{
+              textAlign: 'center',
               padding: '80px 20px',
               color: '#8c8c8c'
             }}>
@@ -691,8 +692,8 @@ const CategoryManagement = () => {
               <div style={{ fontSize: '16px' }}>Đang tải danh mục...</div>
             </div>
           ) : error ? (
-            <div style={{ 
-              textAlign: 'center', 
+            <div style={{
+              textAlign: 'center',
               padding: '80px 20px',
               color: '#ff4d4f'
             }}>
@@ -700,8 +701,8 @@ const CategoryManagement = () => {
               <div style={{ fontSize: '16px', marginBottom: '16px' }}>
                 Lỗi: {error}
               </div>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 onClick={fetchCategories}
                 icon={<ReloadOutlined />}
               >
@@ -709,8 +710,8 @@ const CategoryManagement = () => {
               </Button>
             </div>
           ) : !filteredFlatData || filteredFlatData.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
+            <div style={{
+              textAlign: 'center',
               padding: '80px 20px',
               color: '#8c8c8c'
             }}>
@@ -718,8 +719,8 @@ const CategoryManagement = () => {
               <div style={{ fontSize: '16px', marginBottom: '16px' }}>
                 {searchValue ? 'Không tìm thấy danh mục phù hợp' : 'Chưa có danh mục nào'}
               </div>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 onClick={() => handleAddCategory()}
                 icon={<PlusOutlined />}
                 size="large"
@@ -733,10 +734,14 @@ const CategoryManagement = () => {
               dataSource={filteredFlatData}
               loading={loading}
               pagination={{
-                pageSize: 20,
+                current: pagination.current,
+                pageSize: pagination.pageSize,
                 showSizeChanger: true,
                 showTotal: (total) => `Tổng ${total} danh mục`,
-                pageSizeOptions: ['10', '20', '50', '100']
+                pageSizeOptions: ['10', '20', '50', '100'],
+                onChange: (page, pageSize) => {
+                  setPagination({ current: page, pageSize });
+                }
               }}
               rowKey={(record) => record.key || record._id || record.id}
               rowClassName={(record, index) => {
@@ -783,7 +788,7 @@ const CategoryManagement = () => {
           onCancel={cancelDelete}
           okText="Xóa"
           cancelText="Hủy"
-          okButtonProps={{ 
+          okButtonProps={{
             danger: true,
             loading: loading
           }}
@@ -795,12 +800,12 @@ const CategoryManagement = () => {
                 <p style={{ fontSize: '16px', marginBottom: '8px' }}>
                   Bạn có chắc chắn muốn xóa danh mục <strong>"{deleteInfo.category.name}"</strong>?
                 </p>
-                
+
                 {deleteInfo.hasChildren ? (
-                  <div style={{ 
-                    background: '#fff2f0', 
-                    border: '1px solid #ffccc7', 
-                    borderRadius: '6px', 
+                  <div style={{
+                    background: '#fff2f0',
+                    border: '1px solid #ffccc7',
+                    borderRadius: '6px',
                     padding: '16px',
                     marginBottom: '16px'
                   }}>
@@ -809,7 +814,7 @@ const CategoryManagement = () => {
                       <strong style={{ color: '#ff4d4f' }}>Cảnh báo:</strong>
                     </div>
                     <p style={{ margin: 0, color: '#262626' }}>
-                      Danh mục này có <strong>{deleteInfo.childrenCount}</strong> danh mục con. 
+                      Danh mục này có <strong>{deleteInfo.childrenCount}</strong> danh mục con.
                       Khi xóa danh mục cha, tất cả danh mục con cũng sẽ bị xóa theo.
                     </p>
                     <p style={{ margin: '8px 0 0 0', color: '#8c8c8c', fontSize: '14px' }}>
@@ -817,10 +822,10 @@ const CategoryManagement = () => {
                     </p>
                   </div>
                 ) : (
-                  <div style={{ 
-                    background: '#f6ffed', 
-                    border: '1px solid #b7eb8f', 
-                    borderRadius: '6px', 
+                  <div style={{
+                    background: '#f6ffed',
+                    border: '1px solid #b7eb8f',
+                    borderRadius: '6px',
                     padding: '16px',
                     marginBottom: '16px'
                   }}>
@@ -833,11 +838,11 @@ const CategoryManagement = () => {
                   </div>
                 )}
               </div>
-              
-              <div style={{ 
-                background: '#fafafa', 
-                border: '1px solid #d9d9d9', 
-                borderRadius: '6px', 
+
+              <div style={{
+                background: '#fafafa',
+                border: '1px solid #d9d9d9',
+                borderRadius: '6px',
                 padding: '12px',
                 fontSize: '14px'
               }}>
@@ -865,8 +870,8 @@ const CategoryManagement = () => {
         <div style={{ padding: '50px', color: '#ff4d4f' }}>
           <h3>Lỗi khi tải trang</h3>
           <p>Vui lòng thử lại sau</p>
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             onClick={() => window.location.reload()}
             style={{ marginTop: 16 }}
           >

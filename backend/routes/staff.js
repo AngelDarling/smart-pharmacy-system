@@ -35,6 +35,9 @@ router.delete("/:id", requireRole("admin"), staffController.remove);
 // Bulk operations (admin or manager)
 router.post("/bulk/update", requireRole("admin", "manager"), staffController.bulkUpdate);
 
+// Update staff permissions (admin only)
+router.patch("/:id/permissions", requireRole("admin"), staffController.updatePermissions);
+
 // Change password
 router.put("/:id/password", authRequired, staffController.changePassword);
 

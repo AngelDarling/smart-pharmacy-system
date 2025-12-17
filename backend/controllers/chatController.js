@@ -38,53 +38,102 @@ function initializeGemini() {
  */
 async function findProductsInDB(userQuery) {
   try {
-    const query = userQuery.toLowerCase().trim();
+    const originalQuery = userQuery.toLowerCase().trim();
     
-    if (!query || query.length < 2) {
+    if (!originalQuery || originalQuery.length < 2) {
       return [];
     }
 
-    // Tìm kiếm sản phẩm bằng text search (MongoDB full-text search)
-    const textSearchResults = await Product.find({
-      $text: { $search: query },
-      isActive: true,
-      totalStock: { $gt: 0 } // Chỉ lấy sản phẩm còn hàng
-    })
-      .populate("categoryId", "name slug")
-      .populate("brandId", "name slug")
-      .select("name slug price imageUrls description shortDescription tags categoryId brandId")
-      .limit(10)
-      .lean();
+    // Trích xuất từ khóa quan trọng (loại bỏ stop words)
+    const stopWords = ['bạn', 'có', 'bán', 'không', 'tôi', 'muốn', 'mua', 'cần', 'cho', 'của', 'và', 'hay', 'là', 'thì', 'được', 'ạ', 'nhé', 'à', 'vậy', 'sao', 'gì', 'đi', 'nào', 'với'];
+    const importantSingleLetters = ['a', 'b', 'c', 'd', 'e', 'k']; // Vitamin letters
+    
+    const keywords = originalQuery
+      .split(/\s+/)
+      .filter(word => {
+        const lower = word.toLowerCase();
+        // Giữ lại nếu: (1) dài hơn 1 ký tự, hoặc (2) là vitamin letter quan trọng
+        return (word.length > 1 && !stopWords.includes(lower)) || importantSingleLetters.includes(lower);
+      })
+      .join(' ');
+    
+    const searchQuery = keywords || originalQuery;
+    console.log(`[Search] Original: "${originalQuery}" → Keywords: "${searchQuery}"`);
 
-    // Nếu không tìm thấy bằng text search, thử tìm bằng regex
-    let regexResults = [];
-    if (textSearchResults.length === 0) {
-      regexResults = await Product.find({
-        $or: [
-          { name: { $regex: query, $options: "i" } },
-          { description: { $regex: query, $options: "i" } },
-          { shortDescription: { $regex: query, $options: "i" } },
-          { tags: { $in: [new RegExp(query, "i")] } },
-          { ingredients: { $regex: query, $options: "i" } },
-          { usage: { $regex: query, $options: "i" } }
-        ],
+    // Tìm kiếm với text search (MongoDB full-text)
+    let textSearchResults = [];
+    try {
+      textSearchResults = await Product.find({
+        $text: { $search: searchQuery },
         isActive: true,
         totalStock: { $gt: 0 }
       })
         .populate("categoryId", "name slug")
         .populate("brandId", "name slug")
         .select("name slug price imageUrls description shortDescription tags categoryId brandId")
-        .limit(10)
+        .limit(20)
         .lean();
+    } catch (error) {
+      console.log("[Search] Text search not available, using regex");
     }
 
-    // Kết hợp kết quả và loại bỏ trùng lặp
+    // Tìm kiếm bằng regex (fallback hoặc bổ sung)
+    const regexResults = await Product.find({
+      $or: [
+        { name: { $regex: searchQuery, $options: "i" } },
+        { description: { $regex: searchQuery, $options: "i" } },
+        { shortDescription: { $regex: searchQuery, $options: "i" } },
+        { tags: { $in: [new RegExp(searchQuery, "i")] } },
+        { ingredients: { $regex: searchQuery, $options: "i" } },
+        { usage: { $regex: searchQuery, $options: "i" } }
+      ],
+      isActive: true,
+      totalStock: { $gt: 0 }
+    })
+      .populate("categoryId", "name slug")
+      .populate("brandId", "name slug")
+      .select("name slug price imageUrls description shortDescription tags categoryId brandId")
+      .limit(20)
+      .lean();
+
+    // Kết hợp và loại bỏ trùng lặp
     const allResults = [...textSearchResults, ...regexResults];
     const uniqueResults = Array.from(
       new Map(allResults.map((item) => [item._id.toString(), item])).values()
     );
 
-    return uniqueResults.slice(0, 10); // Giới hạn tối đa 10 sản phẩm
+    // Tính điểm relevance và sắp xếp
+    const scoredResults = uniqueResults.map(product => {
+      let score = 0;
+      const nameMatch = product.name.toLowerCase();
+      const searchLower = searchQuery.toLowerCase();
+      
+      // Exact match trong tên = điểm cao nhất
+      if (nameMatch.includes(searchLower)) {
+        score += 100;
+        // Bonus nếu match ở đầu tên
+        if (nameMatch.startsWith(searchLower)) {
+          score += 50;
+        }
+      }
+      
+      // Match trong tags
+      if (product.tags?.some(tag => tag.toLowerCase().includes(searchLower))) {
+        score += 30;
+      }
+      
+      // Match trong description
+      if (product.description?.toLowerCase().includes(searchLower)) {
+        score += 10;
+      }
+      
+      return { ...product, relevanceScore: score };
+    });
+
+    // Sắp xếp theo điểm relevance
+    scoredResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+    return scoredResults.slice(0, 10); // Top 10 sản phẩm liên quan nhất
   } catch (error) {
     console.error("Lỗi tìm kiếm sản phẩm:", error);
     return [];
@@ -177,7 +226,21 @@ Hãy đưa ra câu trả lời tư vấn NGẮN GỌN, chuyên nghiệp và thâ
       console.log("✅ Gemini 2.5 Flash đã trả lời thành công");
     } catch (error) {
       console.error("❌ Lỗi khi gọi Gemini API:", error);
-      throw new Error(`Lỗi khi gọi Gemini API: ${error.message}. Vui lòng kiểm tra API key và quyền truy cập tại https://aistudio.google.com/app/apikey`);
+      
+      // Xử lý các lỗi cụ thể từ Gemini API
+      if (error.status === 503 || error.message?.includes("overloaded")) {
+        // API overload - trả về response thân thiện với sản phẩm
+        aiReply = relevantProducts.length > 0
+          ? `Tôi tìm thấy ${relevantProducts.length} sản phẩm phù hợp với yêu cầu của bạn. Vui lòng xem danh sách bên dưới để biết thêm chi tiết. Nếu cần tư vấn thêm, vui lòng liên hệ hotline 1800 6928.`
+          : `Hiện tại tôi không tìm thấy sản phẩm phù hợp. Vui lòng thử tìm kiếm với từ khóa khác hoặc liên hệ hotline 1800 6928 để được hỗ trợ trực tiếp.`;
+        console.log("⚠️ Gemini API overload - sử dụng fallback response");
+      } else if (error.status === 429) {
+        // Rate limit exceeded
+        aiReply = `Hệ thống đang xử lý quá nhiều yêu cầu. Vui lòng thử lại sau ít phút hoặc liên hệ hotline 1800 6928 để được hỗ trợ ngay.`;
+      } else {
+        // Lỗi khác - throw để outer catch xử lý
+        throw new Error(`Gemini API error: ${error.message}`);
+      }
     }
 
     // Trả về kết quả

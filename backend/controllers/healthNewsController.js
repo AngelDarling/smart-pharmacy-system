@@ -102,6 +102,49 @@ export const getBySlug = async (req, res) => {
   }
 };
 
+// Get news by ID (admin) - WITH content for editing
+// Get news by ID (admin) - WITH content for editing
+export const getById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`[getById] Fetching news with ID: ${id}`);
+    
+    // Validate ObjectId
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        console.log(`[getById] Invalid ID format: ${id}`);
+        return res.status(400).json({ message: 'Invalid news ID format' });
+    }
+
+    const news = await HealthNews.findById(id)
+      .populate('category', 'name slug icon')
+      .populate({
+          path: 'relatedProducts',
+          select: 'name price imageUrls image discount finalPrice',
+          strictPopulate: false
+      });
+
+    if (!news) {
+      console.log(`[getById] News not found: ${id}`);
+      return res.status(404).json({ message: 'News article not found' });
+    }
+    
+    // Filter out any null relatedProducts (if product was deleted)
+    if (news.relatedProducts && Array.isArray(news.relatedProducts)) {
+        const originalLength = news.relatedProducts.length;
+        news.relatedProducts = news.relatedProducts.filter(p => p !== null && p !== undefined);
+        /*
+        console.log(`[getById] Related products filtered. Original: ${originalLength}, New: ${news.relatedProducts.length}`);
+        */
+    }
+
+    console.log(`[getById] Success: ${id}`);
+    res.json(news);
+  } catch (error) {
+    console.error('[getById] Error:', error);
+    res.status(500).json({ message: 'Error fetching news article', error: error.message });
+  }
+};
+
 // Increment view count
 export const incrementView = async (req, res) => {
   try {
@@ -152,20 +195,38 @@ export const create = async (req, res) => {
 };
 
 // Update news (admin)
+// Update news (admin)
 export const update = async (req, res) => {
   try {
-    const news = await HealthNews.findById(req.params.id);
+    const { id } = req.params;
+    console.log(`[update] Updating news ID: ${id}`);
+    // console.log('[update] Request body:', JSON.stringify(req.body, null, 2));
+
+    const news = await HealthNews.findById(id);
     if (!news) {
+      console.log(`[update] News not found: ${id}`);
       return res.status(404).json({ message: 'News article not found' });
     }
+
     Object.keys(req.body).forEach(key => {
-      if (key !== '_id' && key !== 'createdBy' && key !== 'createdAt') {
+      // Prevent updating immutable fields
+      if (key !== '_id' && key !== 'createdBy' && key !== 'createdAt' && key !== 'updatedAt') {
         news[key] = req.body[key];
       }
     });
+
+    // Ensure relatedProducts doesn't contain nulls if it was updated
+    if (req.body.relatedProducts && Array.isArray(news.relatedProducts)) {
+         news.relatedProducts = news.relatedProducts.filter(p => p !== null && p !== undefined);
+    }
+    
+    console.log('[update] Saving changes...');
     await news.save();
+    console.log('[update] Save successful');
+    
     res.json(news);
   } catch (error) {
+    console.error('[update] Error updating news:', error);
     res.status(500).json({ message: 'Error updating news article', error: error.message });
   }
 };
@@ -245,6 +306,7 @@ export default {
   getFeatured,
   getTrending,
   getBySlug,
+  getById,
   incrementView,
   incrementLike,
   create,

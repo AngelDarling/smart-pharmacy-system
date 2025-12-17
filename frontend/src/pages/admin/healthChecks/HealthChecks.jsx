@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Space, message, Tag } from 'antd';
-import { EditOutlined, DeleteOutlined, QuestionCircleOutlined, FileTextOutlined, PlusOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Space, message, Tag, Avatar } from 'antd';
+import { EditOutlined, DeleteOutlined, QuestionCircleOutlined, FileTextOutlined, PlusOutlined, HeartOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../api/client.js';
 
@@ -115,12 +115,36 @@ export default function HealthChecks() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý bài kiểm tra sức khỏe</h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<HeartOutlined />}
+            style={{
+              backgroundColor: '#eb2f96',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý bài kiểm tra sức khỏe
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý các bài kiểm tra và đánh giá sức khỏe
+            </div>
+          </div>
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => navigate('/admin/health-checks/new')}
+          size="large"
         >
           Thêm bài kiểm tra
         </Button>

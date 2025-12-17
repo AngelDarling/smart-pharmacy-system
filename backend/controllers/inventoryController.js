@@ -320,9 +320,8 @@ export async function getStockByBatch(req, res) {
             $sum: {
               $cond: [{ $eq: ['$type', 'return'] }, '$quantity', 0]
             }
-          }
-          // Note: 'adjust' and 'transfer' might need specific handling depending on business logic
-          // For now, we assume simple import/export/return flow for batch tracking
+          },
+          firstImportDate: { $min: '$createdAt' }
         }
       },
       {
@@ -331,6 +330,7 @@ export async function getStockByBatch(req, res) {
           variantId: '$_id.variantId',
           batchNumber: '$_id.batchNumber',
           expiryDate: '$_id.expiryDate',
+          firstImportDate: '$firstImportDate',
           quantity: {
             $subtract: [
               { $add: ['$totalImport', '$totalReturn'] },

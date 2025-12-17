@@ -235,7 +235,7 @@ const UserManagement = () => {
           size={50}
           src={avatar || '/default-avatar.png'}
           icon={<UserOutlined />}
-          style={{ 
+          style={{
             backgroundColor: record.isActive ? '#52c41a' : '#ff4d4f'
           }}
         />
@@ -248,8 +248,8 @@ const UserManagement = () => {
       width: 250,
       render: (text, record) => (
         <div style={{ padding: '8px 0' }}>
-          <div style={{ 
-            fontWeight: 600, 
+          <div style={{
+            fontWeight: 600,
             fontSize: '14px',
             marginBottom: '4px',
             color: '#262626',
@@ -257,8 +257,8 @@ const UserManagement = () => {
           }}>
             {text}
           </div>
-          <div style={{ 
-            fontSize: '12px', 
+          <div style={{
+            fontSize: '12px',
             color: '#8c8c8c',
             marginBottom: '6px',
             fontFamily: 'monospace'
@@ -275,8 +275,8 @@ const UserManagement = () => {
       render: (_, record) => (
         <div>
           {record.phone && (
-            <div style={{ 
-              fontSize: '12px', 
+            <div style={{
+              fontSize: '12px',
               color: '#262626',
               marginBottom: '4px'
             }}>
@@ -284,21 +284,21 @@ const UserManagement = () => {
             </div>
           )}
           {record.address && (
-            <div style={{ 
-              fontSize: '11px', 
+            <div style={{
+              fontSize: '11px',
               color: '#8c8c8c',
               fontStyle: 'italic',
               lineHeight: '1.3'
             }}>
-              📍 {record.address.length > 40 
-                ? `${record.address.substring(0, 40)}...` 
+              📍 {record.address.length > 40
+                ? `${record.address.substring(0, 40)}...`
                 : record.address
               }
             </div>
           )}
           {record.lastLogin && (
-            <div style={{ 
-              fontSize: '10px', 
+            <div style={{
+              fontSize: '10px',
               color: '#8c8c8c',
               marginTop: '4px'
             }}>
@@ -316,15 +316,15 @@ const UserManagement = () => {
       align: 'center',
       render: (points) => (
         <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            fontSize: '16px', 
-            fontWeight: 700, 
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 700,
             color: '#4f46e5'
           }}>
             {points || 0}
           </div>
-          <div style={{ 
-            fontSize: '11px', 
+          <div style={{
+            fontSize: '11px',
             color: '#8c8c8c',
             marginTop: '2px'
           }}>
@@ -348,8 +348,8 @@ const UserManagement = () => {
             unCheckedChildren="Tạm dừng"
             style={{ marginBottom: '4px' }}
           />
-          <div style={{ 
-            fontSize: '10px', 
+          <div style={{
+            fontSize: '10px',
             color: isActive ? '#52c41a' : '#ff4d4f',
             marginTop: '2px'
           }}>
@@ -397,7 +397,7 @@ const UserManagement = () => {
                 shape="circle"
                 icon={<EyeOutlined />}
                 onClick={() => handleViewPointHistory(record)}
-                style={{ 
+                style={{
                   color: '#1890ff',
                   border: '1px solid #91d5ff'
                 }}
@@ -410,7 +410,7 @@ const UserManagement = () => {
                 shape="circle"
                 icon={<EditOutlined />}
                 onClick={() => handleEditUser(record)}
-                style={{ 
+                style={{
                   color: '#52c41a',
                   border: '1px solid #b7eb8f'
                 }}
@@ -422,7 +422,7 @@ const UserManagement = () => {
                 size="small"
                 shape="circle"
                 icon={<MoreOutlined />}
-                style={{ 
+                style={{
                   color: '#8c8c8c',
                   border: '1px solid #d9d9d9'
                 }}
@@ -447,20 +447,46 @@ const UserManagement = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý Khách hàng</h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<UserOutlined />}
+            style={{
+              backgroundColor: '#1890ff',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý Khách hàng
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý thông tin khách hàng và điểm tích lũy
+            </div>
+          </div>
+        </div>
         <Space>
           <Tooltip title="Làm mới dữ liệu">
             <Button
               icon={<ReloadOutlined />}
               onClick={() => fetchUsers(filters)}
               loading={loading}
+              shape="circle"
+              size="large"
             />
           </Tooltip>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleAddUser}
+            size="large"
           >
             Thêm người dùng
           </Button>
@@ -545,14 +571,14 @@ const UserManagement = () => {
           <Option value={true}>Hoạt động</Option>
           <Option value={false}>Tạm dừng</Option>
         </Select>
-        <Button 
-          type="primary" 
+        <Button
+          type="primary"
           onClick={applyFilters}
           icon={<FilterOutlined />}
         >
           Áp dụng
         </Button>
-        <Button 
+        <Button
           onClick={resetFilters}
           icon={<ClearOutlined />}
         >
@@ -573,15 +599,15 @@ const UserManagement = () => {
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => (
-            <div style={{ 
-              display: 'flex', 
+            <div style={{
+              display: 'flex',
               alignItems: 'center',
               gap: '8px',
               color: '#8c8c8c'
             }}>
               <UserOutlined />
               <span>
-                Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong> 
+                Hiển thị <strong style={{ color: '#262626' }}>{range[0]}-{range[1]}</strong>
                 {' '}trong tổng số <strong style={{ color: '#262626' }}>{total}</strong> khách hàng
               </span>
             </div>
@@ -596,7 +622,7 @@ const UserManagement = () => {
 
       {/* Bulk Actions */}
       {selectedRowKeys.length > 0 && (
-        <div style={{ 
+        <div style={{
           marginTop: 16,
           padding: 16,
           background: '#f6ffed',
@@ -607,8 +633,8 @@ const UserManagement = () => {
           alignItems: 'center'
         }}>
           <Space>
-            <Badge 
-              count={selectedRowKeys.length} 
+            <Badge
+              count={selectedRowKeys.length}
               style={{ backgroundColor: '#52c41a' }}
             />
             <span style={{ color: '#262626', fontWeight: 500 }}>
@@ -636,7 +662,7 @@ const UserManagement = () => {
             >
               Xóa đã chọn
             </Button>
-            <Button 
+            <Button
               onClick={() => setSelectedRowKeys([])}
               icon={<ClearOutlined />}
             >
@@ -691,7 +717,7 @@ const UserManagement = () => {
               </Descriptions.Item>
             </Descriptions>
           )}
-          
+
           {pointHistory.length === 0 && !historyLoading ? (
             <Empty description="Khách hàng chưa có lịch sử tích điểm" />
           ) : (

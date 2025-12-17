@@ -101,7 +101,10 @@ export default function BestSellingSection({ products, page = 0, onPrev, onNext,
                                                     boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
                                                     position: "relative",
                                                     cursor: "pointer",
-                                                    transition: "all 0.3s ease"
+                                                    transition: "all 0.3s ease",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    height: "100%"
                                                 }}
                                                 onMouseEnter={(e) => {
                                                     e.currentTarget.style.transform = "translateY(-4px)";
@@ -150,7 +153,7 @@ export default function BestSellingSection({ products, page = 0, onPrev, onNext,
                                                 <button
                                                     onClick={(e) => onBuyClick(e, p)}
                                                     style={{
-                                                        marginTop: 10,
+                                                        marginTop: "auto",
                                                         width: "100%",
                                                         background: "#2563eb",
                                                         color: "white",

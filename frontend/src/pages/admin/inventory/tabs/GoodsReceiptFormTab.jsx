@@ -203,12 +203,24 @@ export default function GoodsReceiptFormTab() {
                     showSearch
                     optionFilterProp="children"
                     style={{ width: '100%' }}
+                    optionLabelProp="label"
                 >
-                    {products.map(product => (
-                        <Option key={product._id} value={product._id}>
-                            {product.name} ({product.sku})
-                        </Option>
-                    ))}
+                    {products.map(product => {
+                        const fullName = `${product.name} (${product.sku})`;
+                        const truncatedLabel = fullName.length > 35 ? `${fullName.substring(0, 35)}...` : fullName;
+
+                        return (
+                            <Option
+                                key={product._id}
+                                value={product._id}
+                                label={truncatedLabel}
+                            >
+                                <div title={fullName}>
+                                    {product.name} <Text type="secondary" style={{ fontSize: '12px' }}>({product.sku})</Text>
+                                </div>
+                            </Option>
+                        );
+                    })}
                 </Select>
             )
         },

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, message, Popconfirm, Switch } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, OrderedListOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, message, Popconfirm, Switch, Avatar } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, OrderedListOutlined, HeartOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../../api/client.js';
 
@@ -278,14 +278,36 @@ export default function QuestionManagement() {
         </Button>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>
-          Quản lý câu hỏi: {healthCheckName}
-        </h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<HeartOutlined />}
+            style={{
+              backgroundColor: '#eb2f96',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý câu hỏi: {healthCheckName}
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý câu hỏi và phương án trả lời
+            </div>
+          </div>
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={onAddQuestion}
+          size="large"
         >
           Thêm câu hỏi
         </Button>

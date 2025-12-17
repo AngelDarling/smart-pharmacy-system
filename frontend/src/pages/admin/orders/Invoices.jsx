@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions, Card, Divider } from 'antd';
+import { Table, Tag, Space, Input, Select, Button, DatePicker, Typography, Statistic, Row, Col, message, Modal, Descriptions, Card, Divider, Avatar } from 'antd';
 import { SearchOutlined, ReloadOutlined, ClearOutlined, PrinterOutlined, FileTextOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 import dayjs from 'dayjs';
@@ -55,10 +55,10 @@ export default function Invoices() {
 
       setOrders(listRes.data.items || []);
       setPagination((p) => ({ ...p, total: listRes.data.total || 0 }));
-      
+
       // Tính thống kê từ danh sách đơn hàng
       const totalRevenue = (listRes.data.items || []).reduce((sum, order) => sum + (order.totals?.grand || 0), 0);
-      setStats({ 
+      setStats({
         totalInvoices: listRes.data.total || 0,
         totalRevenue: statsRes.data?.totalRevenue || totalRevenue
       });
@@ -72,37 +72,39 @@ export default function Invoices() {
   useEffect(() => { load(); }, [load]);
 
   const columns = [
-    { 
-      title: 'Mã hóa đơn', 
-      dataIndex: 'code', 
+    {
+      title: 'Mã hóa đơn',
+      dataIndex: 'code',
       width: 140,
       render: (v) => (
         <span style={{ color: '#1d4ed8', fontWeight: 700 }}>{v}</span>
       )
     },
-    { 
-      title: 'Khách hàng', 
-      dataIndex: ['shippingAddress', 'fullName'], 
-      width: 220, 
+    {
+      title: 'Khách hàng',
+      dataIndex: ['shippingAddress', 'fullName'],
+      width: 220,
       render: (_, r) => (
         <span style={{ color: '#0f172a', fontWeight: 700 }}>
           {r.shippingAddress?.fullName || (r.userId?.name || 'Khách vãng lai')}
         </span>
-      ) 
+      )
     },
-    { title: 'SĐT', dataIndex: ['shippingAddress','phone'], width: 130, render: (_, r) => r.shippingAddress?.phone || '—' },
-    { title: 'Thanh toán', dataIndex: 'paymentMethod', width: 110, render: (v)=> (v||'cod').toUpperCase() },
-    { title: 'Tổng tiền', dataIndex: ['totals','grand'], align:'right', width: 140, render: (v)=> (
-      <span style={{ color: '#16a34a', fontWeight: 700 }}>{(v||0).toLocaleString('vi-VN')}₫</span>
-    ) },
-    { title: 'Ngày xuất', dataIndex: 'createdAt', width: 160, render: (v)=> dayjs(v).format('DD/MM/YYYY HH:mm') },
+    { title: 'SĐT', dataIndex: ['shippingAddress', 'phone'], width: 130, render: (_, r) => r.shippingAddress?.phone || '—' },
+    { title: 'Thanh toán', dataIndex: 'paymentMethod', width: 110, render: (v) => (v || 'cod').toUpperCase() },
+    {
+      title: 'Tổng tiền', dataIndex: ['totals', 'grand'], align: 'right', width: 140, render: (v) => (
+        <span style={{ color: '#16a34a', fontWeight: 700 }}>{(v || 0).toLocaleString('vi-VN')}₫</span>
+      )
+    },
+    { title: 'Ngày xuất', dataIndex: 'createdAt', width: 160, render: (v) => dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Thao tác', fixed: 'right', width: 250,
       render: (_, r) => (
         <Space wrap>
-          <Button 
-            type="primary" 
-            size="small" 
+          <Button
+            type="primary"
+            size="small"
             icon={<EyeOutlined />}
             onClick={async () => {
               try {
@@ -115,7 +117,7 @@ export default function Invoices() {
           >
             Xem
           </Button>
-          <Button 
+          <Button
             size="small"
             icon={<PrinterOutlined />}
             onClick={async () => {
@@ -134,7 +136,7 @@ export default function Invoices() {
             fileName={getPDFFileName(r)}
           >
             {({ loading }) => (
-              <Button 
+              <Button
                 size="small"
                 icon={<DownloadOutlined />}
                 loading={loading}
@@ -163,11 +165,31 @@ export default function Invoices() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 0, color: '#1d4ed8' }}>
-          <FileTextOutlined style={{ marginRight: 8 }} />
-          Quản lý hóa đơn
-        </Title>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<FileTextOutlined />}
+            style={{
+              backgroundColor: '#faad14',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý hóa đơn
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý hóa đơn và xuất file PDF
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -176,7 +198,7 @@ export default function Invoices() {
           <Input
             placeholder="Tìm mã đơn / tên / SĐT"
             value={filters.q}
-            onChange={(e)=> setFilters({ ...filters, q: e.target.value })}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             prefix={<SearchOutlined />}
             style={{ width: 260 }}
             allowClear
@@ -184,7 +206,7 @@ export default function Invoices() {
           <Select
             placeholder="Hình thức thanh toán"
             value={filters.paymentMethod || undefined}
-            onChange={(v)=> setFilters({ ...filters, paymentMethod: v || '' })}
+            onChange={(v) => setFilters({ ...filters, paymentMethod: v || '' })}
             allowClear
             style={{ width: 200 }}
             options={[
@@ -194,10 +216,10 @@ export default function Invoices() {
           />
           <RangePicker
             value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
-            onChange={(vals)=> setFilters({ ...filters, from: vals?.[0] || null, to: vals?.[1] || null })}
+            onChange={(vals) => setFilters({ ...filters, from: vals?.[0] || null, to: vals?.[1] || null })}
           />
-          <Button 
-            onClick={()=> {
+          <Button
+            onClick={() => {
               const today = dayjs().startOf('day');
               const todayEnd = dayjs().endOf('day');
               setFilters({ ...filters, from: today, to: todayEnd });
@@ -206,15 +228,15 @@ export default function Invoices() {
           >
             Hôm nay
           </Button>
-          <Button 
-            type="primary" 
-            onClick={()=> setPagination((p)=> ({ ...p, current: 1 }))} 
+          <Button
+            type="primary"
+            onClick={() => setPagination((p) => ({ ...p, current: 1 }))}
             icon={<ReloadOutlined />}
           >
             Lọc
           </Button>
-          <Button 
-            onClick={()=> {
+          <Button
+            onClick={() => {
               setFilters({ q: '', paymentMethod: '', from: null, to: null });
               setPagination((p) => ({ ...p, current: 1 }));
             }}
@@ -226,11 +248,11 @@ export default function Invoices() {
       </Card>
 
       {/* Stats */}
-      <Row gutter={[16,16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={12}>
           <Card>
-            <Statistic 
-              title="Tổng số hóa đơn" 
+            <Statistic
+              title="Tổng số hóa đơn"
               value={stats.totalInvoices}
               prefix={<FileTextOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -239,9 +261,9 @@ export default function Invoices() {
         </Col>
         <Col xs={24} sm={12} md={12}>
           <Card>
-            <Statistic 
-              title="Tổng doanh thu" 
-              value={(stats.totalRevenue||0).toLocaleString('vi-VN') + '₫'}
+            <Statistic
+              title="Tổng doanh thu"
+              value={(stats.totalRevenue || 0).toLocaleString('vi-VN') + '₫'}
               prefix={<DownloadOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
@@ -269,15 +291,15 @@ export default function Invoices() {
       {/* Detail Modal */}
       <Modal
         open={detail.open}
-        onCancel={()=> setDetail({ open:false, order:null })}
+        onCancel={() => setDetail({ open: false, order: null })}
         title={<span>Chi tiết hóa đơn <strong>{detail.order?.code}</strong></span>}
         footer={[
-          <Button key="close" onClick={()=> setDetail({ open:false, order:null })}>
+          <Button key="close" onClick={() => setDetail({ open: false, order: null })}>
             Đóng
           </Button>,
-          <Button 
-            key="print" 
-            type="primary" 
+          <Button
+            key="print"
+            type="primary"
             icon={<PrinterOutlined />}
             onClick={() => {
               setDetail({ open: false, order: null });
@@ -291,7 +313,7 @@ export default function Invoices() {
       >
         {detail.order && (
           <div>
-            <Row gutter={[16,16]}>
+            <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
                   <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Thông tin khách hàng</h3>
@@ -307,9 +329,9 @@ export default function Invoices() {
                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
                   <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Thông tin thanh toán</h3>
                   <Descriptions column={1} size="small">
-                    <Descriptions.Item label="Phương thức">{(detail.order.paymentMethod||'cod').toUpperCase()}</Descriptions.Item>
-                    <Descriptions.Item label="Tổng tiền hàng">{(detail.order.totals?.items||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
-                    <Descriptions.Item label="Phí vận chuyển">{(detail.order.totals?.shipping||0).toLocaleString('vi-VN')}₫</Descriptions.Item>
+                    <Descriptions.Item label="Phương thức">{(detail.order.paymentMethod || 'cod').toUpperCase()}</Descriptions.Item>
+                    <Descriptions.Item label="Tổng tiền hàng">{(detail.order.totals?.items || 0).toLocaleString('vi-VN')}₫</Descriptions.Item>
+                    <Descriptions.Item label="Phí vận chuyển">{(detail.order.totals?.shipping || 0).toLocaleString('vi-VN')}₫</Descriptions.Item>
                     {detail.order.couponCode && (
                       <Descriptions.Item label="Mã giảm giá">
                         <Space>
@@ -317,16 +339,16 @@ export default function Invoices() {
                             {detail.order.couponCode}
                           </Text>
                           <Text type="secondary" style={{ fontSize: 12 }}>
-                            (Giảm {(detail.order.totals?.discount||0).toLocaleString('vi-VN')}₫)
+                            (Giảm {(detail.order.totals?.discount || 0).toLocaleString('vi-VN')}₫)
                           </Text>
                         </Space>
                       </Descriptions.Item>
                     )}
                     <Descriptions.Item label="Giảm giá">
-                      {(detail.order.totals?.discount||0).toLocaleString('vi-VN')}₫
+                      {(detail.order.totals?.discount || 0).toLocaleString('vi-VN')}₫
                     </Descriptions.Item>
                     <Descriptions.Item label="Tổng thanh toán">
-                      <span style={{ color:'#16a34a', fontWeight:700 }}>{(detail.order.totals?.grand||0).toLocaleString('vi-VN')}₫</span>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>{(detail.order.totals?.grand || 0).toLocaleString('vi-VN')}₫</span>
                     </Descriptions.Item>
                     <Descriptions.Item label="Ngày xuất">
                       {dayjs(detail.order.createdAt).format('DD/MM/YYYY HH:mm')}
@@ -339,7 +361,7 @@ export default function Invoices() {
             <div style={{ marginTop: 16, padding: 16, border: '1px solid #f0f0f0', borderRadius: 4 }}>
               <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Sản phẩm</h3>
               <Table
-                rowKey={(r,idx)=> `${r.productId || idx}`}
+                rowKey={(r, idx) => `${r.productId || idx}`}
                 dataSource={detail.order.items || []}
                 pagination={false}
                 columns={[
@@ -347,38 +369,38 @@ export default function Invoices() {
                     title: 'Sản phẩm',
                     dataIndex: 'nameSnapshot',
                     render: (_, r) => (
-                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <img
                           src={getImageUrl(r.productId?.imageUrls?.[0], '/default-product.png')}
                           alt={r.nameSnapshot}
                           width={56}
                           height={56}
-                          style={{ objectFit:'cover', borderRadius:8, border:'1px solid #f0f0f0' }}
-                          onError={(e)=> handleImageError(e, '/default-product.png')}
+                          style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #f0f0f0' }}
+                          onError={(e) => handleImageError(e, '/default-product.png')}
                         />
                         <div>
-                          <div style={{ fontWeight:600 }}>{r.nameSnapshot}</div>
+                          <div style={{ fontWeight: 600 }}>{r.nameSnapshot}</div>
                         </div>
                       </div>
                     )
                   },
-                  { 
-                    title:'SL', 
-                    dataIndex:'quantity', 
-                    align:'right', 
-                    width:80 
+                  {
+                    title: 'SL',
+                    dataIndex: 'quantity',
+                    align: 'right',
+                    width: 80
                   },
-                  { 
-                    title:'Đơn giá', 
-                    dataIndex:'priceSnapshot', 
-                    align:'right', 
-                    width:180, 
-                    render:(v, r) => {
-                      const hasDiscount = (r.originalPriceSnapshot && r.originalPriceSnapshot > r.priceSnapshot) || 
-                                         (r.discount > 0 && r.priceSnapshot < (r.originalPriceSnapshot || r.priceSnapshot));
+                  {
+                    title: 'Đơn giá',
+                    dataIndex: 'priceSnapshot',
+                    align: 'right',
+                    width: 180,
+                    render: (v, r) => {
+                      const hasDiscount = (r.originalPriceSnapshot && r.originalPriceSnapshot > r.priceSnapshot) ||
+                        (r.discount > 0 && r.priceSnapshot < (r.originalPriceSnapshot || r.priceSnapshot));
                       const displayPrice = r.priceSnapshot || 0;
                       const originalPrice = r.originalPriceSnapshot || (hasDiscount ? r.priceSnapshot : null);
-                      
+
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                           <span style={{ color: '#3b82f6', fontWeight: 600 }}>
@@ -393,12 +415,12 @@ export default function Invoices() {
                       );
                     }
                   },
-                  { 
-                    title:'Thành tiền', 
-                    align:'right', 
-                    width:180, 
-                    render:(_,r)=> {
-                      const totalPrice = (r.priceSnapshot||0) * (r.quantity||0);
+                  {
+                    title: 'Thành tiền',
+                    align: 'right',
+                    width: 180,
+                    render: (_, r) => {
+                      const totalPrice = (r.priceSnapshot || 0) * (r.quantity || 0);
                       return (
                         <span style={{ color: '#3b82f6', fontWeight: 600 }}>
                           {totalPrice.toLocaleString('vi-VN')}₫
@@ -416,10 +438,10 @@ export default function Invoices() {
       {/* Print View Modal */}
       <Modal
         open={printView.open}
-        onCancel={()=> setPrintView({ open:false, order:null })}
+        onCancel={() => setPrintView({ open: false, order: null })}
         title={<span>Xem và tải hóa đơn <strong>{printView.order?.code}</strong></span>}
         footer={[
-          <Button key="close" onClick={()=> setPrintView({ open:false, order:null })}>
+          <Button key="close" onClick={() => setPrintView({ open: false, order: null })}>
             Đóng
           </Button>,
           printView.order && (
@@ -429,8 +451,8 @@ export default function Invoices() {
               fileName={getPDFFileName(printView.order)}
             >
               {({ loading }) => (
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   icon={<DownloadOutlined />}
                   loading={loading}
                 >

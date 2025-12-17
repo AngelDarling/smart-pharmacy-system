@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Table, Button, Space, Tag, Modal, Form, Input, Row, Col, message, Select, Tooltip, Switch, Statistic, TreeSelect } from "antd";
+import { Table, Button, Space, Tag, Modal, Form, Input, Row, Col, message, Select, Tooltip, Switch, Statistic, TreeSelect, Avatar } from "antd";
 import { PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ShopOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined } from "@ant-design/icons";
 import api from "../../api/client.js";
 
@@ -13,19 +13,27 @@ export default function AdminSuppliers() {
   const [filters, setFilters] = useState({ search: "", isActive: undefined, category: undefined });
   const [form] = Form.useForm();
   const [rootCategories, setRootCategories] = useState([]);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   const fetchSuppliers = async (params = {}) => {
     try {
       setLoading(true);
-      const res = await api.get("/suppliers", { params: {
-        page: params.page || 1,
-        limit: params.limit || 10,
-        q: filters.search || undefined,
-        isActive: filters.isActive,
-        category: filters.category || undefined
-      } });
+      const res = await api.get("/suppliers", {
+        params: {
+          page: params.page || pagination.current,
+          limit: params.limit || pagination.pageSize,
+          q: filters.search || undefined,
+          isActive: filters.isActive,
+          category: filters.category || undefined
+        }
+      });
       const data = res.data?.items || [];
       setSuppliers(data);
+      setPagination({
+        current: res.data?.page || params.page || 1,
+        pageSize: params.limit || pagination.pageSize,
+        total: res.data?.total || data.length
+      });
     } catch (e) {
       message.error("Lỗi khi tải danh sách nhà cung cấp");
     } finally {
@@ -43,7 +51,7 @@ export default function AdminSuppliers() {
         const all = Array.isArray(res.data) ? res.data : (res.data?.items || []);
         const roots = all.filter(c => c.level === 0 || !c.parent);
         setRootCategories(roots);
-      } catch {}
+      } catch { }
     })();
   }, []);
 
@@ -60,13 +68,15 @@ export default function AdminSuppliers() {
         </div>
       )
     },
-    { title: "Liên hệ", key: "contact", width: 280, render: (_, r) => (
-      <div>
-        <div><MailOutlined /> {r.email || "-"}</div>
-        <div><PhoneOutlined /> {r.phone || "-"}</div>
-        <div><EnvironmentOutlined /> {r.address || "-"}</div>
-      </div>
-    ) },
+    {
+      title: "Liên hệ", key: "contact", width: 280, render: (_, r) => (
+        <div>
+          <div><MailOutlined /> {r.email || "-"}</div>
+          <div><PhoneOutlined /> {r.phone || "-"}</div>
+          <div><EnvironmentOutlined /> {r.address || "-"}</div>
+        </div>
+      )
+    },
     { title: "Phân loại", dataIndex: ["category", "name"], key: "category", width: 160, render: (_, r) => <Tag color="blue">{r.category?.name || "-"}</Tag> },
     { title: "Trạng thái", dataIndex: "isActive", key: "isActive", width: 140, render: (v) => <Tag color={v ? "green" : "red"}>{v ? "Hoạt động" : "Tạm dừng"}</Tag> },
     {
@@ -90,7 +100,10 @@ export default function AdminSuppliers() {
   };
   const onEdit = (record) => {
     setEditing(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({
+      ...record,
+      category: record.category?._id || record.category // Extract _id if category is populated
+    });
     setIsModalOpen(true);
   };
   const onDelete = (record) => {
@@ -119,18 +132,41 @@ export default function AdminSuppliers() {
       setIsModalOpen(false);
       setEditing(null);
       fetchSuppliers();
-    } catch {}
+    } catch { }
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý Nhà cung cấp</h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<ShopOutlined />}
+            style={{
+              backgroundColor: '#13c2c2',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý Nhà cung cấp
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý thông tin và liên hệ nhà cung cấp
+            </div>
+          </div>
+        </div>
         <Space>
           <Tooltip title="Làm mới">
-            <Button icon={<ReloadOutlined />} onClick={() => fetchSuppliers()} loading={loading} />
+            <Button icon={<ReloadOutlined />} onClick={() => fetchSuppliers()} loading={loading} shape="circle" size="large" />
           </Tooltip>
-          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large">
             Thêm nhà cung cấp
           </Button>
         </Space>
@@ -142,19 +178,14 @@ export default function AdminSuppliers() {
         </Col>
         <Col span={12}>
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
-                <Statistic title="Tổng NCC" value={suppliers.length} />
+                <Statistic title="Tổng NCC" value={pagination.total || suppliers.length} />
               </div>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic title="Đang hoạt động" value={suppliers.filter(s => s.isActive).length} />
-              </div>
-            </Col>
-            <Col span={8}>
-              <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
-                <Statistic title="Ưu tiên" value={suppliers.filter(s => s.isPreferred).length} />
               </div>
             </Col>
           </Row>
@@ -162,9 +193,9 @@ export default function AdminSuppliers() {
       </Row>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
-        <Select 
-          allowClear 
-          placeholder="Trạng thái" 
+        <Select
+          allowClear
+          placeholder="Trạng thái"
           style={{ width: 150 }}
           value={filters.isActive}
           onChange={(v) => { setFilters({ ...filters, isActive: v }); fetchSuppliers(); }}
@@ -172,9 +203,9 @@ export default function AdminSuppliers() {
           <Option value={true}>Hoạt động</Option>
           <Option value={false}>Tạm dừng</Option>
         </Select>
-        <Select 
-          allowClear 
-          placeholder="Phân loại" 
+        <Select
+          allowClear
+          placeholder="Phân loại"
           style={{ width: 200 }}
           value={filters.category}
           onChange={(v) => { setFilters({ ...filters, category: v }); fetchSuppliers(); }}
@@ -185,13 +216,20 @@ export default function AdminSuppliers() {
         </Select>
       </div>
 
-      <Table 
-        rowKey={(r) => r._id} 
-        columns={columns} 
-        dataSource={suppliers} 
-        loading={loading} 
-        pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }} 
-        onChange={(p) => fetchSuppliers({ page: p.current, limit: p.pageSize })} 
+      <Table
+        rowKey={(r) => r._id}
+        columns={columns}
+        dataSource={suppliers}
+        loading={loading}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          showTotal: (total) => `Tổng ${total} nhà cung cấp`
+        }}
+        onChange={(p) => fetchSuppliers({ page: p.current, limit: p.pageSize })}
       />
 
       <Modal title={editing ? 'Sửa nhà cung cấp' : 'Thêm nhà cung cấp'} open={isModalOpen} onOk={onSubmit} onCancel={() => setIsModalOpen(false)} okText="Lưu" width={720}>
@@ -202,7 +240,7 @@ export default function AdminSuppliers() {
                 <Input prefix={<ShopOutlined />} />
               </Form.Item>
             </Col>
-            
+
           </Row>
           <Row gutter={16}>
             <Col span={12}>

@@ -275,18 +275,59 @@ export const useStaff = () => {
     }
   };
 
+  // Update staff permissions
+  const updatePermissions = async (id, permissions) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.patch(`/staff/${id}/permissions`, { permissions });
+      const updatedStaff = response.data.staff;
+      
+      setStaff(prev => 
+        prev.map(s => s._id === id ? updatedStaff : s)
+      );
+      
+      Swal.fire({
+        title: 'Cập nhật thành công!',
+        text: 'Phân quyền đã được cập nhật!',
+        icon: 'success',
+        timer: 5000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+      
+      return updatedStaff;
+    } catch (err) {
+      setError(err.message);
+      message.error(err.response?.data?.message || 'Lỗi khi cập nhật phân quyền');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle pagination change
   const handlePaginationChange = (page, pageSize) => {
     setPagination(prev => ({ ...prev, current: page, pageSize }));
     fetchStaff({ page, limit: pageSize });
   };
 
-  // Handle table change (sorting, filtering)
-  const handleTableChange = (pagination, filters, sorter) => {
+  // Handle table change (sorting, filtering, pagination)
+  const handleTableChange = (paginationInfo, filters, sorter) => {
+    // Update pagination state first
+    setPagination(prev => ({
+      ...prev,
+      current: paginationInfo.current,
+      pageSize: paginationInfo.pageSize
+    }));
+    
     const newFilters = {
       ...filters,
-      page: pagination.current,
-      limit: pagination.pageSize
+      page: paginationInfo.current,
+      limit: paginationInfo.pageSize
     };
     
     if (sorter.field) {
@@ -316,6 +357,7 @@ export const useStaff = () => {
     updateUser: updateStaff,
     updateStaff,
     updateStaffRole,
+    updatePermissions,
     deleteUser: deleteStaff,
     deleteStaff,
     getUserById: getStaffById,

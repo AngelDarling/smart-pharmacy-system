@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Table, Button, Space, Tag, Modal, Form, Input, message, Row, Col, Typography, Select, Avatar, Tooltip, Switch, Upload } from 'antd';
 import { PlusOutlined, EditOutlined, ReloadOutlined, SearchOutlined, TagsOutlined, EyeOutlined, DeleteOutlined, GlobalOutlined, FlagOutlined, UploadOutlined } from '@ant-design/icons';
+import Swal from 'sweetalert2';
 import api from '../../../api/client.js';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils.js';
 import { uploadFile } from '../../../api/client.js';
@@ -53,22 +54,21 @@ const BrandManagement = () => {
       )
     },
     { title: 'Tên thương hiệu', dataIndex: 'name', key: 'name', width: 300 },
-    { title: 'Sản phẩm', dataIndex: 'productCount', key: 'productCount', width: 140, render: (v, record) => (
-      <Button type="link" onClick={() => onOpenProductsByBrand(record)} style={{ padding: 0 }}>
-        {v ?? 0}
-      </Button>
-    ) },
+    {
+      title: 'Sản phẩm', dataIndex: 'productCount', key: 'productCount', width: 140, render: (v, record) => (
+        <Button type="link" onClick={() => onOpenProductsByBrand(record)} style={{ padding: 0 }}>
+          {v ?? 0}
+        </Button>
+      )
+    },
     { title: 'Trạng thái', dataIndex: 'isActive', key: 'isActive', width: 140, render: (v) => <Tag color={v ? 'green' : 'red'}>{v ? 'Hoạt động' : 'Tạm dừng'}</Tag> },
     {
       title: 'Thao tác',
       key: 'actions',
       fixed: 'right',
-      width: 180,
+      width: 120,
       render: (_, record) => (
         <Space>
-          <Tooltip title="Xem chi tiết">
-            <Button icon={<EyeOutlined />} size="small" onClick={() => onView(record)} />
-          </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
           </Tooltip>
@@ -106,22 +106,26 @@ const BrandManagement = () => {
   };
 
   const onDelete = async (record) => {
-    Modal.confirm({
-      title: 'Bạn có chắc muốn xóa thương hiệu này?',
-      content: 'Thao tác không thể hoàn tác. Chỉ xóa khi không có sản phẩm liên kết.',
-      okText: 'Xóa',
-      okButtonProps: { danger: true },
-      cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          await api.delete(`/brands/${record._id}`);
-          message.success('Đã xóa thương hiệu');
-          fetchBrands({ page: pagination.current, limit: pagination.pageSize, ...filters });
-        } catch (e) {
-          message.error(e?.response?.data?.message || 'Xóa thương hiệu thất bại');
-        }
-      }
+    const result = await Swal.fire({
+      title: 'Xác nhận xóa',
+      text: `Bạn có chắc muốn xóa thương hiệu "${record.name}"? Thao tác không thể hoàn tác.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Xóa',
+      cancelButtonText: 'Hủy'
     });
+
+    if (result.isConfirmed) {
+      try {
+        await api.delete(`/brands/${record._id}`);
+        Swal.fire('Đã xóa!', 'Thương hiệu đã được xóa thành công.', 'success');
+        fetchBrands({ page: pagination.current, limit: pagination.pageSize, ...filters });
+      } catch (e) {
+        Swal.fire('Lỗi!', e?.response?.data?.message || 'Xóa thương hiệu thất bại', 'error');
+      }
+    }
   };
 
   const onSubmit = async () => {
@@ -134,15 +138,17 @@ const BrandManagement = () => {
       if (!payload.seoKeywords) payload.seoKeywords = [];
       if (editing) {
         await api.put(`/brands/${editing._id}`, payload);
-        message.success('Cập nhật thương hiệu thành công');
+        Swal.fire('Thành công!', 'Cập nhật thương hiệu thành công', 'success');
       } else {
         await api.post('/brands', payload);
-        message.success('Thêm thương hiệu thành công');
+        Swal.fire('Thành công!', 'Thêm thương hiệu thành công', 'success');
       }
       setIsModalOpen(false);
       setEditing(null);
       fetchBrands({ page: pagination.current, limit: pagination.pageSize, ...filters });
-    } catch {}
+    } catch (e) {
+      Swal.fire('Lỗi!', e?.response?.data?.message || 'Có lỗi xảy ra', 'error');
+    }
   };
 
   const onOpenProductsByBrand = (brand) => {
@@ -150,30 +156,55 @@ const BrandManagement = () => {
       // Điều hướng sang trang sản phẩm với filter theo slug cho đẹp URL
       const params = new URLSearchParams({ brandSlug: brand.slug, search: brand.name });
       window.location.href = `/admin/products?${params.toString()}`;
-    } catch {}
+    } catch { }
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý Thương hiệu</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>Thêm thương hiệu</Button>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<TagsOutlined />}
+            style={{
+              backgroundColor: '#1890ff',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý Thương hiệu
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý danh sách thương hiệu sản phẩm
+            </div>
+          </div>
+        </div>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large">
+          Thêm thương hiệu
+        </Button>
       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <Input 
-          allowClear 
-          placeholder="Tìm theo tên, website, quốc gia..." 
-          prefix={<SearchOutlined />} 
+        <Input
+          allowClear
+          placeholder="Tìm theo tên, website, quốc gia..."
+          prefix={<SearchOutlined />}
           style={{ width: 300 }}
-          onPressEnter={(e) => { setFilters({ ...filters, search: e.target.value }); fetchBrands({ ...filters, search: e.target.value }); }} 
+          onPressEnter={(e) => { setFilters({ ...filters, search: e.target.value }); fetchBrands({ ...filters, search: e.target.value }); }}
         />
-        <Select 
-          allowClear 
-          placeholder="Trạng thái" 
-          style={{ width: 150 }} 
-          value={filters.isActive} 
+        <Select
+          allowClear
+          placeholder="Trạng thái"
+          style={{ width: 150 }}
+          value={filters.isActive}
           onChange={(v) => { const nf = { ...filters, isActive: v }; setFilters(nf); fetchBrands(nf); }}
         >
           <Select.Option value={true}>Hoạt động</Select.Option>
@@ -183,23 +214,23 @@ const BrandManagement = () => {
       </div>
 
       {/* Table */}
-      <Table 
-        rowKey={(r) => r._id || r.slug} 
-        columns={columns} 
-        dataSource={brands} 
-        loading={loading} 
-        pagination={{ 
-          current: pagination.current, 
-          pageSize: pagination.pageSize, 
-          total: pagination.total, 
-          showSizeChanger: true, 
-          showQuickJumper: true, 
-          pageSizeOptions: ['10', '20', '50', '100'] 
-        }} 
-        onChange={(p) => { 
-          setPagination({ ...pagination, current: p.current, pageSize: p.pageSize }); 
-          fetchBrands({ ...filters, page: p.current, limit: p.pageSize }); 
-        }} 
+      <Table
+        rowKey={(r) => r._id || r.slug}
+        columns={columns}
+        dataSource={brands}
+        loading={loading}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          pageSizeOptions: ['10', '20', '50', '100']
+        }}
+        onChange={(p) => {
+          setPagination({ ...pagination, current: p.current, pageSize: p.pageSize });
+          fetchBrands({ ...filters, page: p.current, limit: p.pageSize });
+        }}
       />
 
       <Modal title={editing ? 'Sửa thương hiệu' : 'Thêm thương hiệu'} open={isModalOpen} onOk={onSubmit} onCancel={() => setIsModalOpen(false)} okText="Lưu" width={720}>
@@ -257,7 +288,7 @@ const BrandManagement = () => {
                 <Input prefix={<FlagOutlined />} placeholder="Việt Nam" />
               </Form.Item>
             </Col>
-            
+
           </Row>
           <Row gutter={16}>
             <Col span={8}>
@@ -265,27 +296,12 @@ const BrandManagement = () => {
                 <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm dừng" />
               </Form.Item>
             </Col>
-            
+
           </Row>
           <Form.Item name="description" label="Mô tả">
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="seoTitle" label="SEO Title">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="seoKeywords" label="SEO Keywords">
-                <Select mode="tags" tokenSeparators={[',']} placeholder="Nhập từ khóa và Enter" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="seoDescription" label="SEO Description">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          
+
         </Form>
       </Modal>
 
@@ -305,7 +321,7 @@ const BrandManagement = () => {
                 <div style={{ marginTop: 8 }}>
                   {detail.website && <div><GlobalOutlined /> <a href={detail.website} target="_blank" rel="noreferrer">{detail.website}</a></div>}
                   {detail.country && <div><FlagOutlined /> {detail.country}</div>}
-                  
+
                 </div>
               </Col>
             </Row>
@@ -319,7 +335,7 @@ const BrandManagement = () => {
               <div>Description: {detail.seoDescription || '-'}</div>
               <div>Keywords: {(detail.seoKeywords || []).join(', ') || '-'}</div>
             </Card>
-            
+
             <Card size="small" title="Khác" style={{ marginTop: 16 }}>
               <div>Tổng doanh số: {detail.totalSales ?? 0}</div>
               <div>Ngày tạo: {detail.createdAt ? new Date(detail.createdAt).toLocaleString('vi-VN') : '-'}</div>

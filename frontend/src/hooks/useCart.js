@@ -76,6 +76,12 @@ const updateGlobalCartQty = (id, newQty) => {
   globalCartState.listeners.forEach(callback => callback(globalCartState.items));
 };
 
+export const updateGlobalCartItems = (newItems) => {
+  globalCartState.items = newItems;
+  localStorage.setItem("cart", JSON.stringify(globalCartState.items));
+  globalCartState.listeners.forEach(callback => callback(globalCartState.items));
+};
+
 export default function useCart() {
   const [items, setItems] = useState(globalCartState.items);
 

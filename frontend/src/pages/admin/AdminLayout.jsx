@@ -141,7 +141,7 @@ const AdminLayout = () => {
       ].filter(Boolean),
     }] : []),
     // Health News section
-    ...[{
+    ...(permissions.canViewHealthNews() ? [{
       key: 'health-news',
       icon: <HeartOutlined />,
       label: 'Tin tức sức khỏe',
@@ -155,9 +155,9 @@ const AdminLayout = () => {
           label: 'Quản lý danh mục',
         },
       ],
-    }],
+    }] : []),
     // Orders section
-    ...[{
+    ...(permissions.canViewOrders() ? [{
       key: 'orders',
       icon: <FolderOutlined />,
       label: (
@@ -193,7 +193,7 @@ const AdminLayout = () => {
           label: 'Hóa đơn',
         },
       ],
-    }],
+    }] : []),
     // Inventory section
     ...(permissions.canReadInventory() ? [{
       key: 'inventory',
@@ -221,8 +221,8 @@ const AdminLayout = () => {
       label: 'Quản lý người dùng',
       children: [
         ...(permissions.canReadUsers() ? [{
-          key: '/admin/users',
-          label: 'Người dùng',
+          key: '/admin/customers',
+          label: 'Khách hàng',
         }] : []),
         ...(permissions.canManageStaff() ? [{
           key: '/admin/staff',
@@ -291,7 +291,7 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/sales-report')) {
       return ['inventory'];
     }
-    if (path.startsWith('/admin/users') || path.startsWith('/admin/staff')) {
+    if (path.startsWith('/admin/customers') || path.startsWith('/admin/staff')) {
       return ['users'];
     }
     return [];
@@ -312,7 +312,7 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/inventory') || path.startsWith('/admin/suppliers') || path.startsWith('/admin/sales-report')) {
       return ['inventory'];
     }
-    if (path.startsWith('/admin/users') || path.startsWith('/admin/staff')) {
+    if (path.startsWith('/admin/customers') || path.startsWith('/admin/staff')) {
       return ['users'];
     }
     return [];

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, Input, Button, Space, Steps, Timeline, Tag, Typography, message, Row, Col, Divider } from 'antd';
-import { CarOutlined, CheckCircleOutlined, ShoppingOutlined, ClockCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Space, Steps, Timeline, Tag, Typography, message, Row, Col, Divider, Avatar, Descriptions, Empty } from 'antd';
+import { CarOutlined, CheckCircleOutlined, ShoppingOutlined, ClockCircleOutlined, ReloadOutlined, EnvironmentOutlined, PhoneOutlined, UserOutlined, ShoppingCartOutlined, DollarOutlined } from '@ant-design/icons';
 import api from '../../../api/client';
 
 const { Title, Text } = Typography;
@@ -22,11 +22,20 @@ const STATUS_TO_STEP = {
   cancelled: 0
 };
 
+const STATUS_COLORS = {
+  preparing: 'processing',
+  pickup: 'warning',
+  shipping: 'processing',
+  delivered: 'success',
+  cancelled: 'error'
+};
+
 export default function Tracking() {
   const [params, setParams] = useSearchParams();
   const [codeInput, setCodeInput] = useState(params.get('code') || '');
   const [loading, setLoading] = useState(false);
   const [shipment, setShipment] = useState(null);
+  const [order, setOrder] = useState(null);
   const [polling, setPolling] = useState(false);
 
   const stepIndex = useMemo(() => STATUS_TO_STEP[shipment?.status] ?? 0, [shipment]);
@@ -37,6 +46,17 @@ export default function Tracking() {
       setLoading(true);
       const res = await api.get(`/shipping/track/${encodeURIComponent(code)}`);
       setShipment(res.data);
+
+      // Fetch order details if we have orderId
+      if (res.data.orderId) {
+        try {
+          const orderRes = await api.get(`/orders/${res.data.orderId}`);
+          setOrder(orderRes.data);
+        } catch (e) {
+          console.error('Failed to fetch order:', e);
+        }
+      }
+
       setParams({ code });
       if (res.data.status !== 'delivered') {
         setPolling(true);
@@ -50,6 +70,7 @@ export default function Tracking() {
     } catch (e) {
       message.error('Không tìm thấy vận đơn');
       setShipment(null);
+      setOrder(null);
     } finally {
       setLoading(false);
     }
@@ -62,86 +83,209 @@ export default function Tracking() {
   }, []);
 
   return (
-    <div style={{ padding: 24 }}>
+    <div>
+      {/* Header Section */}
       <div style={{
-        background: 'linear-gradient(90deg,#ec4899 0%,#ef4444 100%)',
-        color: 'white',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
-        marginBottom: 16
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
       }}>
-        <div style={{ display:'flex', alignItems:'center', gap: 10 }}>
-          <CarOutlined style={{ fontSize: 22 }} />
-          <Title level={3} style={{ margin: 0, color: 'white' }}>Theo dõi đơn hàng</Title>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<CarOutlined />}
+            style={{
+              backgroundColor: '#52c41a',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Theo dõi đơn hàng
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Tra cứu và theo dõi trạng thái vận chuyển
+            </div>
+          </div>
         </div>
-        <div style={{ marginTop: 8, opacity: 0.9 }}>Nhập mã vận chuyển hoặc mã đơn (SHP... hoặc ORD...).</div>
       </div>
 
-      <Card style={{ marginBottom: 16, borderRadius: 12 }} bodyStyle={{ paddingBottom: 12 }}>
+      {/* Search Card */}
+      <Card style={{ marginBottom: 16 }}>
         <Space.Compact style={{ width: '100%' }}>
-          <Input 
-            placeholder="Nhập mã vận chuyển (SHP...) hoặc mã đơn (ORD...)" 
-            value={codeInput} 
-            onChange={(e)=> setCodeInput(e.target.value)} 
-            onPressEnter={()=> fetchTrack(codeInput.trim())} 
+          <Input
+            size="large"
+            placeholder="Nhập mã vận chuyển (SHP...) hoặc mã đơn (ORD...)"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            onPressEnter={() => fetchTrack(codeInput.trim())}
           />
-          <Button type="primary" loading={loading} onClick={()=> fetchTrack(codeInput.trim())}>Tra cứu</Button>
-          <Button icon={<ReloadOutlined />} onClick={()=> fetchTrack(codeInput.trim())} disabled={!codeInput || loading}>
+          <Button
+            type="primary"
+            size="large"
+            loading={loading}
+            onClick={() => fetchTrack(codeInput.trim())}
+          >
+            Tra cứu
+          </Button>
+          <Button
+            size="large"
+            icon={<ReloadOutlined />}
+            onClick={() => fetchTrack(codeInput.trim())}
+            disabled={!codeInput || loading}
+          >
             Làm mới
           </Button>
         </Space.Compact>
+      </Card>
 
-        {shipment && (
-          <div style={{ marginTop: 16 }}>
-            <Row gutter={[16,16]} align="middle">
+      {shipment ? (
+        <>
+          {/* Status Overview */}
+          <Card style={{ marginBottom: 16 }}>
+            <Row gutter={[16, 16]} align="middle">
               <Col xs={24} md={12}>
-                <div style={{ display:'flex', gap: 10, alignItems:'center' }}>
-                  <Text>Mã vận chuyển:</Text>
-                  <Text code style={{ fontSize: 16 }}>{shipment.shippingCode}</Text>
-                </div>
+                <Space direction="vertical" size={4}>
+                  <Text type="secondary">Mã vận chuyển</Text>
+                  <Text code style={{ fontSize: 18, fontWeight: 600 }}>{shipment.shippingCode}</Text>
+                </Space>
               </Col>
-              <Col xs={24} md={12} style={{ textAlign:'right' }}>
-                <Tag color={shipment.status === 'delivered' ? 'green' : shipment.status === 'shipping' ? 'geekblue' : shipment.status === 'pickup' ? 'gold' : 'default'} style={{ fontSize: 14, padding: '4px 10px' }}>
+              <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+                <Tag
+                  color={STATUS_COLORS[shipment.status]}
+                  style={{ fontSize: 16, padding: '6px 16px', fontWeight: 600 }}
+                >
                   {STATUS_VI[shipment.status] || shipment.status}
                 </Tag>
-                {polling && <span style={{ marginLeft: 8, color: '#6b7280' }}>(Đang tự động cập nhật...)</span>}
+                {polling && <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>Đang tự động cập nhật...</div>}
               </Col>
             </Row>
 
-            <div style={{ marginTop: 12 }}>
-              <Steps current={stepIndex} responsive items={[
+            <Divider />
+
+            <Steps
+              current={stepIndex}
+              status={shipment.status === 'cancelled' ? 'error' : undefined}
+              items={[
                 { title: 'Đã xác nhận', icon: <ClockCircleOutlined /> },
                 { title: 'Đang lấy hàng', icon: <ShoppingOutlined /> },
                 { title: 'Đang giao', icon: <CarOutlined /> },
                 { title: 'Đã giao', icon: <CheckCircleOutlined /> },
-              ]} />
-            </div>
-          </div>
-        )}
-      </Card>
+              ]}
+            />
+          </Card>
 
-      {shipment && (
-        <Row gutter={[16,16]}>
-          <Col xs={24}>
-            <Card title="Lộ trình vận chuyển" style={{ borderRadius: 12 }}>
-              <Timeline>
-                {[...(shipment.timeline || [])].slice().reverse().map((t, idx) => (
-                  <Timeline.Item 
-                    key={idx} 
-                    color={t.status === 'delivered' ? 'green' : t.status === 'shipping' ? 'blue' : t.status === 'pickup' ? 'gold' : 'gray'}
-                    dot={t.status === 'delivered' ? <CheckCircleOutlined style={{ color: '#16a34a' }} /> : t.status === 'shipping' ? <CarOutlined style={{ color: '#2563eb' }} /> : t.status === 'pickup' ? <ShoppingOutlined style={{ color: '#f59e0b' }} /> : <ClockCircleOutlined style={{ color: '#9ca3af' }} />}
-                  >
-                    <div style={{ fontWeight: 600 }}>{STATUS_VI[t.status] || t.status}</div>
-                    <div style={{ color:'#6b7280' }}>{new Date(t.timestamp).toLocaleString('vi-VN')}</div>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-            </Card>
-          </Col>
-        </Row>
-      )}
+          <Row gutter={[16, 16]}>
+            {/* Order Details */}
+            {order && (
+              <Col xs={24} lg={12}>
+                <Card
+                  title={
+                    <Space>
+                      <ShoppingCartOutlined />
+                      <span>Thông tin đơn hàng</span>
+                    </Space>
+                  }
+                  style={{ height: '100%' }}
+                >
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="Mã đơn hàng">
+                      <Text code>{order.code}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Người nhận">
+                      <Space>
+                        <UserOutlined />
+                        <Text strong>{order.shippingAddress?.fullName || 'N/A'}</Text>
+                      </Space>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Số điện thoại">
+                      <Space>
+                        <PhoneOutlined />
+                        <Text>{order.shippingAddress?.phone || 'N/A'}</Text>
+                      </Space>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Địa chỉ giao hàng">
+                      <Space align="start">
+                        <EnvironmentOutlined style={{ marginTop: 4 }} />
+                        <Text>{order.shippingAddress?.address || 'N/A'}</Text>
+                      </Space>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Tổng tiền">
+                      <Space>
+                        <DollarOutlined />
+                        <Text strong style={{ color: '#52c41a', fontSize: 16 }}>
+                          {(order.totals?.grand || 0).toLocaleString('vi-VN')}₫
+                        </Text>
+                      </Space>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Phương thức thanh toán">
+                      <Tag color="blue">{(order.paymentMethod || 'cod').toUpperCase()}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Trạng thái đơn hàng">
+                      <Tag color={order.status === 'completed' ? 'green' : order.status === 'cancelled' ? 'red' : 'blue'}>
+                        {order.status === 'completed' ? 'Hoàn tất' :
+                          order.status === 'cancelled' ? 'Đã hủy' :
+                            order.status === 'shipping' ? 'Đang giao' :
+                              order.status === 'processing' ? 'Đang xử lý' : 'Chờ xử lý'}
+                      </Tag>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </Col>
+            )}
+
+            {/* Timeline */}
+            <Col xs={24} lg={order ? 12 : 24}>
+              <Card
+                title="Lộ trình vận chuyển"
+                style={{ height: '100%' }}
+              >
+                {shipment.timeline && shipment.timeline.length > 0 ? (
+                  <Timeline>
+                    {[...(shipment.timeline || [])].slice().reverse().map((t, idx) => (
+                      <Timeline.Item
+                        key={idx}
+                        color={
+                          t.status === 'delivered' ? 'green' :
+                            t.status === 'shipping' ? 'blue' :
+                              t.status === 'pickup' ? 'gold' : 'gray'
+                        }
+                        dot={
+                          t.status === 'delivered' ? <CheckCircleOutlined style={{ fontSize: 16, color: '#52c41a' }} /> :
+                            t.status === 'shipping' ? <CarOutlined style={{ fontSize: 16, color: '#1890ff' }} /> :
+                              t.status === 'pickup' ? <ShoppingOutlined style={{ fontSize: 16, color: '#faad14' }} /> :
+                                <ClockCircleOutlined style={{ fontSize: 16, color: '#8c8c8c' }} />
+                        }
+                      >
+                        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+                          {STATUS_VI[t.status] || t.status}
+                        </div>
+                        <div style={{ color: '#8c8c8c', fontSize: 13 }}>
+                          {new Date(t.timestamp).toLocaleString('vi-VN')}
+                        </div>
+                        {t.location && (
+                          <div style={{ color: '#595959', fontSize: 12, marginTop: 4 }}>
+                            <EnvironmentOutlined /> {t.location}
+                          </div>
+                        )}
+                      </Timeline.Item>
+                    ))}
+                  </Timeline>
+                ) : (
+                  <Empty description="Chưa có thông tin lộ trình" />
+                )}
+              </Card>
+            </Col>
+          </Row>
+        </>
+      ) : !loading && codeInput ? (
+        <Card>
+          <Empty
+            description="Không tìm thấy thông tin vận chuyển. Vui lòng kiểm tra lại mã vận chuyển hoặc mã đơn hàng."
+          />
+        </Card>
+      ) : null}
     </div>
   );
 }
-

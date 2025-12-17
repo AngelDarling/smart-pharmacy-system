@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { Avatar, Button, Space } from 'antd';
+import { FileTextOutlined, BarChartOutlined, FolderOutlined, PlusOutlined } from '@ant-design/icons';
 import { useHealthNewsCategories } from '../../../hooks/useHealthNewsCategories';
+import Swal from 'sweetalert2';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -41,17 +44,41 @@ function HealthNewsManagement() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Bạn có chắc muốn xóa bài viết này?')) return;
+        const result = await Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc muốn xóa bài viết này?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
 
         try {
             const token = localStorage.getItem('token');
             await axios.delete(`${API_URL}/health-news/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+
+            Swal.fire({
+                title: 'Đã xóa!',
+                text: 'Bài viết đã được xóa thành công',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
             fetchNews();
         } catch (error) {
             console.error('Error deleting news:', error);
-            alert(error.response?.data?.message || 'Có lỗi xảy ra');
+            Swal.fire({
+                title: 'Lỗi!',
+                text: error.response?.data?.message || 'Có lỗi xảy ra',
+                icon: 'error'
+            });
         }
     };
 
@@ -74,58 +101,48 @@ function HealthNewsManagement() {
 
     return (
         <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h1 style={{ margin: 0 }}>Quản lý Tin tức Sức khỏe</h1>
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <Link
-                        to="/admin/health-news/analytics"
+            {/* Header Section */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 24
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar
+                        size="large"
+                        icon={<FileTextOutlined />}
                         style={{
-                            padding: '10px 20px',
-                            background: '#8b5cf6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            textDecoration: 'none',
-                            display: 'inline-block'
+                            backgroundColor: '#52c41a',
+                            marginRight: '16px'
                         }}
-                    >
-                        📊 Thống kê
-                    </Link>
-                    <Link
-                        to="/admin/health-news/categories"
-                        style={{
-                            padding: '10px 20px',
-                            background: '#6b7280',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            textDecoration: 'none',
-                            display: 'inline-block'
-                        }}
-                    >
-                        Quản lý danh mục
-                    </Link>
-                    <Link
-                        to="/admin/health-news/new"
-                        style={{
-                            padding: '10px 20px',
-                            background: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            textDecoration: 'none',
-                            display: 'inline-block'
-                        }}
-                    >
-                        + Tạo bài viết mới
-                    </Link>
+                    />
+                    <div>
+                        <h2 style={{ margin: 0, color: '#262626' }}>
+                            Quản lý Tin tức Sức khỏe
+                        </h2>
+                        <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+                            Quản lý bài viết và nội dung tin tức sức khỏe
+                        </div>
+                    </div>
                 </div>
+                <Space>
+                    <Link to="/admin/health-news/analytics">
+                        <Button icon={<BarChartOutlined />}>
+                            Thống kê
+                        </Button>
+                    </Link>
+                    <Link to="/admin/health-news/categories">
+                        <Button icon={<FolderOutlined />}>
+                            Danh mục
+                        </Button>
+                    </Link>
+                    <Link to="/admin/health-news/new">
+                        <Button type="primary" icon={<PlusOutlined />} size="large">
+                            Tạo bài viết
+                        </Button>
+                    </Link>
+                </Space>
             </div>
 
             {/* Filters */}

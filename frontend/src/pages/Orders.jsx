@@ -27,6 +27,50 @@ export default function Orders() {
     }
   };
 
+  const handleCancelOrder = async (orderId, orderCode) => {
+    try {
+      // Import SweetAlert2 dynamically
+      const Swal = (await import('sweetalert2')).default;
+
+      const result = await Swal.fire({
+        title: 'Xác nhận hủy đơn hàng',
+        html: `Bạn có chắc chắn muốn hủy đơn hàng <strong>#${orderCode}</strong>?<br><small style="color: #6b7280;">Hành động này không thể hoàn tác.</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Hủy đơn hàng',
+        cancelButtonText: 'Không',
+        reverseButtons: true
+      });
+
+      if (result.isConfirmed) {
+        const response = await api.patch(`/orders/${orderId}/cancel`);
+
+        // Update orders list
+        setOrders(orders.map(order =>
+          order._id === orderId ? { ...order, status: 'cancelled' } : order
+        ));
+
+        await Swal.fire({
+          title: 'Đã hủy đơn hàng!',
+          text: `Đơn hàng #${orderCode} đã được hủy thành công.`,
+          icon: 'success',
+          confirmButtonColor: '#22c55e'
+        });
+      }
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      const Swal = (await import('sweetalert2')).default;
+      await Swal.fire({
+        title: 'Lỗi!',
+        text: error.response?.data?.message || 'Không thể hủy đơn hàng. Vui lòng thử lại.',
+        icon: 'error',
+        confirmButtonColor: '#ef4444'
+      });
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case "pending": return { bg: "#fff7ed", text: "#d97706", border: "#fed7aa" };
@@ -267,9 +311,7 @@ export default function Orders() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Handle cancel logic here or open modal
-                          setSelectedOrder(order);
-                          setShowDetailModal(true);
+                          handleCancelOrder(order._id, order.code || order.orderNumber || order._id.slice(-6).toUpperCase());
                         }}
                         style={{
                           padding: "12px 24px",

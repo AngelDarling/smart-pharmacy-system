@@ -126,33 +126,92 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ padding: '16px' }}>
-      {/* Compact Welcome Section */}
+      {/* Professional Welcome Section */}
       <Card
         size="small"
         style={{
           marginBottom: '16px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          border: 'none',
-          padding: '12px'
+          background: '#ffffff',
+          border: '1px solid #f0f0f0',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          borderRadius: '12px',
+          padding: '8px 12px'
         }}
       >
-        <Row align="middle" justify="space-between">
-          <Col>
-            <Space>
-              <div>
-                <Title level={4} style={{ margin: 0, color: 'white' }}>
-                  Xin chào, {user?.name || 'Quản trị viên'}!
-                </Title>
-                <Space style={{ marginTop: '4px' }}>
-                  <Tag color={roleInfo.color} icon={roleInfo.icon} style={{ background: 'white', fontSize: '11px' }}>
-                    {roleInfo.name}
-                  </Tag>
-                  <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: '12px' }}>
-                    📅 {new Date().toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </Text>
-                </Space>
-              </div>
+        <Row align="middle" justify="space-between" gutter={[16, 12]}>
+          {/* Left: Greeting */}
+          <Col xs={24} md={12}>
+            <Space direction="vertical" size={4}>
+              <Title level={4} style={{ margin: 0, color: '#262626', fontWeight: 600, fontSize: '20px' }}>
+                👋 Xin chào, {user?.name || 'Quản trị viên'}!
+              </Title>
+              <Space size={12} wrap>
+                <Tag
+                  icon={roleInfo.icon}
+                  color={roleInfo.color}
+                  style={{
+                    fontSize: '12px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    border: 'none'
+                  }}
+                >
+                  {roleInfo.name}
+                </Tag>
+                <Text type="secondary" style={{ fontSize: '13px' }}>
+                  📅 {new Date().toLocaleDateString('vi-VN', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </Text>
+              </Space>
             </Space>
+          </Col>
+
+          {/* Right: Quick Stats */}
+          <Col xs={24} md={12}>
+            <Row gutter={[16, 8]} justify="end">
+              {permissions.canReadProducts() && (
+                <Col>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 600, color: '#52c41a', marginBottom: 2 }}>
+                      <MedicineBoxOutlined style={{ marginRight: 4, fontSize: '18px' }} />
+                      {stats?.products?.total || 0}
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>Sản phẩm</Text>
+                  </div>
+                </Col>
+              )}
+              {permissions.canReadInventory() && (
+                <Col>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                      fontSize: '20px',
+                      fontWeight: 600,
+                      color: lowStock > 0 ? '#ff4d4f' : '#52c41a',
+                      marginBottom: 2
+                    }}>
+                      <WarningOutlined style={{ marginRight: 4, fontSize: '18px' }} />
+                      {lowStock}
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>Cảnh báo</Text>
+                  </div>
+                </Col>
+              )}
+              {(permissions.canReadOrders() || permissions.canReadReports()) && (
+                <Col>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 600, color: '#1890ff', marginBottom: 2 }}>
+                      <DollarOutlined style={{ marginRight: 4, fontSize: '18px' }} />
+                      {(todayRevenue / 1000000).toFixed(1)}M
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>Hôm nay</Text>
+                  </div>
+                </Col>
+              )}
+            </Row>
           </Col>
         </Row>
       </Card>
@@ -200,7 +259,7 @@ export default function AdminDashboard() {
 
         {permissions.canReadUsers() && (
           <Col xs={12} sm={8} lg={4}>
-            <Card size="small" hoverable onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
+            <Card size="small" hoverable onClick={() => navigate('/admin/customers')} style={{ cursor: 'pointer' }}>
               <Statistic
                 title={<Text style={{ fontSize: 11 }}>Nhân viên</Text>}
                 value={userStats?.totalUsers || 0}

@@ -11,6 +11,11 @@ export default function CurrentStockTab() {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState([]);
     const [searchText, setSearchText] = useState('');
+    const [pagination, setPagination] = useState({
+        current: 1,
+        pageSize: 20,
+        total: 0
+    });
     const [detailModal, setDetailModal] = useState({ visible: false, data: null });
     const [transactionHistory, setTransactionHistory] = useState([]);
 
@@ -126,8 +131,7 @@ export default function CurrentStockTab() {
             onFilter: (value, record) =>
                 record.product.name.toLowerCase().includes(value.toLowerCase()) ||
                 record.product.sku?.toLowerCase().includes(value.toLowerCase()) ||
-                record.batchNumber?.toLowerCase().includes(value.toLowerCase()),
-            ellipsis: true
+                record.batchNumber?.toLowerCase().includes(value.toLowerCase())
         },
         {
             title: 'Số lô',
@@ -142,8 +146,8 @@ export default function CurrentStockTab() {
             width: 120,
             align: 'center',
             render: (_, record) => {
-                // Get the latest import transaction for this batch
-                const importDate = record.createdAt || record.expiryDate;
+                // Get the earliest import date (batch creation date)
+                const importDate = record.firstImportDate || record.createdAt;
                 return importDate ? (
                     <Text>{dayjs(importDate).format('DD/MM/YYYY')}</Text>
                 ) : (
@@ -288,7 +292,22 @@ export default function CurrentStockTab() {
                 dataSource={data}
                 rowKey={(record) => `${record.productId}-${record.batchNumber}-${record.expiryDate}`}
                 loading={loading}
-                pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `Tổng ${total} lô hàng` }}
+                pagination={{
+                    current: pagination.current,
+                    pageSize: pagination.pageSize,
+                    total: data.length,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total) => `Tổng ${total} lô hàng`,
+                    pageSizeOptions: ['10', '20', '50', '100']
+                }}
+                onChange={(paginationInfo) => {
+                    setPagination({
+                        current: paginationInfo.current,
+                        pageSize: paginationInfo.pageSize,
+                        total: data.length
+                    });
+                }}
             />
 
             <Modal

@@ -49,7 +49,33 @@ export const useCategories = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.post('/categories', categoryData);
+      // Create FormData if there's a file
+      let requestData;
+      if (categoryData.iconFile) {
+        const formData = new FormData();
+        formData.append('icon', categoryData.iconFile);
+        
+        // Append other fields (skip null/undefined values)
+        Object.keys(categoryData).forEach(key => {
+          if (key !== 'iconFile' && key !== 'iconUrl') {
+            const value = categoryData[key];
+            // Only append if value is not null or undefined
+            if (value !== null && value !== undefined) {
+              formData.append(key, value);
+            }
+          }
+        });
+        
+        requestData = formData;
+      } else {
+        requestData = categoryData;
+      }
+      
+      const response = await api.post('/categories', requestData, {
+        headers: categoryData.iconFile ? {
+          'Content-Type': 'multipart/form-data'
+        } : undefined
+      });
       const newCategory = response.data;
       setCategories(prev => [...prev, newCategory]);
       
@@ -84,7 +110,33 @@ export const useCategories = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.put(`/categories/${id}`, categoryData);
+      // Create FormData if there's a file
+      let requestData;
+      if (categoryData.iconFile) {
+        const formData = new FormData();
+        formData.append('icon', categoryData.iconFile);
+        
+        // Append other fields (skip null/undefined values)
+        Object.keys(categoryData).forEach(key => {
+          if (key !== 'iconFile' && key !== 'iconUrl') {
+            const value = categoryData[key];
+            // Only append if value is not null or undefined
+            if (value !== null && value !== undefined) {
+              formData.append(key, value);
+            }
+          }
+        });
+        
+        requestData = formData;
+      } else {
+        requestData = categoryData;
+      }
+      
+      const response = await api.put(`/categories/${id}`, requestData, {
+        headers: categoryData.iconFile ? {
+          'Content-Type': 'multipart/form-data'
+        } : undefined
+      });
       const updatedCategory = response.data;
       setCategories(prev => 
         prev.map(cat => cat._id === id ? updatedCategory : cat)

@@ -53,6 +53,7 @@ const ProductManagement = () => {
     products,
     loading,
     pagination,
+    setPagination,
     stats,
     fetchProducts,
     createProduct,
@@ -719,10 +720,23 @@ const ProductManagement = () => {
         }}
         rowSelection={rowSelection}
         onChange={(p, f, s) => {
+          // Update pagination state
+          setPagination({
+            ...pagination,
+            current: p.current,
+            pageSize: p.pageSize
+          });
+
+          // Prepare payload for API
           const payload = { ...filters, page: p.current, limit: p.pageSize };
           if (s && s.field) {
             payload.sortBy = s.order === 'ascend' ? s.field : `-${s.field}`;
           }
+
+          // Update filters state
+          setFilters(payload);
+
+          // Fetch products with new parameters
           fetchProducts(payload);
         }}
         scroll={{ x: 1000 }}
@@ -851,12 +865,7 @@ const ProductManagement = () => {
                           {viewingProduct.sku || <span style={{ color: '#8c8c8c' }}>Chưa có SKU</span>}
                         </div>
                       </div>
-                      <div style={{ marginBottom: '12px' }}>
-                        <strong>Barcode:</strong>
-                        <div style={{ marginTop: '4px' }}>
-                          {viewingProduct.barcode || <span style={{ color: '#8c8c8c' }}>Chưa có barcode</span>}
-                        </div>
-                      </div>
+
                       <div style={{ marginBottom: '12px' }}>
                         <strong>Đơn vị:</strong>
                         <div style={{ marginTop: '4px' }}>

@@ -1,8 +1,15 @@
-import app from "./app.js";
-import dotenv from "dotenv";
-import { connectDatabase } from "./config/db.js";
+// CRITICAL: Load environment variables FIRST before any imports
+import './loadEnv.js';
 
-dotenv.config();
+// Debug: Log to verify env vars are loaded
+console.log('Environment Check:', {
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || 'MISSING',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING'
+});
+
+import app from "./app.js";
+import { connectDatabase } from "./config/db.js";
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/smart-pharmacy";

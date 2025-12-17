@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Avatar, Button } from 'antd';
+import { FolderOutlined, PlusOutlined } from '@ant-design/icons';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -98,26 +100,43 @@ function CategoryManagement() {
 
     return (
         <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h1 style={{ margin: 0 }}>Quản lý Danh mục Tin tức</h1>
-                <button
+            {/* Header Section */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 24
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar
+                        size="large"
+                        icon={<FolderOutlined />}
+                        style={{
+                            backgroundColor: '#faad14',
+                            marginRight: '16px'
+                        }}
+                    />
+                    <div>
+                        <h2 style={{ margin: 0, color: '#262626' }}>
+                            Quản lý Danh mục Tin tức
+                        </h2>
+                        <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+                            Quản lý danh mục và phân loại tin tức sức khỏe
+                        </div>
+                    </div>
+                </div>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    size="large"
                     onClick={() => {
                         setShowForm(true);
                         setEditingCategory(null);
                         setFormData({ name: '', description: '', icon: '📰', order: 0, isActive: true });
                     }}
-                    style={{
-                        padding: '10px 20px',
-                        background: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        cursor: 'pointer',
-                        fontWeight: 500
-                    }}
                 >
-                    + Thêm danh mục
-                </button>
+                    Thêm danh mục
+                </Button>
             </div>
 
             {showForm && (

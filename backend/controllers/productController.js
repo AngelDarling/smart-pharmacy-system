@@ -9,9 +9,9 @@ import xlsx from "xlsx";
 
 const upsertSchema = z.object({
   name: z.string().min(2),
-  slug: z.string().min(2),
+  slug: z.string().min(2).optional(),
   categoryId: z.string(),
-  brand: z.string().optional(),
+  brandId: z.string(), // Changed from 'brand' to 'brandId' to match model
   description: z.string().optional(),
   usage: z.string().optional(),
   imageUrls: z.array(z.string()).optional(),
@@ -30,8 +30,36 @@ const upsertSchema = z.object({
   dosage: z.string().optional(),
   ingredients: z.string().optional(),
   storage: z.string().optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  isFeatured: z.boolean().optional(),
+  isNewProduct: z.boolean().optional()
 });
+
+// Helper function to generate slug from product name
+function generateSlug(name) {
+  // Convert Vietnamese to ASCII
+  const from = "àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ";
+  const to = "aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd";
+  
+  let slug = name.toLowerCase();
+  
+  // Replace Vietnamese characters
+  for (let i = 0; i < from.length; i++) {
+    slug = slug.replace(new RegExp(from[i], 'g'), to[i]);
+  }
+  
+  // Replace special characters with dash
+  slug = slug.replace(/[^a-z0-9]+/g, '-');
+  
+  // Remove leading/trailing dashes
+  slug = slug.replace(/^-+|-+$/g, '');
+  
+  // Add random string to ensure uniqueness
+  const randomStr = Math.random().toString(36).substring(2, 8);
+  slug = `${slug}-${randomStr}`;
+  
+  return slug;
+}
 
 export async function list(req, res) {
   // Support both skip (offset) and page-based pagination
@@ -382,6 +410,47 @@ export async function getBySlug(req, res) {
 export async function create(req, res, next) {
   try {
     const parsed = upsertSchema.extend({ attributes: z.record(z.any()).optional() }).parse(req.body);
+    
+    // Extract Cloudinary URLs from uploaded files
+    if (req.files && req.files.length > 0) {
+      parsed.imageUrls = req.files.map(file => file.path);
+    }
+    
+    // Auto-generate slug if not provided
+    if (!parsed.slug) {
+      parsed.slug = generateSlug(parsed.name);
+    }
+
+    // Auto-generate SKU if not provided
+    if (!parsed.sku) {
+      try {
+        const brand = await Brand.findById(parsed.brandId);
+        const category = await Category.findById(parsed.categoryId);
+
+        if (brand && category) {
+          // Generate Brand Code: TRAPHACO -> TRAP
+          const brandCode = brand.slug.replace(/-/g, '').substring(0, 4).toUpperCase();
+          
+          // Generate Category Code: VITAMIN-E -> VITA
+          const categoryCode = category.slug.replace(/-/g, '').substring(0, 4).toUpperCase();
+          
+          // Generate Random Number: 1000-9999
+          const randomNum = Math.floor(1000 + Math.random() * 9000);
+          
+          parsed.sku = `${brandCode}-${categoryCode}-${randomNum}`;
+        } else {
+          // Fallback if brand/category not found
+          const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+          parsed.sku = `SP-${randomStr}`;
+        }
+      } catch (error) {
+        console.error('Error generating SKU:', error);
+        // Fallback on error
+        const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+        parsed.sku = `SP-${randomStr}`;
+      }
+    }
+    
     const doc = await Product.create(parsed);
     res.status(201).json(doc);
   } catch (err) {
@@ -392,6 +461,16 @@ export async function create(req, res, next) {
 export async function update(req, res, next) {
   try {
     const parsed = upsertSchema.extend({ attributes: z.record(z.any()).optional() }).partial().parse(req.body);
+    
+    // Extract Cloudinary URLs from uploaded files if new images are provided
+    if (req.files && req.files.length > 0) {
+      const newImageUrls = req.files.map(file => file.path);
+      // Merge with existing imageUrls if any
+      parsed.imageUrls = parsed.imageUrls 
+        ? [...parsed.imageUrls, ...newImageUrls]
+        : newImageUrls;
+    }
+    
     const doc = await Product.findByIdAndUpdate(req.params.id, parsed, { new: true });
     if (!doc) return res.status(404).json({ message: "Không tìm thấy" });
     res.json(doc);
@@ -407,99 +486,164 @@ export async function remove(req, res) {
 }
 
 // Best sellers in current month
+// Query Orders directly instead of relying on ProductSalesDaily
 export async function bestSellers(req, res, next) {
   try {
-    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit || "12", 10)));                                                                             
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit || "12", 10)));
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);        
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);      
-
-    const agg = await ProductSalesDaily.aggregate([
-      { $match: { date: { $gte: startOfMonth, $lt: endOfMonth } } },
-      { $group: { _id: "$productId", qty: { $sum: "$quantity" }, revenue: { $sum: "$revenue" } } },                                                             
-      { $sort: { qty: -1, revenue: -1 } },
-      { $limit: limit },
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    console.log(`[bestSellers] Fetching best sellers for ${startOfMonth.toISOString()} to ${endOfMonth.toISOString()}`);
+    // Aggregate orders to get best selling products in current month
+    const Order = (await import("../models/Order.js")).default;
+    
+    const monthSales = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ['processing', 'shipping', 'completed'] },
+          createdAt: {
+            $gte: startOfMonth,
+            $lt: endOfMonth
+          }
+        }
+      },
+      {
+        $unwind: '$items'
+      },
+      {
+        $group: {
+          _id: '$items.productId',
+          totalQuantity: { $sum: '$items.quantity' },
+          totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.priceSnapshot'] } }
+        }
+      },
+      {
+        $sort: { totalQuantity: -1, totalRevenue: -1 }
+      },
+      {
+        $limit: limit + 10 // Get extra in case some products are inactive
+      }
     ]);
-
-    const productIds = agg.map(a => a._id);
-    const products = await Product.find({ _id: { $in: productIds }, isActive: true })                                                                           
+    console.log(`[bestSellers] Found ${monthSales.length} products with sales this month`);
+    
+    let productIds;
+    let salesMap = new Map();
+    
+    // Get product IDs
+    if (monthSales.length === 0) {
+      console.log(`[bestSellers] No sales this month, falling back to random products`);
+      // Fallback: Get random active products
+      const randomProducts = await Product.find({ isActive: true })
+        .select('_id')
+        .limit(limit)
+        .lean();
+      productIds = randomProducts.map(p => p._id);
+    } else {
+      productIds = monthSales.map(sale => sale._id);
+      // Create sales data map for quick lookup
+      monthSales.forEach(sale => {
+        salesMap.set(sale._id.toString(), {
+          quantity: sale.totalQuantity,
+          revenue: sale.totalRevenue
+        });
+      });
+    }
+    
+    if (productIds.length === 0) {
+      console.log(`[bestSellers] No active products found, returning empty array`);
+      return res.json({ items: [] });
+    }
+    
+    // Fetch product details
+    let products = await Product.find({ 
+      _id: { $in: productIds }, 
+      isActive: true 
+    })
       .populate('brandId', 'name slug')
-      .populate('categoryId', 'name slug');
-
+      .populate('categoryId', 'name slug')
+      .lean();
+    console.log(`[bestSellers] Found ${products.length} active products`);
+    
+    // If we don't have enough products, fill with random ones
+    if (products.length < limit) {
+      const remaining = limit - products.length;
+      console.log(`[bestSellers] Need ${remaining} more products, fetching random products...`);
+      
+      const existingIds = products.map(p => p._id);
+      const randomProducts = await Product.find({
+        _id: { $nin: existingIds },
+        isActive: true
+      })
+        .populate('brandId', 'name slug')
+        .populate('categoryId', 'name slug')
+        .limit(remaining)
+        .lean();
+      
+      console.log(`[bestSellers] Adding ${randomProducts.length} random products`);
+      products = [...products, ...randomProducts];
+    }
+    
     // Fetch all active direct apply coupons
     const allDirectCoupons = await Coupon.find({
       isDirectApply: true,
       isActive: true
     }).lean();
     
-    // Filter valid coupons (check dates and usage limit)
+    // Filter valid coupons
     const directCoupons = allDirectCoupons.filter(coupon => {
-      // Check start date
       if (coupon.startDate && new Date(coupon.startDate) > now) return false;
-      // Check end date
       if (coupon.endDate && new Date(coupon.endDate) < now) return false;
-      // Check usage limit
       if (coupon.usageLimit && coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) return false;
       return true;
     });
-
-    // Create a map of productSlug -> coupon for quick lookup
+    // Create coupon map
     const couponMap = new Map();
     directCoupons.forEach(coupon => {
       if (coupon.productSlug) {
         couponMap.set(coupon.productSlug, coupon);
       }
     });
-
-    // Keep order same as ranking
-    const orderMap = new Map(productIds.map((id, idx) => [String(id), idx]));   
+    
+    // Keep order same as ranking (only if we have sales data)
+    const orderMap = monthSales.length > 0 
+      ? new Map(productIds.map((id, idx) => [String(id), idx]))
+      : new Map();
+    
     const items = products
-      .map(p => p.toObject())
       .map(p => {
-        // Calculate discount and final price: only if there's a valid promotion or direct coupon
+        const salesData = salesMap.get(p._id.toString());
+        
+        // Calculate discount
         let discount = 0;
-        let discountType = 'percent'; // 'percent' or 'amount'
-        let discountValue = 0; // The actual discount value (percentage or amount)
-        let finalPrice = p.price; // Default final price is original price
-        let originalPrice = p.price; // Default original price
-
+        let discountType = 'percent';
+        let discountValue = 0;
+        let finalPrice = p.price;
+        let originalPrice = p.price;
         const directCoupon = couponMap.get(p.slug);
-
         if (directCoupon) {
-          // Calculate discount from direct coupon
-          originalPrice = p.price; // Keep original price
+          originalPrice = p.price;
           let discountAmount = 0;
-          discountType = directCoupon.discountType; // 'percent' or 'amount'
+          discountType = directCoupon.discountType;
           discountValue = directCoupon.discountValue;
-
           if (directCoupon.discountType === 'percent') {
             discount = directCoupon.discountValue;
             discountAmount = Math.round(p.price * discount / 100);
-            // Apply maxDiscount if exists
             if (directCoupon.maxDiscount && discountAmount > directCoupon.maxDiscount) {
               discountAmount = directCoupon.maxDiscount;
               discount = Math.round((discountAmount / p.price) * 100);
-              discountValue = discount; // Update discountValue to reflect actual discount percentage
+              discountValue = discount;
             }
           } else {
-            // If discount is amount
             discountAmount = directCoupon.discountValue;
-            // Calculate percentage for display
             if (p.price > 0) {
               discount = Math.round((discountAmount / p.price) * 100);
             }
           }
-
           finalPrice = Math.max(0, p.price - discountAmount);
         } else if (p.promotionInfo?.isOnSale && p.promotionInfo?.discountPercentage) {
-          // Only use promotionInfo discount if isOnSale is true
-          // Check if sale is currently active (check dates if provided)
           const saleStartDate = p.promotionInfo.saleStartDate ? new Date(p.promotionInfo.saleStartDate) : null;
           const saleEndDate = p.promotionInfo.saleEndDate ? new Date(p.promotionInfo.saleEndDate) : null;
-
-          // Check if sale is active
           const isSaleActive = (!saleStartDate || saleStartDate <= now) && (!saleEndDate || saleEndDate >= now);
-
           if (isSaleActive && p.promotionInfo.discountPercentage > 0) {
             discount = p.promotionInfo.discountPercentage;
             discountType = 'percent';
@@ -509,14 +653,12 @@ export async function bestSellers(req, res, next) {
           }
         }
         
-        // Ensure discount is between 0 and 100
         discount = Math.max(0, Math.min(100, discount));
-
         return {
           ...p,
-          imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"],                                                            
-          monthQuantity: agg.find(a => String(a._id) === String(p._id))?.qty || 0,
-          monthRevenue: agg.find(a => String(a._id) === String(p._id))?.revenue || 0,
+          imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"],
+          monthQuantity: salesData?.quantity || 0,
+          monthRevenue: salesData?.revenue || 0,
           discount: discount,
           discountType: discount > 0 ? discountType : null,
           discountValue: discount > 0 ? discountValue : 0,
@@ -524,10 +666,21 @@ export async function bestSellers(req, res, next) {
           finalPrice: discount > 0 ? finalPrice : p.price
         };
       })
-      .sort((a, b) => (orderMap.get(String(a._id)) ?? 0) - (orderMap.get(String(b._id)) ?? 0));                                                                 
-
+      .sort((a, b) => {
+        // If we have sales data, sort by ranking
+        if (monthSales.length > 0) {
+          const aIdx = orderMap.get(String(a._id)) ?? 999;
+          const bIdx = orderMap.get(String(b._id)) ?? 999;
+          return aIdx - bIdx;
+        }
+        // Otherwise, keep random order
+        return 0;
+      })
+      .slice(0, limit); // Ensure we return exactly the requested limit
+    console.log(`[bestSellers] Returning ${items.length} best sellers`);
     res.json({ items });
   } catch (err) {
+    console.error('[bestSellers] Error:', err);
     next(err);
   }
 }
@@ -655,55 +808,108 @@ export async function bulkUpdate(req, res, next) {
   }
 }
 
-// Lấy sản phẩm nổi bật hôm nay (12 sản phẩm bán chạy nhất trong ngày)
+// Lấy sản phẩm nổi bật hôm nay
+// Ưu tiên sản phẩm có isFeatured: true, sau đó lấy thêm sản phẩm bán chạy nhất
 export async function getTodayFeatured(req, res, next) {
   try {
+    const limit = 12; // Total products to return
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Aggregate để lấy sản phẩm bán chạy nhất trong ngày
-    const Order = (await import("../models/Order.js")).default;
-    
-    const todaySales = await Order.aggregate([
-      {
-        $match: {
-          status: { $in: ['processing', 'shipping', 'completed'] },
-          createdAt: {
-            $gte: today,
-            $lt: tomorrow
-          }
-        }
-      },
-      {
-        $unwind: '$items'
-      },
-      {
-        $group: {
-          _id: '$items.productId',
-          totalQuantity: { $sum: '$items.quantity' },
-          productName: { $first: '$items.nameSnapshot' },
-          productPrice: { $first: '$items.priceSnapshot' },
-          productImage: { $first: '$items.imageSnapshot' }
-        }
-      },
-      {
-        $sort: { totalQuantity: -1 }
-      },
-      {
-        $limit: 12
-      }
-    ]);
-
-        // Lấy thông tin chi tiết sản phẩm từ Product collection
-    const productIds = todaySales.map(sale => sale._id);
-    const products = await Product.find({
-      _id: { $in: productIds },
+    // Step 1: Get featured products (isFeatured: true)
+    const featuredProducts = await Product.find({
+      isFeatured: true,
       isActive: true
-    }).populate('categoryId', 'name slug').populate('brandId', 'name slug');    
+    })
+      .populate('categoryId', 'name slug')
+      .populate('brandId', 'name slug')
+      .limit(limit)
+      .lean();
 
-    // Fetch all active direct apply coupons
+    console.log(`[getTodayFeatured] Found ${featuredProducts.length} featured products`);
+
+    let finalProducts = [...featuredProducts];
+    const featuredProductIds = featuredProducts.map(p => p._id.toString());
+
+    // Step 2: If we don't have enough products, fill with best sellers from today
+    if (finalProducts.length < limit) {
+      const remaining = limit - finalProducts.length;
+      console.log(`[getTodayFeatured] Need ${remaining} more products, fetching best sellers...`);
+
+      // Aggregate to get best sellers from today's orders
+      const Order = (await import("../models/Order.js")).default;
+      
+      const todaySales = await Order.aggregate([
+        {
+          $match: {
+            status: { $in: ['processing', 'shipping', 'completed'] },
+            createdAt: {
+              $gte: today,
+              $lt: tomorrow
+            }
+          }
+        },
+        {
+          $unwind: '$items'
+        },
+        {
+          $group: {
+            _id: '$items.productId',
+            totalQuantity: { $sum: '$items.quantity' }
+          }
+        },
+        {
+          $sort: { totalQuantity: -1 }
+        },
+        {
+          $limit: remaining + 10 // Get extra in case some are already featured
+        }
+      ]);
+
+      console.log(`[getTodayFeatured] Found ${todaySales.length} best selling products today`);
+
+      // Get product IDs that are not already in featured list
+      const bestSellerIds = todaySales
+        .map(sale => sale._id.toString())
+        .filter(id => !featuredProductIds.includes(id))
+        .slice(0, remaining);
+
+      if (bestSellerIds.length > 0) {
+        const bestSellerProducts = await Product.find({
+          _id: { $in: bestSellerIds },
+          isActive: true
+        })
+          .populate('categoryId', 'name slug')
+          .populate('brandId', 'name slug')
+          .lean();
+
+        console.log(`[getTodayFeatured] Adding ${bestSellerProducts.length} best sellers`);
+        finalProducts = [...finalProducts, ...bestSellerProducts];
+      }
+    }
+
+    // Step 3: If still not enough, fill with random active products
+    if (finalProducts.length < limit) {
+      const remaining = limit - finalProducts.length;
+      console.log(`[getTodayFeatured] Still need ${remaining} more products, fetching random products...`);
+
+      const existingIds = finalProducts.map(p => p._id.toString());
+      const randomProducts = await Product.find({
+        _id: { $nin: existingIds },
+        isActive: true
+      })
+        .populate('categoryId', 'name slug')
+        .populate('brandId', 'name slug')
+        .limit(remaining)
+        .lean();
+
+      console.log(`[getTodayFeatured] Adding ${randomProducts.length} random products`);
+      finalProducts = [...finalProducts, ...randomProducts];
+    }
+
+    // Step 4: Fetch all active direct apply coupons
     const allDirectCoupons = await Coupon.find({
       isDirectApply: true,
       isActive: true
@@ -711,11 +917,8 @@ export async function getTodayFeatured(req, res, next) {
     
     // Filter valid coupons (check dates and usage limit)
     const directCoupons = allDirectCoupons.filter(coupon => {
-      // Check start date
       if (coupon.startDate && new Date(coupon.startDate) > today) return false;
-      // Check end date
       if (coupon.endDate && new Date(coupon.endDate) < today) return false;
-      // Check usage limit
       if (coupon.usageLimit && coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) return false;
       return true;
     });
@@ -728,42 +931,32 @@ export async function getTodayFeatured(req, res, next) {
       }
     });
 
-    // Kết hợp dữ liệu bán hàng với thông tin sản phẩm
-    const featuredProducts = todaySales.map(sale => {
-      const product = products.find(p => p._id.toString() === sale._id.toString());
-      if (!product) return null;
-      
-      const p = product.toObject();
-      
-      // Calculate discount and final price: only if there's a valid promotion or direct coupon
+    // Step 5: Add discount information to products
+    const productsWithDiscount = finalProducts.map(p => {
       let discount = 0;
-      let discountType = 'percent'; // 'percent' or 'amount'
-      let discountValue = 0; // The actual discount value (percentage or amount)
-      let finalPrice = p.price; // Default final price is original price
-      let originalPrice = p.price; // Default original price
+      let discountType = 'percent';
+      let discountValue = 0;
+      let finalPrice = p.price;
+      let originalPrice = p.price;
 
       const directCoupon = couponMap.get(p.slug);
 
       if (directCoupon) {
-        // Calculate discount from direct coupon
-        originalPrice = p.price; // Keep original price
+        originalPrice = p.price;
         let discountAmount = 0;
-        discountType = directCoupon.discountType; // 'percent' or 'amount'
+        discountType = directCoupon.discountType;
         discountValue = directCoupon.discountValue;
 
         if (directCoupon.discountType === 'percent') {
           discount = directCoupon.discountValue;
           discountAmount = Math.round(p.price * discount / 100);
-          // Apply maxDiscount if exists
           if (directCoupon.maxDiscount && discountAmount > directCoupon.maxDiscount) {
             discountAmount = directCoupon.maxDiscount;
             discount = Math.round((discountAmount / p.price) * 100);
-            discountValue = discount; // Update discountValue to reflect actual discount percentage
+            discountValue = discount;
           }
         } else {
-          // If discount is amount
           discountAmount = directCoupon.discountValue;
-          // Calculate percentage for display
           if (p.price > 0) {
             discount = Math.round((discountAmount / p.price) * 100);
           }
@@ -771,12 +964,8 @@ export async function getTodayFeatured(req, res, next) {
 
         finalPrice = Math.max(0, p.price - discountAmount);
       } else if (p.promotionInfo?.isOnSale && p.promotionInfo?.discountPercentage) {
-        // Only use promotionInfo discount if isOnSale is true
-        // Check if sale is currently active (check dates if provided)
         const saleStartDate = p.promotionInfo.saleStartDate ? new Date(p.promotionInfo.saleStartDate) : null;
         const saleEndDate = p.promotionInfo.saleEndDate ? new Date(p.promotionInfo.saleEndDate) : null;
-
-        // Check if sale is active
         const isSaleActive = (!saleStartDate || saleStartDate <= today) && (!saleEndDate || saleEndDate >= today);
 
         if (isSaleActive && p.promotionInfo.discountPercentage > 0) {
@@ -788,31 +977,23 @@ export async function getTodayFeatured(req, res, next) {
         }
       }
       
-      // Ensure discount is between 0 and 100
       discount = Math.max(0, Math.min(100, discount));
       
       return {
         ...p,
-        todaySales: sale.totalQuantity,
-        productName: sale.productName || p.name,
-        productPrice: sale.productPrice || p.price,
-        productImage: sale.productImage || p.images?.[0],
+        imageUrls: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls : ["/uploads/default.png"],
         discount: discount,
         discountType: discount > 0 ? discountType : null,
         discountValue: discount > 0 ? discountValue : 0,
         originalPrice: originalPrice,
         finalPrice: discount > 0 ? finalPrice : p.price
       };
-    }).filter(Boolean);
-
-    res.json({
-      success: true,
-      items: featuredProducts,
-      total: featuredProducts.length
     });
+
+    console.log(`[getTodayFeatured] Returning ${productsWithDiscount.length} products total`);
+    res.json({ items: productsWithDiscount });
   } catch (err) {
+    console.error('[getTodayFeatured] Error:', err);
     next(err);
   }
 }
-
-

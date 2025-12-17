@@ -45,7 +45,7 @@ import {
   CrownOutlined,
   SafetyOutlined
 } from '@ant-design/icons';
-import { useUsers } from '../../../hooks/admin/useUsers';
+import { useCustomers } from '../../../hooks/admin/useCustomers';
 import CustomerForm from '../../../components/admin/CustomerForm';
 import api from '../../../api/client.js';
 
@@ -54,24 +54,22 @@ const { Option } = Select;
 
 const CustomerManagement = () => {
   const {
-    users,
+    customers,
     loading,
     pagination,
     stats,
-    fetchUsers,
-    createUser,
-    updateUser,
-    deleteUser,
-    toggleUserStatus,
-    bulkUpdateUsers,
+    fetchCustomers,
+    createCustomer,
+    updateCustomer,
+    deleteCustomer,
+    toggleCustomerStatus,
+    bulkUpdateCustomers,
     handleTableChange
-  } = useUsers();
+  } = useCustomers();
 
   const [filters, setFilters] = useState({
     search: '',
-    role: 'customer', // Mặc định chỉ hiển thị customers
-    isActive: undefined,
-    department: ''
+    isActive: undefined
   });
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
@@ -82,25 +80,8 @@ const CustomerManagement = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
 
-  // Role options
-  const roleOptions = [
-    { value: 'customer', label: 'Khách hàng', color: 'blue' },
-    { value: 'staff', label: 'Nhân viên', color: 'green' },
-    { value: 'manager', label: 'Quản lý', color: 'orange' },
-    { value: 'pharmacist', label: 'Dược sĩ', color: 'purple' },
-    { value: 'admin', label: 'Quản trị viên', color: 'red' }
-  ];
-
-  // Department options
-  const departmentOptions = [
-    'Bán hàng',
-    'Kho',
-    'Kế toán',
-    'Dược',
-    'Quản lý',
-    'IT',
-    'Marketing'
-  ];
+  // Role options - not needed for customers
+  // Department options - not needed for customers
 
   // Handle filter change
   const handleFilterChange = (key, value) => {
@@ -109,30 +90,30 @@ const CustomerManagement = () => {
 
   // Apply filters
   const applyFilters = () => {
-    fetchUsers(filters);
+    fetchCustomers(filters);
   };
 
   // Reset filters
   const resetFilters = () => {
     setFilters({
       search: '',
-      role: 'customer', // Mặc định chỉ hiển thị customers
-      isActive: undefined,
-      department: ''
+      isActive: undefined
     });
-    fetchUsers({ role: 'customer' });
+    fetchCustomers();
   };
 
   // Handle search
   const handleSearch = (value) => {
     handleFilterChange('search', value);
-    fetchUsers({ ...filters, search: value });
+    fetchCustomers({ ...filters, search: value });
   };
 
   // Handle delete user
   const handleDeleteUser = async (userId) => {
     try {
-      await deleteUser(userId);
+      await deleteCustomer(userId);
+      // Reload customers
+      await fetchCustomers(filters);
     } catch (error) {
       console.error('Delete error:', error);
     }
@@ -141,7 +122,7 @@ const CustomerManagement = () => {
   // Handle bulk delete
   const handleBulkDelete = async () => {
     try {
-      await bulkUpdateUsers(selectedRowKeys, { isActive: false });
+      await bulkUpdateCustomers(selectedRowKeys, { isActive: false });
       setSelectedRowKeys([]);
     } catch (error) {
       console.error('Bulk delete error:', error);
@@ -151,7 +132,7 @@ const CustomerManagement = () => {
   // Handle bulk status update
   const handleBulkStatusUpdate = async (status) => {
     try {
-      await bulkUpdateUsers(selectedRowKeys, { isActive: status });
+      await bulkUpdateCustomers(selectedRowKeys, { isActive: status });
       setSelectedRowKeys([]);
     } catch (error) {
       console.error('Bulk status update error:', error);
@@ -161,7 +142,7 @@ const CustomerManagement = () => {
   // Handle status toggle
   const handleStatusToggle = async (userId, currentStatus) => {
     try {
-      await toggleUserStatus(userId);
+      await toggleCustomerStatus(userId);
     } catch (error) {
       console.error('Status toggle error:', error);
     }
@@ -186,7 +167,7 @@ const CustomerManagement = () => {
     setHistoryLoading(true);
     setPointHistory([]);
     try {
-      const response = await api.get(`/users/${user._id}/point-history`);
+      const response = await api.get(`/customers/${user._id}/points/history`);
       setPointHistory(response.data || []);
     } catch (error) {
       console.error('Error fetching point history:', error);
@@ -199,14 +180,18 @@ const CustomerManagement = () => {
   // Handle user form submit
   const handleUserFormSubmit = async (values) => {
     try {
+      // Ensure role is customer
+      const customerValues = { ...values, role: 'customer' };
+
       if (editingUser) {
-        await updateUser(editingUser._id, values);
+        await updateUser(editingUser._id, customerValues);
       } else {
-        await createUser(values);
+        await createUser(customerValues);
       }
       setIsUserFormVisible(false);
       setEditingUser(null);
-      await fetchUsers(filters);
+      // Reload with customer filter
+      await fetchUsers({ role: 'customer', ...filters });
     } catch (error) {
       console.error('User form submit error:', error);
     }
@@ -218,9 +203,9 @@ const CustomerManagement = () => {
     setEditingUser(null);
   };
 
-  // Load users with customer filter on mount
+  // Load customers on mount
   useEffect(() => {
-    fetchUsers({ role: 'customer' });
+    fetchCustomers();
   }, []);
 
   // Table columns
@@ -447,20 +432,46 @@ const CustomerManagement = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý Khách hàng</h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<UserOutlined />}
+            style={{
+              backgroundColor: '#1890ff',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý Khách hàng
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý thông tin khách hàng và điểm tích lũy
+            </div>
+          </div>
+        </div>
         <Space>
           <Tooltip title="Làm mới dữ liệu">
             <Button
               icon={<ReloadOutlined />}
               onClick={() => fetchUsers(filters)}
               loading={loading}
+              shape="circle"
+              size="large"
             />
           </Tooltip>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleAddUser}
+            size="large"
           >
             Thêm người dùng
           </Button>
@@ -484,7 +495,7 @@ const CustomerManagement = () => {
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
                   title="Tổng khách hàng"
-                  value={stats?.customers || users.length || 0}
+                  value={customers.length}
                   prefix={<UserOutlined />}
                   valueStyle={{ color: '#1890ff', fontSize: '18px' }}
                 />
@@ -494,7 +505,7 @@ const CustomerManagement = () => {
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
                   title="Đang hoạt động"
-                  value={stats?.activeUsers || users.filter(u => u.isActive).length || 0}
+                  value={customers.filter(u => u.isActive).length}
                   prefix={<SafetyOutlined />}
                   valueStyle={{ color: '#52c41a', fontSize: '18px' }}
                 />
@@ -504,7 +515,7 @@ const CustomerManagement = () => {
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
                   title="Tổng điểm tích lũy"
-                  value={users.reduce((sum, u) => sum + (u.loyaltyPoints || 0), 0)}
+                  value={customers.reduce((sum, u) => sum + (u.loyaltyPoints || 0), 0)}
                   prefix={<CrownOutlined />}
                   valueStyle={{ color: '#722ed1', fontSize: '18px' }}
                 />
@@ -514,7 +525,7 @@ const CustomerManagement = () => {
               <div style={{ textAlign: 'center', padding: 12, background: '#f9fafb', borderRadius: 4 }}>
                 <Statistic
                   title="Đăng nhập gần nhất"
-                  value={stats?.recentLogins || users.filter(u => u.lastLogin).length || 0}
+                  value={customers.filter(u => u.lastLogin).length}
                   prefix={<UserOutlined />}
                   valueStyle={{ color: '#faad14', fontSize: '18px' }}
                 />
@@ -526,15 +537,6 @@ const CustomerManagement = () => {
 
       {/* Advanced Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
-        <Select
-          placeholder="Vai trò"
-          allowClear
-          style={{ width: 150 }}
-          value={filters.role || undefined}
-          onChange={(value) => handleFilterChange('role', value || 'customer')}
-        >
-          <Option value="customer">Khách hàng</Option>
-        </Select>
         <Select
           placeholder="Trạng thái"
           allowClear
@@ -563,7 +565,7 @@ const CustomerManagement = () => {
       {/* Users Table */}
       <Table
         columns={columns}
-        dataSource={users}
+        dataSource={customers}
         rowKey={(record) => record._id}
         loading={loading}
         pagination={{

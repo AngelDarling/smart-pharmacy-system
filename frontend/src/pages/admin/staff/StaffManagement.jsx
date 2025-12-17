@@ -23,7 +23,8 @@ import {
   Statistic,
   Dropdown,
   Menu,
-  Progress
+  Progress,
+  Modal
 } from 'antd';
 import {
   PlusOutlined,
@@ -48,6 +49,7 @@ import {
 import { useStaff } from '../../../hooks/admin/useStaff';
 import { usePermissions } from '../../../hooks/usePermissions';
 import StaffForm from '../../../components/admin/StaffForm';
+import PermissionsModal from '../../../components/admin/PermissionsModal';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -63,6 +65,7 @@ const StaffManagement = () => {
     createStaff,
     updateStaff,
     updateStaffRole,
+    updatePermissions,
     deleteStaff,
     toggleStaffStatus,
     bulkUpdateStaff,
@@ -80,6 +83,10 @@ const StaffManagement = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isUserFormVisible, setIsUserFormVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [viewingStaff, setViewingStaff] = useState(null);
+  const [permissionsModalVisible, setPermissionsModalVisible] = useState(false);
+  const [permissionsStaff, setPermissionsStaff] = useState(null);
 
   // Staff roles only
   const staffRoles = ['staff', 'manager', 'pharmacist', 'admin'];
@@ -127,7 +134,7 @@ const StaffManagement = () => {
 
   // Apply filters
   const applyFilters = () => {
-    fetchUsers({ ...filters, role: filters.role || undefined });
+    fetchStaff({ ...filters, role: filters.role || undefined });
   };
 
   // Reset filters
@@ -138,19 +145,19 @@ const StaffManagement = () => {
       isActive: undefined,
       department: ''
     });
-    fetchUsers({});
+    fetchStaff({});
   };
 
   // Handle search
   const handleSearch = (value) => {
     handleFilterChange('search', value);
-    fetchUsers({ ...filters, search: value });
+    fetchStaff({ ...filters, search: value });
   };
 
   // Handle delete user
   const handleDeleteUser = async (userId) => {
     try {
-      await deleteUser(userId);
+      await deleteStaff(userId);
     } catch (error) {
       console.error('Delete error:', error);
     }
@@ -159,7 +166,7 @@ const StaffManagement = () => {
   // Handle bulk delete
   const handleBulkDelete = async () => {
     try {
-      await bulkUpdateUsers(selectedRowKeys, { isActive: false });
+      await bulkUpdateStaff(selectedRowKeys, { isActive: false });
       setSelectedRowKeys([]);
     } catch (error) {
       console.error('Bulk delete error:', error);
@@ -169,7 +176,7 @@ const StaffManagement = () => {
   // Handle bulk status update
   const handleBulkStatusUpdate = async (status) => {
     try {
-      await bulkUpdateUsers(selectedRowKeys, { isActive: status });
+      await bulkUpdateStaff(selectedRowKeys, { isActive: status });
       setSelectedRowKeys([]);
     } catch (error) {
       console.error('Bulk status update error:', error);
@@ -179,10 +186,16 @@ const StaffManagement = () => {
   // Handle status toggle
   const handleStatusToggle = async (userId, currentStatus) => {
     try {
-      await toggleUserStatus(userId);
+      await toggleStaffStatus(userId);
     } catch (error) {
       console.error('Status toggle error:', error);
     }
+  };
+
+  // Handle view staff detail
+  const handleViewStaff = (staff) => {
+    setViewingStaff(staff);
+    setDetailModalVisible(true);
   };
 
   // Handle add user
@@ -201,13 +214,13 @@ const StaffManagement = () => {
   const handleUserFormSubmit = async (values) => {
     try {
       if (editingUser) {
-        await updateUser(editingUser._id, values);
+        await updateStaff(editingUser._id, values);
       } else {
-        await createUser(values);
+        await createStaff(values);
       }
       setIsUserFormVisible(false);
       setEditingUser(null);
-      await fetchUsers(filters);
+      await fetchStaff(filters);
     } catch (error) {
       console.error('User form submit error:', error);
     }
@@ -219,20 +232,40 @@ const StaffManagement = () => {
     setEditingUser(null);
   };
 
+  // Handle open permissions modal
+  const handleOpenPermissions = (staff) => {
+    setPermissionsStaff(staff);
+    setPermissionsModalVisible(true);
+  };
+
+  // Handle save permissions
+  const handleSavePermissions = async (permissions) => {
+    try {
+      await updatePermissions(permissionsStaff._id, permissions);
+      setPermissionsModalVisible(false);
+      setPermissionsStaff(null);
+    } catch (error) {
+      console.error('Save permissions error:', error);
+    }
+  };
+
+  // Handle close permissions modal
+  const handleClosePermissions = () => {
+    setPermissionsModalVisible(false);
+    setPermissionsStaff(null);
+  };
+
   // Calculate staff statistics
-  const staffStats = {
-    totalStaff: staffUsers.length,
-    activeStaff: staffUsers.filter(user => user.isActive).length,
+  const staffStats = stats || {
+    totalStaff: 0,
+    activeStaff: 0,
     staffByRole: {
-      staff: staffUsers.filter(user => user.role === 'staff').length,
-      manager: staffUsers.filter(user => user.role === 'manager').length,
-      pharmacist: staffUsers.filter(user => user.role === 'pharmacist').length,
-      admin: staffUsers.filter(user => user.role === 'admin').length
+      staff: 0,
+      manager: 0,
+      pharmacist: 0,
+      admin: 0
     },
-    staffByDepartment: departmentOptions.reduce((acc, dept) => {
-      acc[dept] = staffUsers.filter(user => user.department === dept).length;
-      return acc;
-    }, {})
+    staffByDepartment: {}
   };
 
   // Table columns
@@ -425,7 +458,7 @@ const StaffManagement = () => {
             key: 'view',
             icon: <EyeOutlined />,
             label: 'Xem chi tiết',
-            onClick: () => console.log('View staff:', record._id)
+            onClick: () => handleViewStaff(record)
           },
           ...(permissions.canWriteUsers() ? [{
             key: 'edit',
@@ -453,7 +486,7 @@ const StaffManagement = () => {
                 size="small"
                 shape="circle"
                 icon={<EyeOutlined />}
-                onClick={() => console.log('View staff:', record._id, record.name)}
+                onClick={() => handleViewStaff(record)}
                 style={{
                   color: '#1890ff',
                   border: '1px solid #91d5ff'
@@ -471,6 +504,22 @@ const StaffManagement = () => {
                   style={{
                     color: '#52c41a',
                     border: '1px solid #b7eb8f'
+                  }}
+                />
+              </Tooltip>
+            )}
+            {/* Permissions button - admin only */}
+            {permissions.canWriteUsers() && (
+              <Tooltip title="Phân quyền">
+                <Button
+                  type="text"
+                  size="small"
+                  shape="circle"
+                  icon={<SafetyOutlined />}
+                  onClick={() => handleOpenPermissions(record)}
+                  style={{
+                    color: '#722ed1',
+                    border: '1px solid #d3adf7'
                   }}
                 />
               </Tooltip>
@@ -508,14 +557,39 @@ const StaffManagement = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Quản lý Nhân viên</h2>
+      {/* Header Section */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            size="large"
+            icon={<TeamOutlined />}
+            style={{
+              backgroundColor: '#52c41a',
+              marginRight: '16px'
+            }}
+          />
+          <div>
+            <h2 style={{ margin: 0, color: '#262626' }}>
+              Quản lý Nhân viên
+            </h2>
+            <div style={{ color: '#8c8c8c', fontSize: '14px' }}>
+              Quản lý thông tin nhân viên và phân quyền
+            </div>
+          </div>
+        </div>
         <Space>
           <Tooltip title="Làm mới dữ liệu">
             <Button
               icon={<ReloadOutlined />}
-              onClick={() => fetchUsers(filters)}
+              onClick={() => fetchStaff(filters)}
               loading={loading}
+              shape="circle"
+              size="large"
             />
           </Tooltip>
           {permissions.canWriteUsers() && (
@@ -523,6 +597,7 @@ const StaffManagement = () => {
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAddUser}
+              size="large"
             >
               Thêm nhân viên
             </Button>
@@ -587,33 +662,6 @@ const StaffManagement = () => {
         </Col>
       </Row>
 
-      {/* Department Distribution */}
-      <div style={{ marginBottom: 16, padding: 16, background: '#f9fafb', borderRadius: 4 }}>
-        <h3 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Phân bố theo phòng ban</h3>
-        <Row gutter={16}>
-          {Object.entries(staffStats.staffByDepartment)
-            .filter(([dept, count]) => count > 0)
-            .map(([dept, count]) => (
-              <Col span={3} key={dept}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 600, color: '#262626' }}>
-                    {count}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                    {dept}
-                  </div>
-                  <Progress
-                    percent={staffStats.totalStaff > 0 ? Math.round((count / staffStats.totalStaff) * 100) : 0}
-                    size="small"
-                    showInfo={false}
-                    strokeColor="#52c41a"
-                  />
-                </div>
-              </Col>
-            ))}
-        </Row>
-      </div>
-
       {/* Advanced Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
         <Select
@@ -669,7 +717,7 @@ const StaffManagement = () => {
       {/* Staff Table */}
       <Table
         columns={columns}
-        dataSource={staffUsers}
+        dataSource={staff}
         rowKey={(record) => record._id}
         loading={loading}
         pagination={{
@@ -759,6 +807,144 @@ const StaffManagement = () => {
         onSubmit={handleUserFormSubmit}
         initialValues={editingUser}
         isEditing={!!editingUser}
+      />
+
+      {/* Staff Detail Modal */}
+      <Modal
+        title={<span><EyeOutlined /> Chi tiết nhân viên</span>}
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            Đóng
+          </Button>,
+          permissions.canWriteUsers() && viewingStaff && (
+            <Button
+              key="edit"
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                setDetailModalVisible(false);
+                handleEditUser(viewingStaff);
+              }}
+            >
+              Chỉnh sửa
+            </Button>
+          )
+        ]}
+        width={800}
+      >
+        {viewingStaff && (
+          <div>
+            <Row gutter={[16, 16]}>
+              <Col span={24} style={{ textAlign: 'center', marginBottom: 16 }}>
+                <Avatar
+                  size={100}
+                  src={viewingStaff.avatar || '/default-avatar.png'}
+                  icon={<TeamOutlined />}
+                  style={{
+                    backgroundColor: viewingStaff.isActive ? '#52c41a' : '#ff4d4f'
+                  }}
+                />
+                <div style={{ marginTop: 12 }}>
+                  <h2 style={{ margin: 0 }}>{viewingStaff.name}</h2>
+                  <Tag
+                    color={
+                      viewingStaff.role === 'admin' ? 'red' :
+                        viewingStaff.role === 'manager' ? 'orange' :
+                          viewingStaff.role === 'pharmacist' ? 'purple' : 'green'
+                    }
+                    style={{ marginTop: 8 }}
+                  >
+                    {viewingStaff.role === 'admin' ? 'Quản trị viên' :
+                      viewingStaff.role === 'manager' ? 'Quản lý' :
+                        viewingStaff.role === 'pharmacist' ? 'Dược sĩ' : 'Nhân viên'}
+                  </Tag>
+                  <Tag color={viewingStaff.isActive ? 'green' : 'red'} style={{ marginTop: 8 }}>
+                    {viewingStaff.isActive ? 'Đang làm việc' : 'Nghỉ việc'}
+                  </Tag>
+                </div>
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 16 }}>Thông tin cá nhân</h3>
+                  <div style={{ marginBottom: 12 }}>
+                    <strong>Email:</strong> {viewingStaff.email}
+                  </div>
+                  {viewingStaff.phone && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Số điện thoại:</strong> {viewingStaff.phone}
+                    </div>
+                  )}
+                  {viewingStaff.employeeId && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Mã nhân viên:</strong> {viewingStaff.employeeId}
+                    </div>
+                  )}
+                  {viewingStaff.address && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Địa chỉ:</strong> {viewingStaff.address}
+                    </div>
+                  )}
+                </div>
+              </Col>
+
+              <Col span={12}>
+                <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 16 }}>Thông tin công việc</h3>
+                  {viewingStaff.department && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Phòng ban:</strong> {viewingStaff.department}
+                    </div>
+                  )}
+                  {viewingStaff.position && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Chức vụ:</strong> {viewingStaff.position}
+                    </div>
+                  )}
+                  {viewingStaff.hireDate && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Ngày tuyển dụng:</strong> {new Date(viewingStaff.hireDate).toLocaleDateString('vi-VN')}
+                    </div>
+                  )}
+                  {viewingStaff.salary && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Lương:</strong> {viewingStaff.salary.toLocaleString('vi-VN')} VNĐ
+                    </div>
+                  )}
+                  {viewingStaff.lastLogin && (
+                    <div style={{ marginBottom: 12 }}>
+                      <strong>Đăng nhập cuối:</strong> {new Date(viewingStaff.lastLogin).toLocaleString('vi-VN')}
+                    </div>
+                  )}
+                </div>
+              </Col>
+            </Row>
+
+            {viewingStaff.notes && (
+              <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+                <Col span={24}>
+                  <div style={{ padding: 16, background: '#f9fafb', borderRadius: 4 }}>
+                    <h3 style={{ marginTop: 0, marginBottom: 12 }}>Ghi chú</h3>
+                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{viewingStaff.notes}</p>
+                  </div>
+                </Col>
+              </Row>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Permissions Modal */}
+      <PermissionsModal
+        visible={permissionsModalVisible}
+        onCancel={handleClosePermissions}
+        onSave={handleSavePermissions}
+        staff={permissionsStaff}
+        loading={loading}
       />
     </div>
   );
