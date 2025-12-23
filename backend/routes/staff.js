@@ -9,25 +9,25 @@ router.use(authRequired);
 router.use(requireStaff);
 
 // List all staff
-router.get("/", requirePermission("read_users"), staffController.list);
+router.get("/", requirePermission("read_staff"), staffController.list);
 
 // Get staff statistics
-router.get("/stats", requirePermission("read_reports"), staffController.getStats);
+router.get("/stats", requirePermission("read_staff"), staffController.getStats);
 
 // Get staff by ID
-router.get("/:id", requirePermission("read_users"), staffController.getById);
+router.get("/:id", requirePermission("read_staff"), staffController.getById);
 
 // Create new staff (admin or manager only)
 router.post("/", requireRole("admin", "manager"), staffController.create);
 
 // Update staff
-router.put("/:id", requirePermission("write_users"), staffController.update);
+router.put("/:id", requirePermission("write_staff"), staffController.update);
 
 // Update staff role (admin only)
 router.put("/:id/role", requireRole("admin"), staffController.updateRole);
 
 // Toggle staff status
-router.patch("/:id/status", requirePermission("write_users"), staffController.toggleStatus);
+router.patch("/:id/status", requirePermission("write_staff"), staffController.toggleStatus);
 
 // Delete staff (admin only)
 router.delete("/:id", requireRole("admin"), staffController.remove);

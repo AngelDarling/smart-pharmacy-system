@@ -182,6 +182,42 @@ export async function tree(req, res) {
   };
   
   await addProductCount(sortedRoots);
+
+  // Fetch 3 featured/top products for each Level 1 category
+  const addFeaturedProducts = async (nodes) => {
+    for (const node of nodes) {
+      if (node.level === 1) {
+        // Collect all descendant category IDs (including the node itself)
+        const descendantIds = [];
+        const collectIds = (n) => {
+          descendantIds.push(n._id);
+          if (n.children) n.children.forEach(collectIds);
+        };
+        collectIds(node);
+
+        // Fetch top 3 products (Featured > Best Seller > Rating > Purchase Count > Newest)
+        const products = await Product.find({
+          categoryId: { $in: descendantIds },
+          isActive: true
+        })
+        .sort({ 
+          isFeatured: -1, 
+          isBestSeller: -1, 
+          'rating.average': -1, 
+          purchaseCount: -1, 
+          createdAt: -1 
+        })
+        .limit(3)
+        .lean();
+
+        node.featuredProducts = products;
+      } else if (node.children && node.children.length > 0) {
+        await addFeaturedProducts(node.children);
+      }
+    }
+  };
+
+  await addFeaturedProducts(sortedRoots);
   res.json(sortedRoots);
 }
 

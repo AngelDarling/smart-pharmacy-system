@@ -138,6 +138,7 @@ export async function getGoodsReceipts(req, res) {
       .populate('supplierId', 'name code')
       .populate('createdBy', 'name')
       .populate('approvedBy', 'name')
+      .populate('items.productId', 'name sku unit') // Populate product info for detail modal
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -376,5 +377,218 @@ export async function getGoodsReceiptStats(req, res) {
   } catch (error) {
     console.error('Get goods receipt stats error:', error);
     res.status(500).json({ message: 'Lỗi khi lấy thống kê phiếu nhập' });
+  }
+}
+
+/**
+ * Download Excel template for goods receipt
+ */
+export async function downloadTemplate(req, res) {
+  try {
+    const { generateGoodsReceiptTemplate } = await import('../utils/excelUtils.js');
+    
+    // Fetch all suppliers for reference
+    const suppliers = await Supplier.find({})
+      .select('_id name code')
+      .sort({ name: 1 })
+      .lean();
+    
+    console.log(`[downloadTemplate] Found ${suppliers.length} suppliers`);
+    
+    const buffer = await generateGoodsReceiptTemplate(suppliers);
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=Template_Nhap_Kho.xlsx');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Download template error:', error);
+    res.status(500).json({ message: 'Lỗi khi tải template' });
+  }
+}
+
+/**
+ * Parse and validate uploaded Excel file
+ */
+export async function parseExcelFile(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Vui lòng upload file Excel' });
+    }
+
+    const { parseGoodsReceiptExcel } = await import('../utils/excelUtils.js');
+    const parsedData = parseGoodsReceiptExcel(req.file.buffer);
+
+    // Validate products exist and get full info
+    const validatedProducts = [];
+    const errors = [];
+
+    for (const item of parsedData.products) {
+      const product = await Product.findOne({ sku: item.sku });
+      
+      if (!product) {
+        errors.push({
+          row: item.rowNumber,
+          field: 'SKU',
+          message: `Không tìm thấy sản phẩm với SKU: ${item.sku}`
+        });
+        continue;
+      }
+
+      if (item.quantity <= 0) {
+        errors.push({
+          row: item.rowNumber,
+          field: 'Số lượng',
+          message: 'Số lượng phải lớn hơn 0'
+        });
+        continue;
+      }
+
+      if (item.unitCost < 0) {
+        errors.push({
+          row: item.rowNumber,
+          field: 'Đơn giá',
+          message: 'Đơn giá không được âm'
+        });
+        continue;
+      }
+
+      // Parse expiry date if present (DD/MM/YYYY -> ISO)
+      let expiryDate = null;
+      if (item.expiryDate) {
+        const dateStr = item.expiryDate.toString().trim();
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          const day = parseInt(parts[0]);
+          const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+          const year = parseInt(parts[2]);
+          const parsed = new Date(year, month, day);
+          
+          // Validate date
+          if (!isNaN(parsed.getTime())) {
+            expiryDate = parsed.toISOString();
+          } else {
+            errors.push({
+              row: item.rowNumber,
+              field: 'HSD',
+              message: `Ngày không hợp lệ: ${dateStr}`
+            });
+          }
+        } else {
+          errors.push({
+            row: item.rowNumber,
+            field: 'HSD',
+            message: `Định dạng ngày phải là DD/MM/YYYY, nhận được: ${dateStr}`
+          });
+        }
+      }
+
+      validatedProducts.push({
+        ...item,
+        productId: product._id,
+        productName: product.name,
+        unit: product.unit,
+        expiryDate: expiryDate
+      });
+    }
+
+    // Validate supplier
+    if (parsedData.receiptInfo.supplierId) {
+      const supplier = await Supplier.findById(parsedData.receiptInfo.supplierId);
+      if (!supplier) {
+        errors.push({
+          row: 'Thông tin phiếu',
+          field: 'Nhà cung cấp',
+          message: 'Không tìm thấy nhà cung cấp'
+        });
+      }
+    }
+
+    res.json({
+      success: errors.length === 0,
+      data: {
+        receiptInfo: parsedData.receiptInfo,
+        products: validatedProducts,
+        totalItems: validatedProducts.length
+      },
+      errors
+    });
+  } catch (error) {
+    console.error('Parse Excel error:', error);
+    res.status(500).json({ message: error.message || 'Lỗi khi đọc file Excel' });
+  }
+}
+
+/**
+ * Bulk create goods receipt from Excel data
+ */
+export async function bulkCreateFromExcel(req, res) {
+  try {
+    const { receiptInfo, products } = req.body;
+    const userId = req.user.id;
+
+    // Generate unique code
+    const code = `GR${Date.now().toString().slice(-10)}`;
+
+    // Prepare items
+    const items = products.map(p => ({
+      productId: p.productId,
+      quantity: p.quantity,
+      unitCost: p.unitCost,
+      expiryDate: p.expiryDate,
+      totalCost: p.quantity * p.unitCost
+    }));
+
+    // Calculate totals
+    const totalAmount = items.reduce((sum, item) => sum + item.totalCost, 0);
+
+    // Create goods receipt
+    const goodsReceipt = new GoodsReceipt({
+      code,
+      supplierId: receiptInfo.supplierId,
+      batchNumber: receiptInfo.batchNumber,
+      items,
+      totalAmount,
+      finalAmount: totalAmount,
+      note: receiptInfo.note,
+      status: 'pending',
+      createdBy: userId
+    });
+
+    await goodsReceipt.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Tạo phiếu nhập từ Excel thành công',
+      goodsReceipt
+    });
+  } catch (error) {
+    console.error('Bulk create from Excel error:', error);
+    res.status(500).json({ message: 'Lỗi khi tạo phiếu nhập từ Excel' });
+  }
+}
+
+/**
+ * Delete goods receipt (only draft status)
+ */
+export async function deleteGoodsReceipt(req, res) {
+  try {
+    const { id } = req.params;
+
+    const goodsReceipt = await GoodsReceipt.findById(id);
+    if (!goodsReceipt) {
+      return res.status(404).json({ message: 'Không tìm thấy phiếu nhập' });
+    }
+
+    // Only allow delete draft receipts
+    if (goodsReceipt.status !== 'draft') {
+      return res.status(400).json({ message: 'Chỉ có thể xóa phiếu nhập ở trạng thái nháp' });
+    }
+
+    await GoodsReceipt.findByIdAndDelete(id);
+
+    res.json({ message: 'Xóa phiếu nhập thành công' });
+  } catch (error) {
+    console.error('Delete goods receipt error:', error);
+    res.status(500).json({ message: 'Lỗi khi xóa phiếu nhập' });
   }
 }

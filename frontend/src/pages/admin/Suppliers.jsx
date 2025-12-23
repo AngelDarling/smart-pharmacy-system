@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Table, Button, Space, Tag, Modal, Form, Input, Row, Col, message, Select, Tooltip, Switch, Statistic, TreeSelect, Avatar } from "antd";
 import { PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ShopOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined } from "@ant-design/icons";
 import api from "../../api/client.js";
+import { usePermissions } from '../../hooks/usePermissions';
 
 const { Option } = Select;
 
 export default function AdminSuppliers() {
+  const { permissions } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -86,8 +88,12 @@ export default function AdminSuppliers() {
       width: 140,
       render: (_, record) => (
         <Space>
-          <Tooltip title="Chỉnh sửa"><Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} /></Tooltip>
-          <Tooltip title="Xóa"><Button danger icon={<DeleteOutlined />} size="small" onClick={() => onDelete(record)} /></Tooltip>
+          {permissions.canEditSuppliers() && (
+            <Tooltip title="Chỉnh sửa"><Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} /></Tooltip>
+          )}
+          {permissions.canDeleteSuppliers() && (
+            <Tooltip title="Xóa"><Button danger icon={<DeleteOutlined />} size="small" onClick={() => onDelete(record)} /></Tooltip>
+          )}
         </Space>
       )
     }
@@ -166,9 +172,11 @@ export default function AdminSuppliers() {
           <Tooltip title="Làm mới">
             <Button icon={<ReloadOutlined />} onClick={() => fetchSuppliers()} loading={loading} shape="circle" size="large" />
           </Tooltip>
-          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large">
-            Thêm nhà cung cấp
-          </Button>
+          {permissions.canCreateSuppliers() && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large">
+              Thêm nhà cung cấp
+            </Button>
+          )}
         </Space>
       </div>
 

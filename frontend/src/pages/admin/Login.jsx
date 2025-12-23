@@ -25,7 +25,7 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       const res = await api.post("/auth/login", { email, password });
-      
+
       // Allow admin, manager, pharmacist, and staff to access admin panel
       const allowedRoles = ['admin', 'manager', 'pharmacist', 'staff'];
       if (!allowedRoles.includes(res.data?.user?.role)) {
@@ -33,7 +33,7 @@ export default function AdminLogin() {
         showError("Tài khoản không có quyền truy cập admin panel");
         return;
       }
-      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("admin_token", res.data.token);
       localStorage.setItem("flash", "login_success");
       // dùng replace để không ở lại trang login
       window.location.replace("/admin/dashboard");
@@ -47,7 +47,7 @@ export default function AdminLogin() {
 
   // Allow admin, manager, pharmacist, and staff to access admin panel
   const allowedRoles = ['admin', 'manager', 'pharmacist', 'staff'];
-  
+
   if (user && allowedRoles.includes(user.role)) {
     // Chặn truy cập trang login: dùng replace để không đẩy trang login vào history
     window.location.replace("/admin/dashboard");

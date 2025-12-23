@@ -228,21 +228,22 @@ export default function ProductImageGallery({ images, productName, selectedImage
                     {/* Main modal image */}
                     <div style={{
                         width: '100%',
-                        maxHeight: '70vh',
+                        height: '500px', // Fixed height to prevent jumping
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         background: '#f8f9fa',
-                        borderRadius: 8,
-                        padding: 20
+                        borderRadius: 12,
+                        padding: 20,
+                        border: '1px solid #e5e7eb'
                     }}>
                         <img
                             src={getImageUrl(images[modalImageIndex], '/default-product.svg')}
                             alt={`${productName} ${modalImageIndex + 1}`}
                             style={{
-                                maxWidth: '100%',
-                                maxHeight: '70vh',
-                                objectFit: 'contain'
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain' // Keep aspect ratio within fixed container
                             }}
                             onError={(e) => handleImageError(e, '/default-product.svg')}
                         />

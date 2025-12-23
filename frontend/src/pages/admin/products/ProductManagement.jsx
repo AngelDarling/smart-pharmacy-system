@@ -38,17 +38,21 @@ import {
   StarOutlined,
   TagsOutlined,
   DollarOutlined,
-  InboxOutlined
+  InboxOutlined,
+  FileExcelOutlined
 } from '@ant-design/icons';
+import api from '../../../api/client';
 import { useProducts } from '../../../hooks/admin/useProducts';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import { useCategories } from '../../../hooks/admin/useCategories';
 import ProductForm from '../../../components/admin/ProductForm';
 import ProductBatchModal from '../../../components/admin/ProductBatchModal';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 const { Option } = Select;
 
 const ProductManagement = () => {
+  const { permissions } = usePermissions();
   const {
     products,
     loading,
@@ -71,7 +75,8 @@ const ProductManagement = () => {
     search: '',
     categoryId: '',
     brandId: '',
-    isActive: undefined
+    isActive: undefined,
+    outOfStock: undefined
   });
   const [brandOptions, setBrandOptions] = useState([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
@@ -133,7 +138,8 @@ const ProductManagement = () => {
       search: '',
       categoryId: '',
       brandId: '',
-      isActive: undefined
+      isActive: undefined,
+      outOfStock: undefined
     });
     fetchProducts({});
   };
@@ -229,6 +235,29 @@ const ProductManagement = () => {
   const handleCloseBatchModal = () => {
     setIsBatchModalVisible(false);
     setBatchProduct(null);
+  };
+
+  // Handle export products to Excel
+  const handleExportProducts = async () => {
+    try {
+      const response = await api.get('/products/export/list', {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Danh_Sach_San_Pham.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      message.success('Đã tải danh sách sản phẩm thành công');
+    } catch (error) {
+      console.error('Export error:', error);
+      message.error(error.response?.data?.message || 'Không thể tải danh sách sản phẩm');
+    }
   };
 
   // Table columns
@@ -449,38 +478,42 @@ const ProductManagement = () => {
               }}
             />
           </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              size="small"
-              shape="circle"
-              icon={<EditOutlined />}
-              onClick={() => handleEditProduct(record)}
-              style={{
-                color: '#52c41a',
-                border: '1px solid #b7eb8f'
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa sản phẩm này?"
-            onConfirm={() => handleDeleteProduct(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
+          {permissions.canEditProducts() && (
+            <Tooltip title="Chỉnh sửa">
               <Button
                 type="text"
                 size="small"
                 shape="circle"
-                icon={<DeleteOutlined />}
+                icon={<EditOutlined />}
+                onClick={() => handleEditProduct(record)}
                 style={{
-                  color: '#ff4d4f',
-                  border: '1px solid #ffccc7'
+                  color: '#52c41a',
+                  border: '1px solid #b7eb8f'
                 }}
               />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {permissions.canDeleteProducts() && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa sản phẩm này?"
+              onConfirm={() => handleDeleteProduct(record._id)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Tooltip title="Xóa">
+                <Button
+                  type="text"
+                  size="small"
+                  shape="circle"
+                  icon={<DeleteOutlined />}
+                  style={{
+                    color: '#ff4d4f',
+                    border: '1px solid #ffccc7'
+                  }}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       )
     }
@@ -535,20 +568,35 @@ const ProductManagement = () => {
             />
           </Tooltip>
           <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAddProduct}
+            icon={<FileExcelOutlined />}
+            onClick={handleExportProducts}
             size="large"
             style={{
               borderRadius: '8px',
               height: '40px',
               paddingLeft: '20px',
-              paddingRight: '20px',
-              fontWeight: 500
+              paddingRight: '20px'
             }}
           >
-            Thêm sản phẩm
+            Export Excel
           </Button>
+          {permissions.canCreateProducts() && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddProduct}
+              size="large"
+              style={{
+                borderRadius: '8px',
+                height: '40px',
+                paddingLeft: '20px',
+                paddingRight: '20px',
+                fontWeight: 500
+              }}
+            >
+              Thêm sản phẩm
+            </Button>
+          )}
         </Space>
       </div>
 
@@ -629,7 +677,7 @@ const ProductManagement = () => {
           <TreeSelect
             placeholder="Chọn danh mục"
             allowClear
-            value={filters.categoryId}
+            value={filters.categoryId || undefined}
             onChange={(value) => handleFilterChange('categoryId', value)}
             treeData={categoryOptions || []}
             treeDefaultExpandAll
@@ -671,6 +719,18 @@ const ProductManagement = () => {
           >
             <Option value={true}>Hoạt động</Option>
             <Option value={false}>Tạm dừng</Option>
+          </Select>
+        </Form.Item>
+        <Form.Item label="Tồn kho" style={{ marginBottom: 0, flex: '1 1 200px' }}>
+          <Select
+            placeholder="Chọn tình trạng"
+            allowClear
+            value={filters.outOfStock}
+            onChange={(value) => handleFilterChange('outOfStock', value)}
+            size="large"
+          >
+            <Option value={true}>Hết hàng</Option>
+            <Option value={false}>Còn hàng</Option>
           </Select>
         </Form.Item>
         <div style={{ display: 'flex', gap: '8px' }}>

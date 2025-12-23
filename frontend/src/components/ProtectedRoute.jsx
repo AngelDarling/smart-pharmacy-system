@@ -54,20 +54,70 @@ const ProtectedRoute = ({
       return hasPermission(resource, action);
     }
 
-    // Legacy permission checks (for backward compatibility)
+    // Legacy permission checks - map to new structure
     if (requiredPermission) {
-      return user.permissions && user.permissions.includes(requiredPermission);
+      // Map legacy permissions to new resource-based permissions
+      const legacyPermissionMap = {
+        'read_products': () => hasPermission('products', 'view'),
+        'write_products': () => hasPermission('products', 'edit'),
+        'delete_products': () => hasPermission('products', 'delete'),
+        'read_categories': () => hasPermission('products', 'view'),
+        'write_categories': () => hasPermission('products', 'edit'),
+        'delete_categories': () => hasPermission('products', 'delete'),
+        'read_users': () => hasPermission('staff', 'view'),
+        'write_users': () => hasPermission('staff', 'edit'),
+        'delete_users': () => hasPermission('staff', 'delete'),
+        'manage_staff': () => hasPermission('staff', 'permissions'),
+        'read_orders': () => hasPermission('orders', 'view'),
+        'write_orders': () => hasPermission('orders', 'edit'),
+        'delete_orders': () => hasPermission('orders', 'delete'),
+        'read_inventory': () => hasPermission('inventory', 'view'),
+        'write_inventory': () => hasPermission('inventory', 'edit'),
+        'delete_inventory': () => hasPermission('inventory', 'delete'),
+        'read_reports': () => hasPermission('reports', 'view'),
+        'write_reports': () => hasPermission('reports', 'export'),
+        'manage_settings': () => hasPermission('settings', 'edit'),
+        'manage_content': () => hasPermission('healthNews', 'view')
+      };
+
+      const checkFunc = legacyPermissionMap[requiredPermission];
+      return checkFunc ? checkFunc() : false;
     }
 
     if (requiredPermissions.length > 0) {
+      // Map each legacy permission and check
+      const checks = requiredPermissions.map(permission => {
+        const legacyPermissionMap = {
+          'read_products': () => hasPermission('products', 'view'),
+          'write_products': () => hasPermission('products', 'edit'),
+          'delete_products': () => hasPermission('products', 'delete'),
+          'read_categories': () => hasPermission('products', 'view'),
+          'write_categories': () => hasPermission('products', 'edit'),
+          'delete_categories': () => hasPermission('products', 'delete'),
+          'read_users': () => hasPermission('staff', 'view'),
+          'write_users': () => hasPermission('staff', 'edit'),
+          'delete_users': () => hasPermission('staff', 'delete'),
+          'manage_staff': () => hasPermission('staff', 'permissions'),
+          'read_orders': () => hasPermission('orders', 'view'),
+          'write_orders': () => hasPermission('orders', 'edit'),
+          'delete_orders': () => hasPermission('orders', 'delete'),
+          'read_inventory': () => hasPermission('inventory', 'view'),
+          'write_inventory': () => hasPermission('inventory', 'edit'),
+          'delete_inventory': () => hasPermission('inventory', 'delete'),
+          'read_reports': () => hasPermission('reports', 'view'),
+          'write_reports': () => hasPermission('reports', 'export'),
+          'manage_settings': () => hasPermission('settings', 'edit'),
+          'manage_content': () => hasPermission('healthNews', 'edit')
+        };
+
+        const checkFunc = legacyPermissionMap[permission];
+        return checkFunc ? checkFunc() : false;
+      });
+
       if (requireAll) {
-        return requiredPermissions.every(permission =>
-          user.permissions && user.permissions.includes(permission)
-        );
+        return checks.every(check => check);
       } else {
-        return requiredPermissions.some(permission =>
-          user.permissions && user.permissions.includes(permission)
-        );
+        return checks.some(check => check);
       }
     }
 

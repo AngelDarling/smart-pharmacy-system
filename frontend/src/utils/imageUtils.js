@@ -20,16 +20,16 @@ export function getImageUrl(imagePath, fallback = "/default-product.svg") {
   
   // If it starts with /uploads/, prepend the backend URL
   if (imagePath.startsWith('/uploads/')) {
-    return `http://localhost:5000${imagePath}`;
+    return `${imagePath}`;
   }
   
   // If it doesn't start with /, assume it's a relative path from uploads
   if (!imagePath.startsWith('/')) {
-    return `http://localhost:5000/uploads/${imagePath}`;
+    return `/uploads/${imagePath}`;
   }
   
   // For other cases, prepend backend URL
-  return `http://localhost:5000${imagePath}`;
+  return `${imagePath}`;
 }
 
 /**

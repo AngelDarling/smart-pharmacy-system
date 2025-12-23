@@ -125,9 +125,58 @@ export async function create(req, res) {
       passwordHash = await Staff.hashPassword("123456");
     }
 
+    // Assign default permissions based on role if not provided
+    let permissions = parsed.permissions || {};
+    if (!parsed.permissions || Object.keys(parsed.permissions).length === 0) {
+      const rolePermissions = {
+        admin: {
+          dashboard: ['view'],
+          products: ['view', 'create', 'edit', 'delete'],
+          inventory: ['view', 'create', 'edit', 'delete'],
+          orders: ['view', 'create', 'edit', 'delete', 'cancel'],
+          customers: ['view', 'edit', 'delete'],
+          staff: ['view', 'create', 'edit', 'delete', 'permissions'],
+          reports: ['view', 'export'],
+          settings: ['view', 'edit'],
+          promotions: ['view', 'create', 'edit', 'delete'],
+          healthNews: ['view', 'create', 'edit', 'delete']
+        },
+        manager: {
+          dashboard: ['view'],
+          products: ['view', 'create', 'edit'],
+          inventory: ['view', 'create', 'edit'],
+          orders: ['view', 'edit', 'cancel'],
+          customers: ['view', 'edit'],
+          staff: ['view'],
+          reports: ['view', 'export'],
+          promotions: ['view', 'edit'],
+          healthNews: ['view', 'edit']
+        },
+        pharmacist: {
+          dashboard: ['view'],
+          products: ['view', 'edit'],
+          inventory: ['view'],
+          orders: ['view', 'edit'],
+          customers: ['view'],
+          reports: ['view'],
+          promotions: ['view'],
+          healthNews: ['view']
+        },
+        staff: {
+          dashboard: ['view'],
+          products: ['view'],
+          orders: ['view'],
+          customers: ['view']
+        }
+      };
+
+      permissions = rolePermissions[parsed.role] || rolePermissions.staff;
+    }
+
     const staffData = {
       ...parsed,
       passwordHash,
+      permissions,
       hireDate: parsed.hireDate ? new Date(parsed.hireDate) : undefined
     };
 
@@ -252,12 +301,10 @@ export async function updatePermissions(req, res) {
       return res.status(400).json({ message: "Dữ liệu permissions không hợp lệ" });
     }
     
-    // Convert permissions object to Map
-    const permissionsMap = new Map(Object.entries(permissions));
-    
+    // Store permissions directly - Mongoose will handle Map conversion
     const staff = await Staff.findByIdAndUpdate(
       req.params.id,
-      { permissions: permissionsMap },
+      { permissions },
       { new: true }
     ).select('-passwordHash');
     

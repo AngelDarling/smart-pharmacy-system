@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { InventoryTransaction, InventoryAlert, Product } from '../models/index.js';
+import { InventoryTransaction, InventoryAlert, Product, ProductBatch } from '../models/index.js';
 import { z } from 'zod';
 
 /**
@@ -91,6 +91,7 @@ export async function getTransactions(req, res) {
       productId,
       type,
       supplierId,
+      batchNumber, // Added batch number filter
       startDate,
       endDate,
       sortBy = 'createdAt',
@@ -102,6 +103,7 @@ export async function getTransactions(req, res) {
     if (productId) filter.productId = productId;
     if (type) filter.type = type;
     if (supplierId) filter.supplierId = supplierId;
+    if (batchNumber) filter.batchNumber = batchNumber; // Filter by batch number
     
     if (startDate || endDate) {
       filter.createdAt = {};
@@ -121,7 +123,21 @@ export async function getTransactions(req, res) {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const total = await InventoryTransaction.countDocuments(filter);
+    const [total, statsResult] = await Promise.all([
+      InventoryTransaction.countDocuments(filter),
+      InventoryTransaction.aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: null,
+            totalQuantity: { $sum: '$quantity' },
+            totalValue: { $sum: { $multiply: ['$quantity', '$unitCost'] } }
+          }
+        }
+      ])
+    ]);
+
+    const stats = statsResult[0] || { totalQuantity: 0, totalValue: 0 };
 
     res.json({
       transactions,
@@ -130,6 +146,11 @@ export async function getTransactions(req, res) {
         pageSize: parseInt(limit),
         total,
         pages: Math.ceil(total / limit)
+      },
+      stats: {
+        totalImports: total,
+        totalQuantity: stats.totalQuantity || 0,
+        totalValue: stats.totalValue || 0
       }
     });
   } catch (error) {
@@ -286,6 +307,7 @@ async function checkAndCreateAlerts(productId, variantId) {
 }
 /**
  * Lấy tồn kho theo lô
+ * Sử dụng ProductBatch.remainingQuantity làm nguồn dữ liệu chính
  */
 export async function getStockByBatch(req, res) {
   try {
@@ -296,62 +318,38 @@ export async function getStockByBatch(req, res) {
       matchStage.productId = new mongoose.Types.ObjectId(productId);
     }
 
-    const stockByBatch = await InventoryTransaction.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: {
-            productId: '$productId',
-            variantId: '$variantId',
-            batchNumber: '$batchNumber',
-            expiryDate: '$expiryDate'
-          },
-          totalImport: {
-            $sum: {
-              $cond: [{ $eq: ['$type', 'import'] }, '$quantity', 0]
-            }
-          },
-          totalExport: {
-            $sum: {
-              $cond: [{ $eq: ['$type', 'export'] }, '$quantity', 0]
-            }
-          },
-          totalReturn: {
-            $sum: {
-              $cond: [{ $eq: ['$type', 'return'] }, '$quantity', 0]
-            }
-          },
-          firstImportDate: { $min: '$createdAt' }
-        }
-      },
-      {
-        $project: {
-          productId: '$_id.productId',
-          variantId: '$_id.variantId',
-          batchNumber: '$_id.batchNumber',
-          expiryDate: '$_id.expiryDate',
-          firstImportDate: '$firstImportDate',
-          quantity: {
-            $subtract: [
-              { $add: ['$totalImport', '$totalReturn'] },
-              '$totalExport'
-            ]
-          }
-        }
-      },
-      { $match: { quantity: { $gt: 0 } } }, // Only show batches with positive stock
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'productId',
-          foreignField: '_id',
-          as: 'product'
-        }
-      },
-      { $unwind: '$product' }
-    ]);
+    // Sử dụng ProductBatch thay vì InventoryTransaction
+    // vì remainingQuantity được cập nhật chính xác khi order status thay đổi
+    const stockByBatch = await ProductBatch.find(matchStage)
+      .populate('productId', 'name sku unit minStockLevel imageUrls')
+      .populate('supplierId', 'name')
+      .sort({ expiryDate: 1, importDate: 1 }) // FEFO order
+      .lean();
 
-    res.json(stockByBatch);
+    // Transform to match frontend expectations
+    const formattedStock = stockByBatch.map(batch => ({
+      _id: batch._id,
+      productId: batch.productId._id,
+      product: {
+        _id: batch.productId._id,
+        name: batch.productId.name,
+        sku: batch.productId.sku,
+        unit: batch.productId.unit,
+        minStockLevel: batch.productId.minStockLevel,
+        imageUrls: batch.productId.imageUrls
+      },
+      batchNumber: batch.batchNumber,
+      quantity: batch.remainingQuantity, // Source of truth!
+      expiryDate: batch.expiryDate,
+      importDate: batch.importDate,
+      firstImportDate: batch.importDate,
+      status: batch.status,
+      unitCost: batch.unitCost,
+      supplier: batch.supplierId,
+      createdAt: batch.createdAt
+    }));
+
+    res.json(formattedStock);
   } catch (error) {
     console.error('Get stock by batch error:', error);
     res.status(500).json({ message: 'Lỗi khi lấy tồn kho theo lô' });

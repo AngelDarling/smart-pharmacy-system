@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../api/client.js';
 import { Link } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api';
 
 function HealthNewsAnalytics() {
     const [stats, setStats] = useState(null);
@@ -15,10 +14,7 @@ function HealthNewsAnalytics() {
 
     const fetchAnalytics = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/health-news/analytics`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get(`/health-news/analytics`);
             setStats(response.data);
         } catch (err) {
             console.error('Error fetching analytics:', err);

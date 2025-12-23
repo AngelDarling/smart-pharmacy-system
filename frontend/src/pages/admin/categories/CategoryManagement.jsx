@@ -40,12 +40,14 @@ import {
 } from '@ant-design/icons';
 import { useCategories } from '../../../hooks/admin/useCategories';
 import CategoryForm from '../../../components/admin/CategoryForm';
+import { usePermissions } from '../../../hooks/usePermissions';
 import '../../../styles/sweetalert2-custom.css';
 
 const { Search } = Input;
 const { Option } = Select;
 
 const CategoryManagement = () => {
+  const { permissions } = usePermissions();
   const {
     categories,
     loading,
@@ -529,24 +531,28 @@ const CategoryManagement = () => {
 
         return (
           <Space size="small">
-            <Tooltip title="Thêm danh mục con">
-              <Button
-                type="text"
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => handleAddCategory(record)}
-                style={{ color: '#52c41a' }}
-              />
-            </Tooltip>
-            <Tooltip title="Chỉnh sửa">
-              <Button
-                type="text"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleEditCategory(record)}
-                style={{ color: '#1890ff' }}
-              />
-            </Tooltip>
+            {permissions.canCreateCategories() && (
+              <Tooltip title="Thêm danh mục con">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => handleAddCategory(record)}
+                  style={{ color: '#52c41a' }}
+                />
+              </Tooltip>
+            )}
+            {permissions.canEditCategories() && (
+              <Tooltip title="Chỉnh sửa">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleEditCategory(record)}
+                  style={{ color: '#1890ff' }}
+                />
+              </Tooltip>
+            )}
             <Dropdown menu={{ items: actionMenu }} trigger={['click']}>
               <Button
                 type="text"
@@ -600,21 +606,23 @@ const CategoryManagement = () => {
                 size="large"
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleAddCategory()}
-              size="large"
-              style={{
-                borderRadius: '8px',
-                height: '40px',
-                paddingLeft: '20px',
-                paddingRight: '20px',
-                fontWeight: 500
-              }}
-            >
-              Thêm danh mục gốc
-            </Button>
+            {permissions.canCreateCategories() && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => handleAddCategory()}
+                size="large"
+                style={{
+                  borderRadius: '8px',
+                  height: '40px',
+                  paddingLeft: '20px',
+                  paddingRight: '20px',
+                  fontWeight: 500
+                }}
+              >
+                Thêm danh mục gốc
+              </Button>
+            )}
           </Space>
         </div>
 

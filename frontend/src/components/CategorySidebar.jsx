@@ -67,7 +67,7 @@ export default function CategorySidebar({ selected, onSelect }) {
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 {cat.iconUrl && cat.iconUrl.trim() ? (
                   <img 
-                    src={cat.iconUrl.startsWith('http') ? cat.iconUrl : `http://localhost:5000${cat.iconUrl}`} 
+                    src={cat.iconUrl.startsWith('http') ? cat.iconUrl : `${cat.iconUrl}`} 
                     alt={cat.name}
                     style={{ 
                       width: '48px', 
@@ -174,7 +174,7 @@ export default function CategorySidebar({ selected, onSelect }) {
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       {child.iconUrl && child.iconUrl.trim() ? (
                         <img 
-                          src={child.iconUrl.startsWith('http') ? child.iconUrl : `http://localhost:5000${child.iconUrl}`} 
+                          src={child.iconUrl.startsWith('http') ? child.iconUrl : `${child.iconUrl}`} 
                           alt={child.name}
                           style={{ 
                             width: '32px', 

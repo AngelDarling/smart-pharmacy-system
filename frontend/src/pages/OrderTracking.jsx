@@ -160,6 +160,27 @@ export default function OrderTracking() {
             >
               {STATUS_LABELS[order.status] || order.status}
             </div>
+
+            {/* Delivery Simulator Shortcut for Admin/Demo */}
+            {order.status === 'shipping' && (
+              <Link
+                to={`/shipper-simulator?code=${order.code}`}
+                style={{
+                  ...styles.statusBadge,
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: '2px solid #059669',
+                  marginLeft: '12px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>🚚</span>
+                <span>Mô phỏng giao hàng</span>
+              </Link>
+            )}
           </div>
 
           {/* Timeline */}

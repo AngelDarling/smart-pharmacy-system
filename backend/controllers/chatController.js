@@ -44,16 +44,17 @@ async function findProductsInDB(userQuery) {
       return [];
     }
 
-    // Trích xuất từ khóa quan trọng (loại bỏ stop words)
-    const stopWords = ['bạn', 'có', 'bán', 'không', 'tôi', 'muốn', 'mua', 'cần', 'cho', 'của', 'và', 'hay', 'là', 'thì', 'được', 'ạ', 'nhé', 'à', 'vậy', 'sao', 'gì', 'đi', 'nào', 'với'];
+    // Trích xuất từ khóa quan trọng (loại bỏ stop words và từ thông dụng)
+    const stopWords = ['bạn', 'có', 'bán', 'không', 'tôi', 'muốn', 'mua', 'cần', 'cho', 'của', 'và', 'hay', 'là', 'thì', 'được', 'ạ', 'nhé', 'à', 'vậy', 'sao', 'gì', 'đi', 'nào', 'với', 'cái', 'con', 'chiếc', 'này', 'kia', 'đó', 'đây', 'rồi', 'chưa', 'nữa'];
+    const genericWords = ['mới', 'pro', 'gà', 'vip', 'hay', 'tốt', 'rẻ', 'đẹp', 'nhất', 'xịn'];
     const importantSingleLetters = ['a', 'b', 'c', 'd', 'e', 'k']; // Vitamin letters
     
     const keywords = originalQuery
       .split(/\s+/)
       .filter(word => {
         const lower = word.toLowerCase();
-        // Giữ lại nếu: (1) dài hơn 1 ký tự, hoặc (2) là vitamin letter quan trọng
-        return (word.length > 1 && !stopWords.includes(lower)) || importantSingleLetters.includes(lower);
+        // Giữ lại nếu: (1) dài hơn 1 ký tự, (2) không phải stop word, (3) không phải từ thông dụng vô nghĩa trong search
+        return (word.length > 1 && !stopWords.includes(lower) && !genericWords.includes(lower)) || importantSingleLetters.includes(lower);
       })
       .join(' ');
     
@@ -141,138 +142,196 @@ async function findProductsInDB(userQuery) {
 }
 
 /**
+ * Bước 1: Phân tích ý định của người dùng bằng AI
+ * Trả về JSON: { intent: "MEDICAL" | "INAPPROPRIATE" | "OFF_TOPIC", keywords: string, reason: string }
+ */
+async function analyzeUserQuery(message) {
+  const lowerMsg = message.toLowerCase();
+
+  // --- 1. LOCAL REGEX FILTER (Lớp bảo vệ đầu tiên) ---
+  
+  // Tạo Regex động từ danh sách (Dễ bảo trì hơn hard-code)
+  const profanityRegex = new RegExp(`\\b(${[
+      "địt", "đụ", "lồn", "buồi", "cặc", "đm", "dm", "vcl", "vl", "đéo", "éo", 
+      "pussy", "porn", "sex", "hentai", "xxx", "fuck", "ngu", "gà", "óc chó", "quần què"
+  ].join("|")})`, 'i');
+
+  // Các từ viết tắt ngắn cần \b chặt chẽ hơn (tránh bắt nhầm chữ 'account' có 'cc')
+  const shortSensitiveRegex = new RegExp(`\\b(${["cc", "cl", "ml", "đmm", "clgt"].join("|")})\\b`, 'i');
+
+  const offTopicRegex = new RegExp(`\\b(${[
+      "thời tiết", "chính trị", "đá bóng", "xổ số", "lô đề", "đánh bạc", "cá độ", 
+      "siu siu", "mãi đỉnh", "anh hổ", "pro", "vip", "đỉnh nóc", "kịch trần", "check var"
+  ].join("|")})`, 'i');
+
+  // Kiểm tra Regex
+  if (profanityRegex.test(lowerMsg) || shortSensitiveRegex.test(lowerMsg)) {
+    return { intent: "INAPPROPRIATE", keywords: "", reason: "Từ khóa nhạy cảm (Local Check)" };
+  }
+  if (offTopicRegex.test(lowerMsg)) {
+    return { intent: "OFF_TOPIC", keywords: "", reason: "Chủ đề lạc đề (Local Check)" };
+  }
+
+  // --- 2. AI ANALYSIS (Lớp thông minh) ---
+  try {
+    // Thêm ví dụ (Few-shot prompting) để AI chính xác hơn
+    const analysisPrompt = `
+      Bạn là trợ lý AI của nhà thuốc Smart Pharmacy. Nhiệm vụ: Phân loại ý định và trích xuất từ khóa tìm kiếm thuốc.
+
+      QUY TẮC PHÂN LOẠI:
+      1. "MEDICAL": Hỏi về thuốc, triệu chứng bệnh, cách dùng, giá thuốc, thực phẩm chức năng.
+      2. "INAPPROPRIATE": Chửi thề, sex, thô tục, hỏi mượn tiền, lừa đảo.
+      3. "OFF_TOPIC": Hỏi thời tiết, code, chính trị, tán gẫu không liên quan sức khỏe.
+
+      VÍ DỤ MẪU (Học theo cách này):
+      - User: "Tôi bị đau đầu quá" -> {"intent": "MEDICAL", "keywords": "đau đầu"}
+      - User: "Có bán bao cao su không" -> {"intent": "MEDICAL", "keywords": "bao cao su"} (Đây là sản phẩm y tế hợp lệ)
+      - User: "Mày ngu quá" -> {"intent": "INAPPROPRIATE"}
+      - User: "Hôm nay trời mưa không" -> {"intent": "OFF_TOPIC"}
+      - User: "Đau ví quá man" -> {"intent": "OFF_TOPIC"} (Vì không phải bệnh lý)
+
+      INPUT CỦA USER: "${message}"
+
+      TRẢ VỀ JSON DUY NHẤT (Không Markdown):
+      {
+        "intent": "MEDICAL" | "INAPPROPRIATE" | "OFF_TOPIC",
+        "keywords": "chỉ trích xuất tên thuốc/triệu chứng (bỏ các từ: tôi bị, cần mua, giá...)",
+        "reason": "giải thích ngắn gọn"
+      }
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash", // Hoặc model mới nhất bạn có
+      contents: [{ role: "user", parts: [{ text: analysisPrompt }] }], // Cấu trúc chuẩn Google SDK
+      generationConfig: { responseMimeType: "application/json" }
+    });
+
+    // Xử lý text trả về an toàn hơn
+    let rawText = response.text; // Sửa lại: SDK @google/genai dùng .text trực tiếp
+    rawText = rawText.replace(/```json|```/g, '').trim();
+    
+    return JSON.parse(rawText);
+
+  } catch (error) {
+    console.error("❌ AI Error:", error.message);
+
+    // --- 3. FALLBACK LOGIC (Khi AI sập) ---
+    // Kiểm tra lại Regex lần cuối cho chắc
+    if (offTopicRegex.test(message)) {
+       return { intent: "OFF_TOPIC", keywords: "", reason: "Fallback Regex" };
+    }
+
+    // Trích xuất từ khóa đơn giản (Xóa stop words tiếng Việt)
+    // Để khi AI lỗi, vẫn tìm kiếm được tương đối chính xác thay vì search cả câu dài
+    const stopWords = ["tôi", "bị", "muốn", "cần", "mua", "có", "bán", "không", "giá", "bao", "nhiêu", "là", "gì", "ở", "đâu"];
+    const simpleKeywords = message.split(' ')
+        .filter(word => !stopWords.includes(word.toLowerCase()))
+        .join(' ');
+
+    return { 
+        intent: "MEDICAL", 
+        keywords: simpleKeywords || message, 
+        reason: "Fallback Mode (AI Error)" 
+    };
+  }
+}
+
+/**
  * API Route: POST /api/chat
- * Xử lý chat với AI sử dụng RAG (Retrieval-Augmented Generation)
+ * Xử lý chat với AI sử dụng RAG nâng cao (Classification -> Retrieval -> Generation)
  */
 export async function chatWithAI(req, res) {
   try {
     const { message } = req.body;
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
-      return res.status(400).json({ 
-        error: "Vui lòng nhập câu hỏi của bạn" 
-      });
+      return res.status(400).json({ error: "Vui lòng nhập câu hỏi của bạn" });
     }
 
-    // Khởi tạo Gemini nếu chưa được khởi tạo (lazy initialization)
+    // Khởi tạo Gemini
     if (!ai) {
       const initialized = initializeGemini();
       if (!initialized) {
         return res.status(503).json({ 
-          error: "Dịch vụ AI tư vấn tạm thời không khả dụng. Vui lòng thử lại sau.",
-          reply: "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng liên hệ hotline 1800 6928 để được hỗ trợ."
+          error: "Dịch vụ AI tư vấn tạm thời không khả dụng.",
+          reply: "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng liên hệ hotline 1800 6928."
         });
       }
     }
 
-    // --- BƯỚC 1: (R) Retrieval - Truy vấn sản phẩm liên quan ---
-    const relevantProducts = await findProductsInDB(message);
-    console.log(`[Chat] Tìm thấy ${relevantProducts.length} sản phẩm liên quan cho: "${message}"`);
+    // --- BƯỚC 1: Phân tích ý định (Intent Classification) ---
+    const analysis = await analyzeUserQuery(message);
+    console.log(`[Intent] ${analysis.intent} - Keywords: "${analysis.keywords}" - Reason: ${analysis.reason}`);
 
-    // --- BƯỚC 2: (A) Augmented - Tạo context từ sản phẩm ---
-    let context = "";
-    if (relevantProducts.length > 0) {
-      context = relevantProducts
-        .map((p, index) => {
-          const price = p.price?.toLocaleString("vi-VN") || "Liên hệ";
-          const category = p.categoryId?.name || "Khác";
-          const brand = p.brandId?.name || "";
-          const description = p.shortDescription || p.description || "";
-          const tags = p.tags?.join(", ") || "";
-          
-          return `${index + 1}. **${p.name}**
-   - Giá: ${price} VND
-   - Danh mục: ${category}
-   ${brand ? `- Thương hiệu: ${brand}` : ""}
-   ${description ? `- Mô tả: ${description.substring(0, 150)}${description.length > 150 ? "..." : ""}` : ""}
-   ${tags ? `- Từ khóa: ${tags}` : ""}
-   - Link: /p/${p.slug}`;
-        })
-        .join("\n\n");
-    } else {
-      context = "Không tìm thấy sản phẩm nào phù hợp với yêu cầu của khách hàng.";
+    if (analysis.intent === "INAPPROPRIATE") {
+      return res.json({
+        reply: "Tôi là trợ lý ảo của nhà thuốc Smart Pharmacy. Tôi được thiết kế để hỗ trợ các vấn đề về sức khỏe một cách văn minh, chuyên nghiệp. Vui lòng sử dụng ngôn từ phù hợp để nhận được sự hỗ trợ tốt nhất.",
+        products: []
+      });
     }
 
-    // --- BƯỚC 3: (G) Generation - Tạo prompt và gọi AI ---
-    const prompt = `Bạn là một trợ lý AI chuyên nghiệp của nhà thuốc Smart Pharmacy. Nhiệm vụ của bạn là tư vấn sản phẩm cho khách hàng một cách thân thiện, chuyên nghiệp và ngắn gọn.
+    if (analysis.intent === "OFF_TOPIC") {
+      return res.json({
+        reply: "Xin lỗi, tôi chỉ có chuyên môn về tư vấn dược phẩm và chăm sóc sức khỏe. Tôi không thể hỗ trợ các chủ đề ngoài phạm vi y tế. Bạn cần tư vấn về loại thuốc hay sản phẩm sức khỏe nào không?",
+        products: []
+      });
+    }
 
-**QUAN TRỌNG:**
-- Chỉ được tư vấn các sản phẩm có trong danh sách "SẢN PHẨM CÓ SẴN" bên dưới
-- Trả lời NGẮN GỌN, súc tích, không dài dòng (tối đa 150 từ)
-- Nếu không có sản phẩm phù hợp, hãy đề xuất các sản phẩm tương tự hoặc gợi ý khách hàng tìm kiếm với từ khóa khác
-- Luôn nhắc nhở khách hàng tham khảo ý kiến bác sĩ trước khi sử dụng thuốc (một câu ngắn)
-- Trả lời bằng tiếng Việt, dễ hiểu
-- Nếu khách hỏi về giá, hãy tham khảo giá trong danh sách sản phẩm
-- KHÔNG liệt kê links hoặc đường dẫn sản phẩm vì đã có product cards hiển thị bên dưới
-- Chỉ đề cập tên sản phẩm, giá và công dụng ngắn gọn (1-2 câu mỗi sản phẩm)
-- Kết thúc bằng một câu mời liên hệ hotline 1800 6928 nếu cần hỗ trợ thêm
+    // --- BƯỚC 2: Truy vấn sản phẩm liên quan (Retrieval) ---
+    // Sử dụng từ khóa do AI bóc tách thay vì câu hỏi thô
+    const relevantProducts = await findProductsInDB(analysis.keywords || message);
+    console.log(`[Chat] Tìm thấy ${relevantProducts.length} sản phẩm cho keywords: "${analysis.keywords}"`);
 
---- SẢN PHẨM CÓ SẴN TRONG KHO ---
+    // --- BƯỚC 3: Tạo ngữ cảnh (Augmentation) ---
+    let context = relevantProducts.length > 0
+      ? relevantProducts.map((p, i) => `${i + 1}. **${p.name}** - Giá: ${p.price?.toLocaleString() || "LH"} VND - /p/${p.slug} - ${p.shortDescription || ""}`).join("\n")
+      : "Không tìm thấy sản phẩm nào phù hợp.";
+
+    // --- BƯỚC 4: Tạo câu trả lời cuối cùng (Generation) ---
+    const prompt = `Bạn là trợ lý ảo nhà thuốc Smart Pharmacy. 
+Dựa vào danh sách sản phẩm và câu hỏi sau đây, hãy tư vấn cho khách hàng một cách chuyên nghiệp.
+
+QUY TẮC:
+- Trả lời NGẮN GỌN (dưới 150 từ).
+- Luôn nhắc khách hàng tham khảo bác sĩ.
+- Chỉ tư vấn sản phẩm có tên dưới đây.
+
+SẢN PHẨM:
 ${context}
---- HẾT DANH SÁCH SẢN PHẨM ---
 
-Câu hỏi của khách hàng: "${message}"
+Câu hỏi khách hàng: "${message}"`;
 
-Hãy đưa ra câu trả lời tư vấn NGẮN GỌN, chuyên nghiệp và thân thiện (tối đa 150 từ):`;
-
-    // Gọi Gemini API với model gemini-2.5-flash
     let aiReply;
     try {
-      const response = await ai.models.generateContent({
+      const response = await ai.models.generateContent({ 
         model: "gemini-2.5-flash",
-        contents: prompt
+        contents: prompt,
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        ],
       });
       aiReply = response.text;
-      console.log("✅ Gemini 2.5 Flash đã trả lời thành công");
     } catch (error) {
-      console.error("❌ Lỗi khi gọi Gemini API:", error);
-      
-      // Xử lý các lỗi cụ thể từ Gemini API
-      if (error.status === 503 || error.message?.includes("overloaded")) {
-        // API overload - trả về response thân thiện với sản phẩm
-        aiReply = relevantProducts.length > 0
-          ? `Tôi tìm thấy ${relevantProducts.length} sản phẩm phù hợp với yêu cầu của bạn. Vui lòng xem danh sách bên dưới để biết thêm chi tiết. Nếu cần tư vấn thêm, vui lòng liên hệ hotline 1800 6928.`
-          : `Hiện tại tôi không tìm thấy sản phẩm phù hợp. Vui lòng thử tìm kiếm với từ khóa khác hoặc liên hệ hotline 1800 6928 để được hỗ trợ trực tiếp.`;
-        console.log("⚠️ Gemini API overload - sử dụng fallback response");
-      } else if (error.status === 429) {
-        // Rate limit exceeded
-        aiReply = `Hệ thống đang xử lý quá nhiều yêu cầu. Vui lòng thử lại sau ít phút hoặc liên hệ hotline 1800 6928 để được hỗ trợ ngay.`;
-      } else {
-        // Lỗi khác - throw để outer catch xử lý
-        throw new Error(`Gemini API error: ${error.message}`);
-      }
+      console.error("❌ Lỗi Generation:", error);
+      aiReply = relevantProducts.length > 0 
+        ? "Tôi đã tìm thấy một số sản phẩm phù hợp. Vui lòng xem danh sách bên dưới." 
+        : "Hiện tại tôi chưa tìm được sản phẩm phù hợp.";
     }
 
-    // Trả về kết quả
     res.json({
       reply: aiReply,
-      products: relevantProducts.map((p) => ({
-        id: p._id,
-        name: p.name,
-        slug: p.slug,
-        price: p.price,
-        imageUrl: p.imageUrls?.[0],
-        category: p.categoryId?.name,
-        brand: p.brandId?.name
-      })),
-      productCount: relevantProducts.length
+      products: relevantProducts.map(p => ({
+        id: p._id, name: p.name, slug: p.slug, price: p.price,
+        imageUrl: p.imageUrls?.[0], category: p.categoryId?.name, brand: p.brandId?.name
+      }))
     });
 
   } catch (error) {
-    console.error("Lỗi khi xử lý chat:", error);
-    
-    // Xử lý các lỗi cụ thể
-    if (error.message?.includes("API_KEY")) {
-      return res.status(503).json({
-        error: "Lỗi cấu hình API. Vui lòng liên hệ quản trị viên.",
-        reply: "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng liên hệ hotline 1800 6928 để được hỗ trợ."
-      });
-    }
-
-    res.status(500).json({
-      error: "Đã có lỗi xảy ra khi xử lý yêu cầu",
-      reply: "Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau hoặc liên hệ hotline 1800 6928 để được hỗ trợ."
-    });
+    console.error("Lỗi Chatbot:", error);
+    res.status(500).json({ error: "Lỗi hệ thống", reply: "Xin lỗi, tôi đang gặp sự cố." });
   }
 }
 

@@ -29,6 +29,7 @@ const { Option } = Select;
 
 export default function AlertsTab() {
     const [loading, setLoading] = useState(false);
+    const [expiryCheckLoading, setExpiryCheckLoading] = useState(false);
     const [alerts, setAlerts] = useState([]);
     const [filter, setFilter] = useState('all'); // all, low_stock, expiring, expired
     const [pagination, setPagination] = useState({
@@ -43,7 +44,56 @@ export default function AlertsTab() {
         total: 0
     });
 
-    // Load data and generate alerts
+    // Manual expiry check function
+    const runExpiryCheck = async () => {
+        try {
+            setExpiryCheckLoading(true);
+
+            Swal.fire({
+                title: 'Đang kiểm tra...',
+                text: 'Đang quét và đánh dấu sản phẩm hết hạn',
+                icon: 'info',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const response = await api.post('/admin/expiry-check/run');
+
+            if (response.data.success) {
+                await Swal.fire({
+                    title: 'Hoàn tất!',
+                    html: `
+                        <p><strong>Kết quả kiểm tra:</strong></p>
+                        <p>🔴 Đánh dấu hết hạn: <strong>${response.data.expiredBatches}</strong> lô hàng</p>
+                        <p>🚫 Tắt sản phẩm: <strong>${response.data.disabledProducts}</strong> sản phẩm</p>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+
+                // Reload alerts to reflect changes
+                await loadData();
+            } else {
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: response.data.message || 'Không thể chạy kiểm tra',
+                    icon: 'error'
+                });
+            }
+        } catch (error) {
+            console.error('Expiry check error:', error);
+            Swal.fire({
+                title: 'Lỗi!',
+                text: error.response?.data?.message || 'Không thể chạy kiểm tra hết hạn',
+                icon: 'error'
+            });
+        } finally {
+            setExpiryCheckLoading(false);
+        }
+    };
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
@@ -86,8 +136,9 @@ export default function AlertsTab() {
                     const expiry = dayjs(batch.expiryDate);
                     const daysUntilExpiry = expiry.diff(dayjs(), 'days');
 
-                    if (daysUntilExpiry < 0) {
-                        // Expired
+                    // Coi sản phẩm hết hạn hôm nay (0 ngày) như đã hết hạn
+                    if (daysUntilExpiry <= 0) {
+                        // Expired (bao gồm cả hôm nay)
                         generatedAlerts.push({
                             id: `expired_${batch.productId}_${batch.batchNumber}`,
                             type: 'expired',
@@ -97,12 +148,14 @@ export default function AlertsTab() {
                             currentStock: batch.quantity,
                             expiryDate: batch.expiryDate,
                             daysUntilExpiry: daysUntilExpiry,
-                            message: `Sản phẩm "${product.name}" (Lô: ${batch.batchNumber}) đã hết hạn ${Math.abs(daysUntilExpiry)} ngày`,
+                            message: daysUntilExpiry === 0
+                                ? `Sản phẩm "${product.name}" (Lô: ${batch.batchNumber}) hết hạn hôm nay`
+                                : `Sản phẩm "${product.name}" (Lô: ${batch.batchNumber}) đã hết hạn ${Math.abs(daysUntilExpiry)} ngày`,
                             createdAt: new Date()
                         });
                         expiredCount++;
                     } else if (daysUntilExpiry <= 30) {
-                        // Expiring soon
+                        // Expiring soon (1-30 ngày)
                         generatedAlerts.push({
                             id: `expiring_${batch.productId}_${batch.batchNumber}`,
                             type: 'expiring',
@@ -236,8 +289,7 @@ export default function AlertsTab() {
                     <Text strong>{product?.name}</Text>
                     <Text type="secondary" style={{ fontSize: '12px' }}>{product?.sku}</Text>
                 </Space>
-            ),
-            width: 250
+            )
         },
         {
             title: 'Số lô',
@@ -351,7 +403,7 @@ export default function AlertsTab() {
                             <Option value="expired">Đã hết hạn</Option>
                         </Select>
                     </Col>
-                    <Col xs={24} sm={12} lg={4}>
+                    <Col xs={24} sm={12} lg={6}>
                         <Button
                             icon={<ReloadOutlined />}
                             onClick={loadData}
@@ -359,6 +411,23 @@ export default function AlertsTab() {
                             block
                         >
                             Làm mới
+                        </Button>
+                    </Col>
+                    <Col xs={24} sm={12} lg={10}>
+                        <Button
+                            type="primary"
+                            danger
+                            icon={<FireOutlined />}
+                            onClick={runExpiryCheck}
+                            loading={expiryCheckLoading}
+                            block
+                            style={{
+                                background: 'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
+                                borderColor: '#ff4d4f',
+                                fontWeight: 500
+                            }}
+                        >
+                            🕐 Chạy kiểm tra hết hạn ngay
                         </Button>
                     </Col>
                 </Row>

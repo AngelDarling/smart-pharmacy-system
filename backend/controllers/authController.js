@@ -209,7 +209,7 @@ export async function updateProfile(req, res, next) {
 export async function getPointHistory(req, res) {
   try {
     const userId = req.user._id;
-    const { PointHistory } = await import("../models/User.js");
+    const { PointHistory } = await import("../models/Customer.js");
     const logs = await PointHistory.find({ userId }).sort({ createdAt: -1 });
     res.json(logs);
   } catch (err) {

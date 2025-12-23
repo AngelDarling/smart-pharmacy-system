@@ -4,7 +4,7 @@ import axios from 'axios';
 import HealthNewsCard from '../../components/healthNews/HealthNewsCard';
 import { Helmet } from 'react-helmet-async';
 import { useHealthNewsCategories } from '../../hooks/useHealthNewsCategories';
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 function HealthNews() {
     const [searchParams, setSearchParams] = useSearchParams();

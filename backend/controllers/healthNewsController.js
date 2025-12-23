@@ -10,8 +10,24 @@ export const getAll = async (req, res) => {
     if (category) query.category = category;
     // Tags filter
     if (tags) query.tags = { $in: tags.split(',') };
-    // Permission check
-    const isManager = req.user && (req.user.role === 'admin' || req.user.permissions?.includes('manage_content'));
+    // Permission check - support both old and new permission formats
+    let isManager = req.user && req.user.role === 'admin';
+    
+    if (!isManager && req.user && req.user.permissions) {
+      // Check old array-based permissions
+      if (Array.isArray(req.user.permissions)) {
+        isManager = req.user.permissions.includes('manage_content');
+      } 
+      // Check new object-based permissions
+      else if (typeof req.user.permissions === 'object') {
+        const perms = req.user.permissions instanceof Map 
+          ? Object.fromEntries(req.user.permissions)
+          : req.user.permissions;
+        const healthNewsPerms = perms.healthNews || [];
+        isManager = healthNewsPerms.includes('view') || healthNewsPerms.includes('edit') || healthNewsPerms.includes('manage');
+      }
+    }
+    
     if (!isManager) {
       query.status = 'published';
     } else if (status) {

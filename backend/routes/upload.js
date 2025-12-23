@@ -1,11 +1,11 @@
 import express from 'express';
 import upload from '../middleware/uploadProductMiddleware.js';
-import { authRequired, requireRole } from '../middlewares/auth.js';
+import { authRequired, requireRole, requireStaff } from '../middlewares/auth.js';
 
 const router = express.Router();
 
 // Upload single image
-router.post('/image', authRequired, requireRole('admin'), upload.single('image'), (req, res) => {
+router.post('/image', authRequired, requireStaff, upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No image file provided' });
@@ -23,7 +23,7 @@ router.post('/image', authRequired, requireRole('admin'), upload.single('image')
 });
 
 // Upload multiple images
-router.post('/images', authRequired, requireRole('admin'), upload.array('images', 10), (req, res) => {
+router.post('/images', authRequired, requireStaff, upload.array('images', 10), (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No image files provided' });

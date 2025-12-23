@@ -5,8 +5,10 @@ import Swal from 'sweetalert2';
 import api from '../../../api/client.js';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils.js';
 import { uploadFile } from '../../../api/client.js';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 const BrandManagement = () => {
+  const { permissions } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [brands, setBrands] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
@@ -69,12 +71,16 @@ const BrandManagement = () => {
       width: 120,
       render: (_, record) => (
         <Space>
-          <Tooltip title="Chỉnh sửa">
-            <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <Button danger icon={<DeleteOutlined />} size="small" onClick={() => onDelete(record)} />
-          </Tooltip>
+          {permissions.canEditBrands() && (
+            <Tooltip title="Chỉnh sửa">
+              <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
+            </Tooltip>
+          )}
+          {permissions.canDeleteBrands() && (
+            <Tooltip title="Xóa">
+              <Button danger icon={<DeleteOutlined />} size="small" onClick={() => onDelete(record)} />
+            </Tooltip>
+          )}
         </Space>
       )
     }
@@ -186,9 +192,11 @@ const BrandManagement = () => {
             </div>
           </div>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large">
-          Thêm thương hiệu
-        </Button>
+        {permissions.canCreateBrands() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} size="large">
+            Thêm thương hiệu
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

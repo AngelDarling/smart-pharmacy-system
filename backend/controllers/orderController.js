@@ -1,14 +1,14 @@
 import { 
   Order, 
-  Shipment, 
   Product, 
   ProductBatch, 
   InventoryTransaction, 
-  ProductSalesDaily, 
-  Coupon, 
-  Payment 
+  Shipment, 
+  Drug,
+  Customer,
+  PointHistory
 } from "../models/index.js";
-import { allocateStockFromBatches } from "./productBatchController.js";
+import { allocateStockFromBatches, reduceStockFIFO } from "./productBatchController.js";
 import mongoose from "mongoose";
 
 // Generate unique order code
@@ -198,50 +198,13 @@ export async function updateStatus(req, res) {
 
     // If switching from pending to processing/shipping/completed, reduce inventory using FIFO
     if (oldStatus === "pending" && ["processing", "shipping", "completed"].includes(newStatus)) {
-      for (const item of order.items) {
-        try {
-          // 1. Allocate stock from batches using FIFO (oldest first)
-          const allocations = await allocateStockFromBatches(
-            item.productId, 
-            item.quantity
-          );
-          
-          // 2. Deduct from each batch's remainingQuantity
-          for (const allocation of allocations) {
-            const batch = await ProductBatch.findById(allocation.batchId);
-            if (batch) {
-              batch.remainingQuantity -= allocation.quantity;
-              await batch.save(); // Will auto-update status via pre-save hook
-            }
-            
-            // 3. Create inventory transaction with batch info
-            const transaction = new InventoryTransaction({
-              productId: item.productId,
-              type: "sale",
-              quantity: -allocation.quantity,
-              batchNumber: allocation.batchNumber,
-              unitCost: allocation.unitCost,
-              reason: `Order ${order.code} - FIFO allocation from batch ${allocation.batchNumber}`,
-              orderId: order._id,
-              performedBy: req.user?.id || null
-            });
-            await transaction.save();
-          }
-          
-          // 4. Update Product.totalStock
-          const product = await Product.findById(item.productId);
-          if (product) {
-            product.totalStock -= item.quantity;
-            await product.save();
-          }
-          
-        } catch (error) {
-          // If not enough stock in batches, rollback and return error
-          console.error(`FIFO allocation error for product ${item.productId}:`, error);
-          return res.status(400).json({ 
-            message: `Không đủ hàng trong kho cho sản phẩm: ${item.nameSnapshot || item.productId}. ${error.message}` 
-          });
-        }
+      try {
+        await reduceStockFIFO(order, req.user?.id);
+      } catch (error) {
+        console.error(`FIFO allocation error for order ${order.code}:`, error);
+        return res.status(400).json({ 
+          message: `Không đủ hàng trong kho. ${error.message}` 
+        });
       }
     }
 
@@ -308,28 +271,46 @@ export async function updateStatus(req, res) {
     order.status = status;
     await order.save();
 
-    // Tích điểm thành viên khi hoàn thành đơn hàng
-    if (newStatus === "completed" && order.userId) {
+    // Tích điểm thành viên khi hoàn thành đơn hàng (Chỉ chạy khi chuyển từ trạng thái khác sang completed)
+    if (newStatus === "completed" && oldStatus !== "completed" && order.userId) {
       try {
-        const Customer = (await import("../models/Customer.js")).default;
-        const { PointHistory } = await import("../models/Customer.js");
+        // Kiểm tra xem đơn hàng này đã được tích điểm chưa
+        const existingHistory = await PointHistory.findOne({ orderId: order._id });
         
-        // Tính điểm chỉ dựa trên tổng tiền hàng, không tính phí vận chuyển
-        const points = Math.floor(order.totals.items / 1000);
-        if (points > 0) {
-          await Customer.findByIdAndUpdate(order.userId, { $inc: { loyaltyPoints: points } });
-          // Lưu lịch sử nhận điểm
-          await PointHistory.create({
-            userId: order.userId,
-            orderId: order._id,
-            orderCode: order.code,
-            points,
-            description: `Tích điểm từ đơn hàng ${order.code}`,
-            createdAt: new Date()
-          });
+        if (!existingHistory) {
+          // Tính điểm: 1000 VNĐ = 1 điểm. Dựa trên tổng tiền hàng (items subtotal)
+          const itemsTotal = Number(order.totals?.items || 0);
+          const points = Math.floor(itemsTotal / 1000);
+          
+          console.log(`[LoyaltyPoints] Processing order ${order.code}. Items total: ${itemsTotal}. Points: ${points}`);
+          
+          if (points > 0) {
+            const updatedCustomer = await Customer.findByIdAndUpdate(
+              order.userId, 
+              { $inc: { loyaltyPoints: points } },
+              { new: true }
+            );
+            
+            if (updatedCustomer) {
+              console.log(`[LoyaltyPoints] Successfully awarded ${points} pts to ${order.userId}. New balance: ${updatedCustomer.loyaltyPoints}`);
+              
+              await PointHistory.create({
+                userId: order.userId,
+                orderId: order._id,
+                orderCode: order.code,
+                points,
+                description: `Tích điểm từ đơn hàng ${order.code}`,
+                createdAt: new Date()
+              });
+            } else {
+              console.warn(`[LoyaltyPoints] Could not find customer ${order.userId} to award points.`);
+            }
+          }
+        } else {
+          console.log(`[LoyaltyPoints] Order ${order.code} already has points awarded. Skipping.`);
         }
       } catch (pointErr) {
-        console.error("Error updating loyalty points:", pointErr);
+        console.error("[LoyaltyPoints] Error awarding points:", pointErr);
       }
     }
 
@@ -368,6 +349,17 @@ export async function shipOrder(req, res) {
       ]
     });
     await shipment.save();
+
+    if (order.status === "pending") {
+      try {
+        await reduceStockFIFO(order, req.user?.id);
+      } catch (error) {
+        console.error(`FIFO allocation error during shipping for order ${order.code}:`, error);
+        return res.status(400).json({ 
+          message: `Không đủ hàng trong kho. ${error.message}` 
+        });
+      }
+    }
 
     order.status = "shipping";
     order.shipment = shipment._id;

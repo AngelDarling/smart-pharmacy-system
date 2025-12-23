@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import api from "./api/client.js";
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import useCart from "./hooks/useCart.js";
 import { useAuth } from "./contexts/AuthContext.jsx";
@@ -55,6 +56,9 @@ import HealthNewsManagement from './pages/admin/healthNews/HealthNewsManagement.
 import HealthNewsEditor from "./pages/admin/healthNews/HealthNewsEditor.jsx";
 import HealthNews from "./pages/healthNews/HealthNews.jsx";
 import HealthNewsDetail from "./pages/healthNews/HealthNewsDetail.jsx";
+import ShipperSimulator from "./pages/ShipperSimulator.jsx";
+import LiveChat from "./components/LiveChat.jsx";
+import AdminChat from "./pages/admin/AdminChat.jsx";
 
 // Static Pages
 import About from "./pages/static/About.jsx";
@@ -81,7 +85,7 @@ function Login() {
     e.preventDefault();
     setError("");
     try {
-      const res = await axios.post("/api/auth/login", { email, password });
+      const res = await api.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
       window.location.href = "/";
     } catch {
@@ -121,7 +125,7 @@ function Register() {
     e.preventDefault();
     setError("");
     try {
-      const res = await axios.post("/api/auth/register", { name, email, password });
+      const res = await api.post("/auth/register", { name, email, password });
       localStorage.setItem("token", res.data.token);
       window.location.href = "/";
     } catch {
@@ -172,6 +176,7 @@ const formatDiscountAmount = (amount) => {
 function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
+  const isSimulatorRoute = location.pathname === "/shipper-simulator";
   const { items: cartItems, remove: removeFromCart } = useCart();
   const { user, logout } = useAuth();
 
@@ -411,7 +416,7 @@ function App() {
           }
         }
       `}</style>
-      {!isAdminRoute && (
+      {!isAdminRoute && !isSimulatorRoute && (
         <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
           {/* Main header */}
           <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "white", padding: "16px 0" }}>
@@ -1228,7 +1233,7 @@ function App() {
                           {/* Category Icon/Image */}
                           {c.iconUrl && c.iconUrl.trim() ? (
                             <img
-                              src={c.iconUrl.startsWith('http') ? c.iconUrl : `http://localhost:5000${c.iconUrl}`}
+                              src={c.iconUrl.startsWith('http') ? c.iconUrl : `${c.iconUrl}`}
                               alt={c.name}
                               style={{
                                 width: 40,
@@ -1272,7 +1277,7 @@ function App() {
                               {/* Level 2 Category Icon/Image */}
                               {c2.iconUrl && c2.iconUrl.trim() ? (
                                 <img
-                                  src={c2.iconUrl.startsWith('http') ? c2.iconUrl : `http://localhost:5000${c2.iconUrl}`}
+                                  src={c2.iconUrl.startsWith('http') ? c2.iconUrl : `${c2.iconUrl}`}
                                   alt={c2.name}
                                   style={{
                                     width: 36,
@@ -1308,6 +1313,101 @@ function App() {
                             <div style={{ color: "#9ca3af" }}>Chọn danh mục cấp 1 để xem danh mục con</div>
                           )}
                       </div>
+
+                      {/* Featured Products inside Dropdown */}
+                      {(() => {
+                        const activeLevel1 = (activeRootCategory.children || []).find((c) => c._id === activeLevel1Id);
+                        const featuredProducts = activeLevel1?.featuredProducts || [];
+                        if (featuredProducts.length === 0) return null;
+
+                        return (
+                          <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ width: 4, height: 18, background: "#10b981", borderRadius: 2 }}></span>
+                                <span style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Bán chạy nhất</span>
+                              </div>
+                              <Link to={`/catalog?category=${activeLevel1.slug}`} style={{ fontSize: 14, color: "#3b82f6", textDecoration: "none", fontWeight: 500 }}>Xem tất cả ›</Link>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
+                              {featuredProducts.map((p) => {
+                                // Calculate discount if exists
+                                const hasDiscount = p.compareAtPrice > p.price;
+                                const discountPercent = hasDiscount ? Math.round(((p.compareAtPrice - p.price) / p.compareAtPrice) * 100) : 0;
+
+                                return (
+                                  <Link
+                                    key={p._id}
+                                    to={`/p/${p.slug}`}
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 10,
+                                      padding: 12,
+                                      border: "1px solid #f0f0f0",
+                                      borderRadius: 12,
+                                      textDecoration: "none",
+                                      color: "inherit",
+                                      background: "white",
+                                      transition: "all 0.3s ease",
+                                      boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.transform = "translateY(-4px)";
+                                      e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0,0,0,0.1)";
+                                      e.currentTarget.style.borderColor = "#e5e7eb";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.transform = "translateY(0)";
+                                      e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
+                                      e.currentTarget.style.borderColor = "#f0f0f0";
+                                    }}
+                                  >
+                                    <div style={{ position: "relative", width: "100%", height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                      <img
+                                        src={getImageUrl(p.imageUrls?.[0], '/default-product.png')}
+                                        alt={p.name}
+                                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                                        onError={(e) => handleImageError(e, '/default-product.png')}
+                                      />
+                                      {hasDiscount && (
+                                        <div style={{ position: "absolute", top: 0, right: 0, background: "#ef4444", color: "white", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>
+                                          -{discountPercent}%
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                      <span style={{
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        lineHeight: "1.3",
+                                        height: 34,
+                                        overflow: "hidden",
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: "vertical",
+                                        color: "#374151"
+                                      }}>
+                                        {p.name}
+                                      </span>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                        <span style={{ fontSize: 14, fontWeight: 800, color: "#10b981" }}>
+                                          {p.price.toLocaleString()}đ
+                                        </span>
+                                        {hasDiscount && (
+                                          <span style={{ fontSize: 11, color: "#9ca3af", textDecoration: "line-through" }}>
+                                            {p.compareAtPrice.toLocaleString()}đ
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1338,6 +1438,7 @@ function App() {
         <Route path="/health-check/:slug/result" element={<HealthCheckResultPage />} />
         <Route path="/health-news" element={<HealthNews />} />
         <Route path="/health-news/:slug" element={<HealthNewsDetail />} />
+        <Route path="/shipper-simulator" element={<ShipperSimulator />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -1358,8 +1459,9 @@ function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="chats" element={<AdminChat />} />
           <Route path="categories" element={
-            <ProtectedRoute requiredPermission="read_categories">
+            <ProtectedRoute resource="categories" action="view">
               <CategoryManagement />
             </ProtectedRoute>
           } />
@@ -1369,7 +1471,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="brands" element={
-            <ProtectedRoute requiredPermission="read_products">
+            <ProtectedRoute resource="brands" action="view">
               <BrandManagement />
             </ProtectedRoute>
           } />
@@ -1419,7 +1521,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="coupons" element={
-            <ProtectedRoute requiredPermission="read_products">
+            <ProtectedRoute resource="promotions" action="view">
               <Promotions />
             </ProtectedRoute>
           } />
@@ -1438,27 +1540,27 @@ function App() {
 
           {/* Health News Routes */}
           <Route path="health-news/analytics" element={
-            <ProtectedRoute requiredPermission="manage_content">
+            <ProtectedRoute resource="healthNews" action="view">
               <HealthNewsAnalytics />
             </ProtectedRoute>
           } />
           <Route path="health-news" element={
-            <ProtectedRoute requiredPermission="manage_content">
+            <ProtectedRoute resource="healthNews" action="view">
               <HealthNewsManagement />
             </ProtectedRoute>
           } />
           <Route path="health-news/new" element={
-            <ProtectedRoute requiredPermission="manage_content">
+            <ProtectedRoute resource="healthNews" action="create">
               <HealthNewsEditor />
             </ProtectedRoute>
           } />
           <Route path="health-news/edit/:id" element={
-            <ProtectedRoute requiredPermission="manage_content">
+            <ProtectedRoute resource="healthNews" action="edit">
               <HealthNewsEditor />
             </ProtectedRoute>
           } />
           <Route path="health-news/categories" element={
-            <ProtectedRoute requiredPermission="manage_content">
+            <ProtectedRoute resource="healthNews" action="view">
               <HealthNewsCategoryManagement />
             </ProtectedRoute>
           } />
@@ -1467,7 +1569,7 @@ function App() {
       </Routes>
 
       {/* Footer - Only show on user pages, not admin */}
-      {!location.pathname.startsWith('/admin') && <Footer />}
+      {!location.pathname.startsWith('/admin') && !isSimulatorRoute && <Footer />}
 
       {/* Auth Modal */}
       <AuthModal
@@ -1490,45 +1592,50 @@ function App() {
       />
 
       {/* Floating Order Tracking Button */}
-      {!isAdminRoute && (
-        <Link
-          to="/track-order"
-          style={{
-            position: "fixed",
-            bottom: "100px",
-            right: "20px",
-            width: "60px",
-            height: "60px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            color: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textDecoration: "none",
-            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
-            transition: "all 0.3s ease",
-            zIndex: 999,
-            cursor: "pointer"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "scale(1.1)";
-            e.currentTarget.style.boxShadow = "0 6px 20px rgba(102, 126, 234, 0.6)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
-          }}
-          title="Theo dõi đơn hàng"
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-            <line x1="12" y1="22.08" x2="12" y2="12" />
-          </svg>
-        </Link>
-      )}
-    </div>
+      {
+        !isAdminRoute && !isSimulatorRoute && (
+          <Link
+            to="/track-order"
+            style={{
+              position: "fixed",
+              bottom: "100px",
+              right: "20px",
+              width: "60px",
+              height: "60px",
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textDecoration: "none",
+              boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+              transition: "all 0.3s ease",
+              zIndex: 999,
+              cursor: "pointer"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.1)";
+              e.currentTarget.style.boxShadow = "0 6px 20px rgba(102, 126, 234, 0.6)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+            }}
+            title="Theo dõi đơn hàng"
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+              <line x1="12" y1="22.08" x2="12" y2="12" />
+            </svg>
+          </Link>
+        )
+      }
+
+      {/* Live Chat for customers */}
+      {!isAdminRoute && !isSimulatorRoute && <LiveChat />}
+    </div >
   );
 }
 

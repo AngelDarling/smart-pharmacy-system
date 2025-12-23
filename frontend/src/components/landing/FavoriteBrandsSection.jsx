@@ -162,7 +162,7 @@ export default function FavoriteBrandsSection({ brands, scrollRef, onScrollRef }
                                     >
                                         {pageBrands.map((brand) => {
                                             const logoSrc = brand.logoUrl
-                                                ? (brand.logoUrl.startsWith('http') ? brand.logoUrl : `http://localhost:5000${brand.logoUrl}`)
+                                                ? (brand.logoUrl.startsWith('http') ? brand.logoUrl : `${brand.logoUrl}`)
                                                 : null;
 
                                             return (

@@ -26,7 +26,7 @@ import ProductSalesDaily from './ProductSalesDaily.js';
 
 // ==================== USER MANAGEMENT ====================
 import User from './User.js';
-import Customer from './Customer.js';
+import Customer, { PointHistory } from './Customer.js';
 import Staff from './Staff.js';
 
 // ==================== ORDER & PAYMENT ====================
@@ -77,6 +77,7 @@ export {
   // User Management (3)
   User,
   Customer,
+  PointHistory,
   Staff,
   
   // Order & Payment (4)
@@ -127,6 +128,7 @@ export default {
   // User Management (3)
   User,
   Customer,
+  PointHistory,
   Staff,
   
   // Order & Payment (4)

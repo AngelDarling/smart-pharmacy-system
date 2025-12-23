@@ -4,8 +4,10 @@ import { TagsOutlined, PlusOutlined, ShoppingOutlined, GlobalOutlined, CopyOutli
 import dayjs from 'dayjs';
 import Swal from 'sweetalert2';
 import api from '../../../api/client.js';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 export default function Promotions() {
+  const { permissions } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
@@ -242,8 +244,12 @@ export default function Promotions() {
       fixed: 'right',
       render: (_, r) => (
         <Space>
-          <Button onClick={() => onEdit(r)} size="small">Sửa</Button>
-          <Button danger onClick={() => onDelete(r._id)} size="small">Xóa</Button>
+          {permissions.canEditPromotions() && (
+            <Button onClick={() => onEdit(r)} size="small">Sửa</Button>
+          )}
+          {permissions.canDeletePromotions() && (
+            <Button danger onClick={() => onDelete(r._id)} size="small">Xóa</Button>
+          )}
         </Space>
       )
     }
@@ -359,8 +365,12 @@ export default function Promotions() {
       fixed: 'right',
       render: (_, r) => (
         <Space>
-          <Button onClick={() => onEdit(r)} size="small">Sửa</Button>
-          <Button danger onClick={() => onDelete(r._id)} size="small">Xóa</Button>
+          {permissions.canEditPromotions() && (
+            <Button onClick={() => onEdit(r)} size="small">Sửa</Button>
+          )}
+          {permissions.canDeletePromotions() && (
+            <Button danger onClick={() => onDelete(r._id)} size="small">Xóa</Button>
+          )}
         </Space>
       )
     }
@@ -393,9 +403,11 @@ export default function Promotions() {
             </div>
           </div>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd} size="large">
-          Thêm mã
-        </Button>
+        {permissions.canCreatePromotions() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd} size="large">
+            Thêm mã
+          </Button>
+        )}
       </div>
 
       {/* General Coupons Section */}

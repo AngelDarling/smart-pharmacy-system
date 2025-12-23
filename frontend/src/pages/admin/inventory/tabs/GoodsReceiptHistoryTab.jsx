@@ -31,7 +31,7 @@ const { RangePicker } = DatePicker;
 export default function GoodsReceiptTab() {
     const [loading, setLoading] = useState(false);
     const [transactions, setTransactions] = useState([]);
-    const [products, setProducts] = useState([]);
+    const [batches, setBatches] = useState([]); // Changed from products to batches
     const [suppliers, setSuppliers] = useState([]);
     const [pagination, setPagination] = useState({
         current: 1,
@@ -39,7 +39,7 @@ export default function GoodsReceiptTab() {
         total: 0
     });
     const [filters, setFilters] = useState({
-        productId: undefined,
+        batchNumber: undefined, // Changed from productId to batchNumber
         supplierId: undefined,
         dateRange: null
     });
@@ -60,34 +60,43 @@ export default function GoodsReceiptTab() {
                 type: 'import' // Only show import transactions
             };
 
-            if (filters.productId) params.productId = filters.productId;
+            if (filters.batchNumber) params.batchNumber = filters.batchNumber; // Changed to filter by batch
             if (filters.supplierId) params.supplierId = filters.supplierId;
             if (filters.dateRange && filters.dateRange[0]) {
                 params.startDate = filters.dateRange[0].format('YYYY-MM-DD');
                 params.endDate = filters.dateRange[1].format('YYYY-MM-DD');
             }
 
-            const [transactionsRes, productsRes, suppliersRes] = await Promise.all([
+            const [transactionsRes, batchesRes, suppliersRes] = await Promise.all([
                 api.get('/inventory/transactions', { params }),
-                api.get('/products?limit=1000'),
+                api.get('/inventory/stock-by-batch'), // Get batches instead of products
                 api.get('/suppliers')
             ]);
 
             const importTransactions = transactionsRes.data.transactions || [];
             setTransactions(importTransactions);
-            setProducts(productsRes.data.items || []);
+
+            // Extract unique batch numbers
+            const uniqueBatches = [...new Set(batchesRes.data.map(b => b.batchNumber).filter(Boolean))];
+            setBatches(uniqueBatches.sort());
+
             setSuppliers(suppliersRes.data.items || []);
 
-            // Calculate stats
-            const totalImports = importTransactions.length;
-            const totalQuantity = importTransactions.reduce((sum, t) => sum + t.quantity, 0);
-            const totalValue = importTransactions.reduce((sum, t) => sum + (t.unitCost * t.quantity || 0), 0);
+            // Use stats from backend (calculated from ALL filtered transactions, not just current page)
+            if (transactionsRes.data.stats) {
+                setStats(transactionsRes.data.stats);
+            } else {
+                // Fallback: calculate from current page only
+                const totalImports = importTransactions.length;
+                const totalQuantity = importTransactions.reduce((sum, t) => sum + t.quantity, 0);
+                const totalValue = importTransactions.reduce((sum, t) => sum + (t.unitCost * t.quantity || 0), 0);
 
-            setStats({
-                totalImports,
-                totalQuantity,
-                totalValue
-            });
+                setStats({
+                    totalImports,
+                    totalQuantity,
+                    totalValue
+                });
+            }
 
             setPagination(prev => ({
                 ...prev,
@@ -267,17 +276,17 @@ export default function GoodsReceiptTab() {
                 <Row gutter={[16, 16]} align="middle">
                     <Col xs={24} sm={12} lg={6}>
                         <Select
-                            placeholder="Chọn sản phẩm"
-                            value={filters.productId}
-                            onChange={(value) => handleFilterChange('productId', value)}
+                            placeholder="Chọn số lô"
+                            value={filters.batchNumber}
+                            onChange={(value) => handleFilterChange('batchNumber', value)}
                             style={{ width: '100%' }}
                             allowClear
                             showSearch
                             optionFilterProp="children"
                         >
-                            {products.map(product => (
-                                <Option key={product._id} value={product._id}>
-                                    {product.name}
+                            {batches.map(batchNum => (
+                                <Option key={batchNum} value={batchNum}>
+                                    {batchNum}
                                 </Option>
                             ))}
                         </Select>

@@ -31,11 +31,13 @@ import paymentRoutes from "./routes/payment.js";
 import healthNewsCategoryRoutes from "./routes/healthNewsCategoryRoutes.js";
 import healthNewsRoutes from "./routes/healthNewsRoutes.js";
 import uploadRoutes from "./routes/upload.js";
+import liveChatRoutes from "./routes/liveChat.js";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
 import { errorHandler, notFound } from "./middlewares/error.js";
 import { startOrderCleanupJob } from "./jobs/orderCleanup.js";
+import { startExpiryCheckerJob } from "./jobs/expiryChecker.js";
 
 const app = express();
 app.use(cors());
@@ -74,6 +76,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/health-news-categories", healthNewsCategoryRoutes);
 app.use("/api/health-news", healthNewsRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/live-chat", liveChatRoutes);
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Pharmacy Backend 🚀" });
 });
@@ -108,6 +111,7 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
 
 // Start cron jobs
 startOrderCleanupJob();
+startExpiryCheckerJob();
 
 // Error handlers
 app.use(notFound);

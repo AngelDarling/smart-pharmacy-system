@@ -460,16 +460,16 @@ const StaffManagement = () => {
             label: 'Xem chi tiết',
             onClick: () => handleViewStaff(record)
           },
-          ...(permissions.canWriteUsers() ? [{
+          ...(permissions.canEditStaff() ? [{
             key: 'edit',
             icon: <EditOutlined />,
             label: 'Chỉnh sửa',
             onClick: () => handleEditUser(record)
           }] : []),
-          ...(permissions.canWriteUsers() || permissions.canDeleteUsers() ? [{
+          ...(permissions.canEditStaff() || permissions.canDeleteStaff() ? [{
             type: 'divider'
           }] : []),
-          ...(permissions.canDeleteUsers() ? [{
+          ...(permissions.canDeleteStaff() ? [{
             key: 'delete',
             icon: <DeleteOutlined />,
             label: 'Xóa nhân viên',
@@ -493,7 +493,7 @@ const StaffManagement = () => {
                 }}
               />
             </Tooltip>
-            {permissions.canWriteUsers() && (
+            {permissions.canEditStaff() && (
               <Tooltip title="Chỉnh sửa">
                 <Button
                   type="text"
@@ -509,7 +509,7 @@ const StaffManagement = () => {
               </Tooltip>
             )}
             {/* Permissions button - admin only */}
-            {permissions.canWriteUsers() && (
+            {permissions.canManagePermissions() && (
               <Tooltip title="Phân quyền">
                 <Button
                   type="text"
@@ -592,7 +592,7 @@ const StaffManagement = () => {
               size="large"
             />
           </Tooltip>
-          {permissions.canWriteUsers() && (
+          {permissions.canCreateStaff() && (
             <Button
               type="primary"
               icon={<PlusOutlined />}

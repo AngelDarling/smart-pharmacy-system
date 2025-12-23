@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
+import { Table, Tag, Typography, Card, Space, Button, Descriptions, Empty, Spin } from 'antd';
+import { CrownOutlined, HistoryOutlined, ShoppingOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useAuth } from "../contexts/AuthContext.jsx";
 import api from "../api/client.js";
+
+const { Text, Title } = Typography;
 
 function PointHistoryTable() {
   const [history, setHistory] = useState([]);
@@ -11,41 +15,67 @@ function PointHistoryTable() {
       try {
         const res = await api.get("/auth/me/point-history");
         setHistory(res.data);
-      } catch {} // lỗi mạng/API -> giữ history=[]
+      } catch (err) {
+        console.error("Error fetching point history:", err);
+      }
       setLoading(false);
     })();
   }, []);
 
+  const columns = [
+    {
+      title: 'Mã đơn hàng',
+      dataIndex: 'orderCode',
+      key: 'orderCode',
+      render: (code) => (
+        <Space>
+          <ShoppingOutlined style={{ color: '#6366f1' }} />
+          <Text strong>{code || "-"}</Text>
+        </Space>
+      )
+    },
+    {
+      title: 'Số điểm nhận',
+      dataIndex: 'points',
+      key: 'points',
+      align: 'center',
+      render: (points) => (
+        <Tag color="purple" style={{ fontSize: '14px', padding: '4px 12px', borderRadius: 20 }}>
+          <CrownOutlined /> +{points} điểm
+        </Tag>
+      )
+    },
+    {
+      title: 'Ngày nhận',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      align: 'right',
+      render: (date) => (
+        <Space>
+          <CalendarOutlined style={{ color: '#8c8c8c' }} />
+          <Text type="secondary">{new Date(date).toLocaleString('vi-VN')}</Text>
+        </Space>
+      )
+    }
+  ];
+
   return (
-    <div style={{ marginTop: 20 }}>
-      <h3 style={{ margin: 0, color: "#4f46e5", fontWeight: 600, marginBottom: 16 }}>Lịch sử nhận điểm</h3>
-      {loading ? (
-        <div>Đang tải...</div>
-      ) : history.length === 0 ? (
-        <div>Bạn chưa có lịch sử nhận điểm.</div>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400, background: "#f9fafb", borderRadius: 8 }}>
-          <thead>
-            <tr style={{ background: "#e0e7ff" }}>
-              <th style={{ padding: 12, textAlign: "left", fontWeight: 500 }}>Mã đơn hàng</th>
-              <th style={{ padding: 12, textAlign: "center", fontWeight: 500 }}>Số điểm nhận</th>
-              <th style={{ padding: 12, textAlign: "center", fontWeight: 500 }}>Ngày nhận</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.map(log => (
-              <tr key={log._id || log.orderCode}>
-                <td style={{ padding: 12 }}>{log.orderCode || "-"}</td>
-                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>{log.points}</td>
-                <td style={{ padding: 12, textAlign: "center" }}>{new Date(log.createdAt).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-      )}
-    </div>
+    <Card
+      title={<Space><HistoryOutlined /> Lịch sử nhận điểm</Space>}
+      styles={{ body: { padding: 0 } }}
+      style={{ marginTop: 24, borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+    >
+      <Table
+        columns={columns}
+        dataSource={history}
+        loading={loading}
+        rowKey={(record) => record._id || record.orderCode || Math.random()}
+        pagination={history.length > 5 ? { pageSize: 5 } : false}
+        locale={{
+          emptyText: <Empty description="Bạn chưa có lịch sử nhận điểm" />
+        }}
+      />
+    </Card>
   );
 }
 
@@ -98,70 +128,79 @@ export default function Profile() {
   }
 
   return (
-    <div style={{ maxWidth: 960, width: "100%", margin: "40px auto 0", padding: 20 }}>
-      <h1 style={{ marginBottom: 32, color: "#1f2937" }}>Thông tin cá nhân</h1>
-      
-      <div style={{ 
-        background: "white", 
-        borderRadius: 12, 
-        padding: 32, 
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-        border: "1px solid #e5e7eb",
-        maxWidth: 900, width: "100%",
+    <div style={{ maxWidth: 960, width: "100%", margin: "40px auto 100px", padding: "0 20px" }}>
+      <div style={{ marginBottom: 32 }}>
+        <Title level={2} style={{ margin: 0 }}>Thông tin cá nhân</Title>
+        <Text type="secondary">Quản lý thông tin tài khoản và theo dõi điểm thưởng của bạn</Text>
+      </div>
+
+      <div style={{
+        background: "white",
+        borderRadius: 16,
+        padding: 40,
+        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+        border: "1px solid #f1f5f9",
         margin: "0 auto"
       }}>
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 24, justifyContent: "space-between", gap: 10 }}>
-          <h2 style={{ margin: 0, color: "#374151" }}>Thông tin tài khoản</h2>
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              style={{
-                padding: "8px 16px",
-                background: "#667eea",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                cursor: "pointer"
-              }}
-            >
-              Chỉnh sửa
-            </button>
-          )}
-        </div>
+        {/* Loyalty Points Section */}
         <div style={{
-          marginBottom: 24,
-          background: "#eef2ff",
-          padding: "16px 16px 16px 24px",
-          borderRadius: 8,
+          marginBottom: 32,
+          background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+          padding: "24px 32px",
+          borderRadius: 16,
           display: "flex",
           alignItems: "center",
-          gap: 20,
-          justifyContent: "space-between"
+          gap: 24,
+          justifyContent: "space-between",
+          color: "white",
+          boxShadow: "0 10px 15px -3px rgba(99, 102, 241, 0.3)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontWeight: 500, color: "#4f46e5", fontSize: 18 }}>
-              Điểm tích lũy:
-            </span>
-            <span style={{ color: "#1e293b", fontSize: 22, fontWeight: 700 }}>
-              {user.loyaltyPoints || 0} điểm
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{
+              width: 64,
+              height: 64,
+              background: "rgba(255, 255, 255, 0.2)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 32
+            }}>
+              <CrownOutlined />
+            </div>
+            <div>
+              <div style={{ opacity: 0.9, fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
+                ĐIỂM TÍCH LŨY HIỆN CÓ
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>
+                {user.loyaltyPoints || 0} <span style={{ fontSize: 16, fontWeight: 400 }}>điểm</span>
+              </div>
+            </div>
           </div>
           <button
             style={{
-              padding: "8px 18px",
-              background: showHistory ? "#6366f1" : "#e5e7eb",
-              color: showHistory ? "white" : "#374151",
+              padding: "12px 24px",
+              background: "white",
+              color: "#6366f1",
               border: "none",
-              borderRadius: 7,
+              borderRadius: 12,
               cursor: "pointer",
-              fontWeight: 500,
-              fontSize: 15
+              fontWeight: 700,
+              fontSize: 15,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "transform 0.2s"
             }}
+            onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
+            onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
             onClick={() => setShowHistory(v => !v)}
           >
-            {showHistory ? "Đóng lịch sử" : "Lịch sử điểm"}
+            <HistoryOutlined />
+            {showHistory ? "Đóng lịch sử" : "Xem lịch sử điểm"}
           </button>
         </div>
+
         {showHistory && <PointHistoryTable />}
 
         <div style={{ display: "grid", gap: 16 }}>

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, message, Image, Button, Space } from 'antd';
 import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../../api/client.js';
 
 const ImageUpload = ({ value = [], onChange, maxCount = 10 }) => {
     const [fileList, setFileList] = useState([]);
@@ -33,11 +33,9 @@ const ImageUpload = ({ value = [], onChange, maxCount = 10 }) => {
 
         try {
             setUploading(true);
-            const token = localStorage.getItem('token');
-            const response = await axios.post('/api/upload/image', formData, {
+            const response = await api.post('/upload/image', formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'multipart/form-data'
                 }
             });
 

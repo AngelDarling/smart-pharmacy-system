@@ -1,4 +1,4 @@
-import { ProductBatch, Product } from '../models/index.js';
+import { ProductBatch, Product, InventoryTransaction } from '../models/index.js';
 
 /**
  * Product Batch Controller
@@ -115,17 +115,31 @@ export async function updateBatchQuantity(req, res) {
 }
 
 /**
- * Helper function: Phân bổ tồn kho từ các lô theo FIFO
+ * Helper function: Phân bổ tồn kho từ các lô theo FEFO (First Expiry First Out)
  * Trả về danh sách các lô cần trừ và số lượng tương ứng
+ * Ưu tiên sử dụng lô gần hết hạn nhất, BỎ QUA lô đã hết hạn
  */
 export async function allocateStockFromBatches(productId, quantityNeeded) {
   try {
-    // Lấy các lô còn hàng, sắp xếp theo ngày nhập (FIFO)
+    const now = new Date();
+
+    // Lấy các lô còn hàng, CHƯA HẾT HẠN, sắp xếp theo ngày hết hạn (FEFO - gần hết hạn nhất trước)
     const batches = await ProductBatch.find({
       productId,
       status: 'active',
-      remainingQuantity: { $gt: 0 }
-    }).sort({ importDate: 1 }); // Lô cũ nhất trước
+      remainingQuantity: { $gt: 0 },
+      // Chỉ lấy batch chưa hết hạn HOẶC không có expiryDate
+      $or: [
+        { expiryDate: { $exists: false } },
+        { expiryDate: null },
+        { expiryDate: { $gte: now } }
+      ]
+    }).sort({ 
+      // Ưu tiên batch có expiryDate gần nhất (FEFO)
+      // Batch không có expiryDate sẽ đi sau
+      expiryDate: 1,
+      importDate: 1 // Nếu cùng expiryDate, ưu tiên lô cũ hơn
+    });
 
     const allocations = [];
     let remaining = quantityNeeded;
@@ -139,18 +153,68 @@ export async function allocateStockFromBatches(productId, quantityNeeded) {
         batchId: batch._id,
         batchNumber: batch.batchNumber,
         quantity: allocateQty,
-        unitCost: batch.unitCost
+        unitCost: batch.unitCost,
+        expiryDate: batch.expiryDate // Thêm thông tin expiry để tracking
       });
 
       remaining -= allocateQty;
     }
 
     if (remaining > 0) {
-      throw new Error(`Không đủ hàng trong kho. Thiếu ${remaining} sản phẩm.`);
+      throw new Error(`Không đủ hàng CÒN HẠN trong kho. Thiếu ${remaining} sản phẩm.`);
     }
 
     return allocations;
   } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Helper function: Trừ tồn kho đồng bộ cho toàn bộ đơn hàng (FIFO/FEFO)
+ * Thực hiện: 1. Phân bổ lô -> 2. Trừ qty batch -> 3. Trừ qty product -> 4. Tạo các giao dịch kho
+ */
+export async function reduceStockFIFO(order, performedBy = null) {
+  try {
+    for (const item of order.items) {
+      // 1. Phân bổ từ các lô (FEFO - First Expiry First Out)
+      const allocations = await allocateStockFromBatches(item.productId, item.quantity);
+      
+      // 2. Trừ số lượng ở từng lô
+      for (const allocation of allocations) {
+        const batch = await ProductBatch.findById(allocation.batchId);
+        if (batch) {
+          batch.remainingQuantity -= allocation.quantity;
+          await batch.save();
+        }
+        
+        // 3. Tạo giao dịch kho chi tiết cho từng lô
+        await InventoryTransaction.create({
+          productId: item.productId,
+          type: "sale",
+          quantity: -allocation.quantity,
+          batchNumber: allocation.batchNumber,
+          unitCost: allocation.unitCost,
+          reason: `Đơn hàng ${order.code} - Xuất kho từ lô ${allocation.batchNumber}`,
+          orderId: order._id,
+          performedBy: performedBy || order.userId || null
+        });
+      }
+      
+      // 4. Cập nhật tổng tồn kho ở Product
+      const product = await Product.findById(item.productId);
+      if (product) {
+        product.totalStock -= item.quantity;
+        // Nếu có variants, cập nhật stockOnHand của variant đầu tiên (đơn giản hóa)
+        if (product.variants && product.variants.length > 0) {
+          const mainVariant = product.variants.find(v => v.isActive) || product.variants[0];
+          mainVariant.stockOnHand -= item.quantity;
+        }
+        await product.save();
+      }
+    }
+  } catch (error) {
+    console.error('Error reducing stock FIFO:', error);
     throw error;
   }
 }

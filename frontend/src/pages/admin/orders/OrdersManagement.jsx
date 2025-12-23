@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import Swal from 'sweetalert2';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import api from '../../../api/client';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -45,6 +46,7 @@ const PAYMENT_STATUS_LABELS = {
 };
 
 export default function OrdersManagement() {
+  const { permissions } = usePermissions();
   const [modal, contextHolder] = Modal.useModal();
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
@@ -135,37 +137,39 @@ export default function OrdersManagement() {
           >
             Chi tiết
           </Button>
-          <Button
-            danger
-            size="small"
-            onClick={() => {
-              modal.confirm({
-                title: 'Xóa đơn hàng?',
-                content: 'Thao tác này sẽ xóa đơn hàng vĩnh viễn. Nếu đơn hàng đã được xử lý, tồn kho sẽ được hoàn lại. Bạn có chắc chắn?',
-                okText: 'Xóa',
-                okType: 'danger',
-                cancelText: 'Hủy',
-                onOk: async () => {
-                  try {
-                    await api.delete(`/orders/${r._id}`);
-                    Swal.fire({
-                      icon: 'success',
-                      title: 'Xóa thành công!',
-                      text: 'Xóa đơn hàng thành công!',
-                      showConfirmButton: false,
-                      timer: 1500
-                    });
-                    load();
-                  } catch (e) {
-                    console.error("Delete failed:", e);
-                    message.error('Không thể xóa đơn hàng: ' + (e.response?.data?.message || e.message));
+          {permissions.canDeleteOrders() && (
+            <Button
+              danger
+              size="small"
+              onClick={() => {
+                modal.confirm({
+                  title: 'Xóa đơn hàng?',
+                  content: 'Thao tác này sẽ xóa đơn hàng vĩnh viễn. Nếu đơn hàng đã được xử lý, tồn kho sẽ được hoàn lại. Bạn có chắc chắn?',
+                  okText: 'Xóa',
+                  okType: 'danger',
+                  cancelText: 'Hủy',
+                  onOk: async () => {
+                    try {
+                      await api.delete(`/orders/${r._id}`);
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Xóa thành công!',
+                        text: 'Xóa đơn hàng thành công!',
+                        showConfirmButton: false,
+                        timer: 1500
+                      });
+                      load();
+                    } catch (e) {
+                      console.error("Delete failed:", e);
+                      message.error('Không thể xóa đơn hàng: ' + (e.response?.data?.message || e.message));
+                    }
                   }
-                }
-              });
-            }}
-          >
-            Xóa
-          </Button>
+                });
+              }}
+            >
+              Xóa
+            </Button>
+          )}
         </Space>
       )
     }
@@ -388,7 +392,7 @@ export default function OrdersManagement() {
                     <Descriptions.Item label="Trạng thái">
                       <Space>
                         <Tag color={STATUS_COLORS[detail.order.status] || 'default'}>{STATUS_LABELS[detail.order.status] || detail.order.status}</Tag>
-                        {detail.order.status !== 'cancelled' && (
+                        {permissions.canEditOrders() && detail.order.status !== 'cancelled' && (
                           <Select
                             size="small"
                             value={detail.order.status}

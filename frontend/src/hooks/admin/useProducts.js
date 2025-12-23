@@ -8,7 +8,7 @@ import { message } from 'antd';
 import Swal from 'sweetalert2';
 import api from '../../api/client.js';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 export const useProducts = () => {
   const [products, setProducts] = useState([]);
@@ -43,6 +43,7 @@ export const useProducts = () => {
       if (filters.brandId) queryParams.append('brandId', filters.brandId);
       if (filters.brandSlug) queryParams.append('brandSlug', filters.brandSlug);
       if (filters.isActive !== undefined) queryParams.append('isActive', filters.isActive);
+      if (filters.outOfStock !== undefined) queryParams.append('outOfStock', filters.outOfStock);
       if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
       if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
       

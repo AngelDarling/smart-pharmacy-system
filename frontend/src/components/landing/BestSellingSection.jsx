@@ -143,7 +143,18 @@ export default function BestSellingSection({ products, page = 0, onPrev, onNext,
                                                         onError={(e) => handleImageError(e, "/default-product.png")}
                                                     />
                                                 </div>
-                                                <div style={{ fontSize: 14, fontWeight: 600, minHeight: 44, color: "#0f172a", marginBottom: 10 }}>{p.name}</div>
+                                                <div style={{
+                                                    fontSize: 14,
+                                                    fontWeight: 600,
+                                                    height: 66,
+                                                    color: "#0f172a",
+                                                    marginBottom: 10,
+                                                    overflow: "hidden",
+                                                    display: "-webkit-box",
+                                                    WebkitLineClamp: 3,
+                                                    WebkitBoxOrient: "vertical",
+                                                    lineHeight: "22px"
+                                                }}>{p.name}</div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                                                     <span style={{ color: "#0ea5e9", fontWeight: 800, fontSize: 16 }}>{(p.finalPrice || p.price)?.toLocaleString()}₫</span>
                                                     {p.discount > 0 && p.originalPrice && p.originalPrice > (p.finalPrice || p.price) && (

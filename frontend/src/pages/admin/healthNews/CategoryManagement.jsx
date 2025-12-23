@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../api/client.js';
 import { Avatar, Button } from 'antd';
 import { FolderOutlined, PlusOutlined } from '@ant-design/icons';
 
-const API_URL = 'http://localhost:5000/api';
 
 function CategoryManagement() {
     const [categories, setCategories] = useState([]);
@@ -24,10 +23,7 @@ function CategoryManagement() {
 
     const fetchCategories = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/health-news-categories`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get(`/health-news-categories`);
             setCategories(response.data);
             setLoading(false);
         } catch (error) {
@@ -39,21 +35,17 @@ function CategoryManagement() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-
             if (editingCategory) {
                 // Update
-                await axios.put(
-                    `${API_URL}/health-news-categories/${editingCategory._id}`,
-                    formData,
-                    { headers: { Authorization: `Bearer ${token}` } }
+                await api.put(
+                    `/health-news-categories/${editingCategory._id}`,
+                    formData
                 );
             } else {
                 // Create
-                await axios.post(
-                    `${API_URL}/health-news-categories`,
-                    formData,
-                    { headers: { Authorization: `Bearer ${token}` } }
+                await api.post(
+                    `/health-news-categories`,
+                    formData
                 );
             }
 
@@ -83,10 +75,7 @@ function CategoryManagement() {
         if (!confirm('Bạn có chắc muốn xóa danh mục này?')) return;
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${API_URL}/health-news-categories/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/health-news-categories/${id}`);
             fetchCategories();
         } catch (error) {
             console.error('Error deleting category:', error);

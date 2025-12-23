@@ -13,9 +13,27 @@ export const PERMISSION_CATEGORIES = [
     permissions: ['view', 'create', 'edit', 'delete']
   },
   {
+    key: 'brands',
+    label: 'Quản Lý Thương Hiệu',
+    icon: 'TagsOutlined',
+    permissions: ['view', 'create', 'edit', 'delete']
+  },
+  {
+    key: 'categories',
+    label: 'Quản Lý Danh Mục',
+    icon: 'AppstoreOutlined',
+    permissions: ['view', 'create', 'edit', 'delete']
+  },
+  {
     key: 'inventory',
     label: 'Quản Lý Tồn Kho',
     icon: 'InboxOutlined',
+    permissions: ['view', 'create', 'edit', 'delete']
+  },
+  {
+    key: 'suppliers',
+    label: 'Quản Lý Nhà Cung Cấp',
+    icon: 'ShopOutlined',
     permissions: ['view', 'create', 'edit', 'delete']
   },
   {
@@ -55,6 +73,18 @@ export const PERMISSION_CATEGORIES = [
     permissions: ['view', 'create', 'edit', 'delete']
   },
   {
+    key: 'reviews',
+    label: 'Đánh Giá Sản Phẩm',
+    icon: 'StarOutlined',
+    permissions: ['view', 'edit', 'delete']
+  },
+  {
+    key: 'healthChecks',
+    label: 'Kiểm Tra Sức Khỏe',
+    icon: 'MedicineBoxOutlined',
+    permissions: ['view', 'create', 'edit', 'delete']
+  },
+  {
     key: 'healthNews',
     label: 'Tin Tức Sức Khỏe',
     icon: 'FileTextOutlined',
@@ -76,39 +106,55 @@ export const PERMISSION_TEMPLATES = {
   admin: {
     dashboard: ['view'],
     products: ['view', 'create', 'edit', 'delete'],
+    brands: ['view', 'create', 'edit', 'delete'],
+    categories: ['view', 'create', 'edit', 'delete'],
     inventory: ['view', 'create', 'edit', 'delete'],
+    suppliers: ['view', 'create', 'edit', 'delete'],
     orders: ['view', 'create', 'edit', 'delete', 'cancel'],
     customers: ['view', 'edit', 'delete'],
     staff: ['view', 'create', 'edit', 'delete', 'permissions'],
     reports: ['view', 'export'],
     settings: ['view', 'edit'],
     promotions: ['view', 'create', 'edit', 'delete'],
+    reviews: ['view', 'edit', 'delete'],
+    healthChecks: ['view', 'create', 'edit', 'delete'],
     healthNews: ['view', 'create', 'edit', 'delete']
   },
   manager: {
     dashboard: ['view'],
     products: ['view', 'create', 'edit'],
+    brands: ['view', 'create', 'edit'],
+    categories: ['view', 'create', 'edit'],
     inventory: ['view', 'create', 'edit'],
+    suppliers: ['view', 'edit'],
     orders: ['view', 'edit', 'cancel'],
     customers: ['view', 'edit'],
     staff: ['view'],
     reports: ['view', 'export'],
     promotions: ['view', 'edit'],
+    reviews: ['view', 'edit'],
+    healthChecks: ['view', 'edit'],
     healthNews: ['view', 'edit']
   },
   staff: {
     dashboard: ['view'],
     products: ['view'],
+    brands: ['view'],
+    categories: ['view'],
     orders: ['view'],
     customers: ['view']
   },
   pharmacist: {
     dashboard: ['view'],
     products: ['view', 'edit'],
+    brands: ['view'],
+    categories: ['view'],
     inventory: ['view'],
     orders: ['view', 'edit'],
     customers: ['view'],
     reports: ['view'],
-    promotions: ['view']
+    promotions: ['view'],
+    reviews: ['view'],
+    healthChecks: ['view']
   }
 };

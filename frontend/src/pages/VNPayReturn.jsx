@@ -9,7 +9,7 @@ export default function VNPayReturn() {
     const query = window.location.search.substring(1);
 
     // Gọi backend để xác thực chữ ký (hash)
-    fetch(`http://localhost:5000/api/payments/vnpay_return?${query}`)
+    fetch(`/api/payments/vnpay_return?${query}`)
       .then(res => res.json())
       .then(data => {
         console.log('Kết quả từ backend:', data);

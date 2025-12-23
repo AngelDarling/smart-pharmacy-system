@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 const CACHE_KEY = 'health_news_categories';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 

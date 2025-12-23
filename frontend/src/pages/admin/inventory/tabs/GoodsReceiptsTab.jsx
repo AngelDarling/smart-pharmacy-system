@@ -205,8 +205,7 @@ export default function GoodsReceiptsTab() {
             dataIndex: 'supplierId',
             key: 'supplierId',
             width: 180,
-            render: (supplier) => supplier?.name || '-',
-            width: 180
+            render: (supplier) => supplier?.name || '-'
         },
         {
             title: 'Số lô',
@@ -243,8 +242,7 @@ export default function GoodsReceiptsTab() {
             dataIndex: 'createdBy',
             key: 'createdBy',
             width: 130,
-            render: (user) => user?.name || 'N/A',
-            width: 130
+            render: (user) => user?.name || 'N/A'
         },
         {
             title: 'Thao tác',

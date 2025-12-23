@@ -8,7 +8,7 @@ import { message } from 'antd';
 import Swal from 'sweetalert2';
 import api from '../../api/client.js';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 export const useCategories = () => {
   const [categories, setCategories] = useState([]);
@@ -236,7 +236,7 @@ export const useCategories = () => {
   };
 
   // Convert flat categories to tree structure
-  const buildCategoryTree = (categories) => {
+  const buildCategoryTree = useCallback((categories) => {
     const categoryMap = new Map();
     const rootCategories = [];
 
@@ -265,10 +265,10 @@ export const useCategories = () => {
     });
 
     return rootCategories;
-  };
+  }, []);
 
   // Get tree data for TreeSelect
-  const getTreeSelectData = (categories) => {
+  const getTreeSelectData = useCallback((categories) => {
     if (!categories || !Array.isArray(categories)) {
       return [];
     }
@@ -277,7 +277,7 @@ export const useCategories = () => {
       title: category.name,
       children: category.children ? getTreeSelectData(category.children) : []
     }));
-  };
+  }, []);
 
   useEffect(() => {
     fetchCategories();

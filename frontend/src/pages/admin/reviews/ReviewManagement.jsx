@@ -27,6 +27,7 @@ import {
 import api from '../../../api/client';
 import Swal from 'sweetalert2';
 import dayjs from 'dayjs';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 const { Search } = Input;
 const { TextArea } = AntInput;
@@ -34,6 +35,7 @@ const { Text } = Typography;
 const { Option } = Select;
 
 const ReviewManagement = () => {
+  const { permissions } = usePermissions();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -302,17 +304,19 @@ const ReviewManagement = () => {
       key: 'actions',
       render: (_, record) => (
         <Space size="small" direction="vertical" style={{ width: '100%' }}>
-          <Button
-            type="link"
-            icon={<MessageOutlined />}
-            onClick={() => handleReply(record)}
-            size="small"
-            style={{ padding: 0, height: 'auto', fontSize: 12 }}
-          >
-            Phản hồi
-          </Button>
+          {permissions.canEditReviews() && (
+            <Button
+              type="link"
+              icon={<MessageOutlined />}
+              onClick={() => handleReply(record)}
+              size="small"
+              style={{ padding: 0, height: 'auto', fontSize: 12 }}
+            >
+              Phản hồi
+            </Button>
+          )}
           <Space size="small" style={{ flexWrap: 'wrap' }}>
-            {record.status !== 'approved' && (
+            {permissions.canEditReviews() && record.status !== 'approved' && (
               <Button
                 type="link"
                 icon={<CheckCircleOutlined />}
@@ -323,7 +327,7 @@ const ReviewManagement = () => {
                 Duyệt
               </Button>
             )}
-            {record.status !== 'rejected' && (
+            {permissions.canEditReviews() && record.status !== 'rejected' && (
               <Button
                 type="link"
                 danger
@@ -335,22 +339,24 @@ const ReviewManagement = () => {
                 Từ chối
               </Button>
             )}
-            <Popconfirm
-              title="Xóa đánh giá này?"
-              onConfirm={() => handleDelete(record._id)}
-              okText="Xóa"
-              cancelText="Hủy"
-            >
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-                style={{ padding: 0, height: 'auto', fontSize: 12 }}
+            {permissions.canDeleteReviews() && (
+              <Popconfirm
+                title="Xóa đánh giá này?"
+                onConfirm={() => handleDelete(record._id)}
+                okText="Xóa"
+                cancelText="Hủy"
               >
-                Xóa
-              </Button>
-            </Popconfirm>
+                <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                >
+                  Xóa
+                </Button>
+              </Popconfirm>
+            )}
           </Space>
         </Space>
       )

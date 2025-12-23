@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Card, Input, Button, Space, Steps, Timeline, Tag, Typography, message, Row, Col, Divider, Avatar, Descriptions, Empty } from 'antd';
 import { CarOutlined, CheckCircleOutlined, ShoppingOutlined, ClockCircleOutlined, ReloadOutlined, EnvironmentOutlined, PhoneOutlined, UserOutlined, ShoppingCartOutlined, DollarOutlined } from '@ant-design/icons';
 import api from '../../../api/client';
@@ -159,6 +159,22 @@ export default function Tracking() {
                   {STATUS_VI[shipment.status] || shipment.status}
                 </Tag>
                 {polling && <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>Đang tự động cập nhật...</div>}
+
+                {/* Delivery Simulator Shortcut for Admin/Demo */}
+                {['pickup', 'shipping'].includes(shipment.status) && (
+                  <div style={{ marginTop: 12 }}>
+                    <Link to={`/shipper-simulator?code=${shipment.shippingCode}`}>
+                      <Button
+                        type="dashed"
+                        danger
+                        icon={<span>🚚</span>}
+                        style={{ borderColor: '#52c41a', color: '#52c41a' }}
+                      >
+                        Mô phỏng giao hàng
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </Col>
             </Row>
 
@@ -285,7 +301,8 @@ export default function Tracking() {
             description="Không tìm thấy thông tin vận chuyển. Vui lòng kiểm tra lại mã vận chuyển hoặc mã đơn hàng."
           />
         </Card>
-      ) : null}
-    </div>
+      ) : null
+      }
+    </div >
   );
 }

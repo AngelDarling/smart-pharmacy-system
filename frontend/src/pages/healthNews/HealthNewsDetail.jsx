@@ -5,7 +5,7 @@ import DOMPurify from 'dompurify';
 import { Helmet } from 'react-helmet-async';
 import HealthNewsCard from '../../components/healthNews/HealthNewsCard';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 function HealthNewsDetail() {
     const { slug } = useParams();

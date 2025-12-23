@@ -13,17 +13,24 @@ import {
     Row,
     Col,
     Divider,
-    message as antMessage
+    message as antMessage,
+    Modal,
+    Upload,
+    Alert
 } from 'antd';
 import {
     PlusOutlined,
     DeleteOutlined,
     SaveOutlined,
-    CheckOutlined
+    CheckOutlined,
+    DownloadOutlined,
+    UploadOutlined,
+    FileExcelOutlined
 } from '@ant-design/icons';
 import api from '../../../../api/client';
 import Swal from 'sweetalert2';
 import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -36,6 +43,13 @@ export default function GoodsReceiptFormTab() {
     const [products, setProducts] = useState([]);
     const [items, setItems] = useState([]);
     const [totalAmount, setTotalAmount] = useState(0);
+
+    // Excel import states
+    const [excelModalVisible, setExcelModalVisible] = useState(false);
+    const [excelFile, setExcelFile] = useState(null);
+    const [parsedData, setParsedData] = useState(null);
+    const [parseErrors, setParseErrors] = useState([]);
+    const [uploading, setUploading] = useState(false);
 
     // Load suppliers and products
     useEffect(() => {
@@ -188,6 +202,103 @@ export default function GoodsReceiptFormTab() {
         }
     };
 
+    // Download Excel template
+    const handleDownloadTemplate = async () => {
+        try {
+            const response = await api.get('/goods-receipts/template', {
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'Template_Nhap_Kho.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            antMessage.success('Đã tải template thành công');
+        } catch (error) {
+            console.error('Download template error:', error);
+            antMessage.error('Không thể tải template');
+        }
+    };
+
+    // Handle Excel file upload
+    const handleExcelUpload = async (file) => {
+        setExcelFile(file);
+        setUploading(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await api.post('/goods-receipts/parse-excel', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (response.data.success) {
+                setParsedData(response.data.data);
+                setParseErrors([]);
+                antMessage.success(`Đã đọc ${response.data.data.totalItems} sản phẩm từ Excel`);
+            } else {
+                setParseErrors(response.data.errors || []);
+                setParsedData(null);
+                antMessage.error('File Excel có lỗi, vui lòng kiểm tra lại');
+            }
+        } catch (error) {
+            console.error('Parse Excel error:', error);
+            antMessage.error(error.response?.data?.message || 'Không thể đọc file Excel');
+            setParsedData(null);
+            setParseErrors([]);
+        } finally {
+            setUploading(false);
+        }
+
+        return false; // Prevent auto upload
+    };
+
+    // Create goods receipt from Excel data
+    const handleCreateFromExcel = async () => {
+        if (!parsedData) return;
+
+        try {
+            setLoading(true);
+
+            const response = await api.post('/goods-receipts/bulk-create', parsedData);
+
+            if (response.data.success) {
+                // Auto approve
+                await api.patch(`/goods-receipts/${response.data.goodsReceipt._id}/approve`);
+
+                Swal.fire({
+                    title: 'Thành công!',
+                    text: `Đã tạo và duyệt phiếu nhập với ${parsedData.totalItems} sản phẩm`,
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+
+                // Close modal and reset
+                setExcelModalVisible(false);
+                setExcelFile(null);
+                setParsedData(null);
+                setParseErrors([]);
+            }
+        } catch (error) {
+            console.error('Create from Excel error:', error);
+            Swal.fire({
+                title: 'Lỗi!',
+                text: error.response?.data?.message || 'Không thể tạo phiếu nhập',
+                icon: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Table columns for product items
     const columns = [
         {
@@ -298,10 +409,29 @@ export default function GoodsReceiptFormTab() {
     return (
         <div>
             <Card style={{ marginBottom: '24px' }}>
-                <Title level={4} style={{ marginTop: 0 }}>Tạo Phiếu Nhập Hàng</Title>
-                <Text type="secondary">
-                    Nhập thông tin phiếu nhập và thêm các sản phẩm. Tất cả sản phẩm sẽ có cùng số lô.
-                </Text>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                        <Title level={4} style={{ marginTop: 0, marginBottom: '8px' }}>Tạo Phiếu Nhập Hàng</Title>
+                        <Text type="secondary">
+                            Nhập thông tin phiếu nhập và thêm các sản phẩm. Tất cả sản phẩm sẽ có cùng số lô.
+                        </Text>
+                    </div>
+                    <Space>
+                        <Button
+                            icon={<DownloadOutlined />}
+                            onClick={handleDownloadTemplate}
+                        >
+                            Tải template Excel
+                        </Button>
+                        <Button
+                            type="primary"
+                            icon={<FileExcelOutlined />}
+                            onClick={() => setExcelModalVisible(true)}
+                        >
+                            Import từ Excel
+                        </Button>
+                    </Space>
+                </div>
 
                 <Divider />
 
@@ -434,6 +564,152 @@ export default function GoodsReceiptFormTab() {
                     </Button>
                 </Space>
             </Card>
+
+            {/* Excel Import Modal */}
+            <Modal
+                title="Import từ Excel"
+                open={excelModalVisible}
+                onCancel={() => {
+                    setExcelModalVisible(false);
+                    setExcelFile(null);
+                    setParsedData(null);
+                    setParseErrors([]);
+                }}
+                width={900}
+                footer={[
+                    <Button key="cancel" onClick={() => setExcelModalVisible(false)}>
+                        Hủy
+                    </Button>,
+                    <Button
+                        key="create"
+                        type="primary"
+                        onClick={handleCreateFromExcel}
+                        disabled={!parsedData || parseErrors.length > 0}
+                        loading={loading}
+                    >
+                        Tạo phiếu nhập
+                    </Button>
+                ]}
+            >
+                <Space direction="vertical" style={{ width: '100%' }} size="large">
+                    <Alert
+                        message="Hướng dẫn"
+                        description={
+                            <ol style={{ margin: 0, paddingLeft: '20px' }}>
+                                <li>Tải template Excel bằng nút "Tải template Excel"</li>
+                                <li>Điền thông tin phiếu nhập và danh sách sản phẩm vào file</li>
+                                <li>Upload file đã điền vào đây để kiểm tra</li>
+                                <li>Nếu không có lỗi, bấm "Tạo phiếu nhập"</li>
+                            </ol>
+                        }
+                        type="info"
+                        showIcon
+                    />
+
+                    <Upload.Dragger
+                        accept=".xlsx,.xls"
+                        beforeUpload={handleExcelUpload}
+                        fileList={excelFile ? [excelFile] : []}
+                        onRemove={() => {
+                            setExcelFile(null);
+                            setParsedData(null);
+                            setParseErrors([]);
+                        }}
+                        maxCount={1}
+                    >
+                        <p className="ant-upload-drag-icon">
+                            <UploadOutlined />
+                        </p>
+                        <p className="ant-upload-text">Click hoặc kéo file Excel vào đây</p>
+                        <p className="ant-upload-hint">
+                            Chỉ hỗ trợ file .xlsx hoặc .xls
+                        </p>
+                    </Upload.Dragger>
+
+                    {uploading && <Alert message="Đang đọc file..." type="info" />}
+
+                    {parseErrors.length > 0 && (
+                        <Alert
+                            message="File có lỗi"
+                            description={
+                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                                    {parseErrors.map((err, idx) => (
+                                        <li key={idx}>
+                                            <strong>Dòng {err.row}:</strong> {err.field} - {err.message}
+                                        </li>
+                                    ))}
+                                </ul>
+                            }
+                            type="error"
+                            showIcon
+                        />
+                    )}
+
+                    {parsedData && parseErrors.length === 0 && (
+                        <>
+                            <Alert
+                                message={`Đã đọc thành công ${parsedData.totalItems} sản phẩm`}
+                                type="success"
+                                showIcon
+                            />
+
+                            <div>
+                                <Title level={5}>Thông tin phiếu nhập</Title>
+                                <Row gutter={16}>
+                                    <Col span={12}>
+                                        <Text><strong>Nhà cung cấp ID:</strong> {parsedData.receiptInfo.supplierId}</Text>
+                                    </Col>
+                                    <Col span={12}>
+                                        <Text><strong>Số lô:</strong> {parsedData.receiptInfo.batchNumber}</Text>
+                                    </Col>
+                                </Row>
+                            </div>
+
+                            <div>
+                                <Title level={5}>Danh sách sản phẩm</Title>
+                                <Table
+                                    dataSource={parsedData.products}
+                                    rowKey={(record, index) => index}
+                                    pagination={false}
+                                    scroll={{ y: 300 }}
+                                    size="small"
+                                    columns={[
+                                        {
+                                            title: 'SKU',
+                                            dataIndex: 'sku',
+                                            width: 120
+                                        },
+                                        {
+                                            title: 'Tên sản phẩm',
+                                            dataIndex: 'productName',
+                                            ellipsis: true
+                                        },
+                                        {
+                                            title: 'SL',
+                                            dataIndex: 'quantity',
+                                            width: 60,
+                                            align: 'center'
+                                        },
+                                        {
+                                            title: 'Đơn giá',
+                                            dataIndex: 'unitCost',
+                                            width: 100,
+                                            align: 'right',
+                                            render: (val) => `${val?.toLocaleString('vi-VN')} ₫`
+                                        },
+                                        {
+                                            title: 'HSD',
+                                            dataIndex: 'expiryDate',
+                                            width: 100,
+                                            render: (val) => val || '-'
+                                        }
+                                    ]}
+                                />
+                            </div>
+                        </>
+                    )}
+                </Space>
+            </Modal>
         </div>
     );
 }

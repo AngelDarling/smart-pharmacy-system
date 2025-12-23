@@ -57,10 +57,10 @@ export default function Checkout() {
   }, [allItems, savedSelectedIds]);
 
   const [formData, setFormData] = useState({
-    fullName: user?.fullName || "",
+    fullName: user?.fullName || user?.name || "",
     phone: user?.phone || "",
     email: user?.email || "",
-    address: "",
+    address: user?.address || "",
     city: "",
     district: "",
     ward: "",
@@ -69,6 +69,19 @@ export default function Checkout() {
     requestInvoice: false,
     addressType: 'after' // Mặc định là địa chỉ mới nhất
   });
+
+  // Tự động điền thông tin nếu user tải chậm hoặc thay đổi
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: prev.fullName || user.fullName || user.name || "",
+        phone: prev.phone || user.phone || "",
+        email: prev.email || user.email || "",
+        address: prev.address || user.address || ""
+      }));
+    }
+  }, [user]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);

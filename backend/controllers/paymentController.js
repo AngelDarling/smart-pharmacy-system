@@ -1,6 +1,7 @@
 import { Payment, Order, Product, InventoryTransaction } from '../models/index.js';
 import { createPaymentRequest, verifySignature, checkTransactionStatus } from '../utils/momo.js';
 import vnpay from '../utils/vnpay.js';
+import { reduceStockFIFO } from './productBatchController.js';
 
 /**
  * Create MoMo payment
@@ -141,42 +142,21 @@ export async function momoIPN(req, res) {
 
       await payment.markAsSuccess(req.body);
 
-      // Update order status
+      // Update order status (Prepare before saving)
       if (order.status === 'pending') {
+        // 1. Reduce inventory first!
+        try {
+          await reduceStockFIFO(order);
+        } catch (invError) {
+          console.error('Inventory reduction failed during MoMo IPN:', invError);
+          // Optional: handle failure (e.g., mark payment as failed even if money received?)
+          // For now, log it and proceed as we already have the money
+        }
+
+        // 2. Change status after successful inventory reduction (or at least attempt)
         order.status = 'processing';
         order.paymentStatus = 'paid';
         await order.save();
-
-        // Reduce inventory (same logic as order status update)
-        for (const item of order.items) {
-          const product = await Product.findById(item.productId);
-          if (product) {
-            if (product.variants && product.variants.length > 0) {
-              const activeVariant = product.variants.find(v => v.isActive);
-              if (activeVariant && activeVariant.stockOnHand >= item.quantity) {
-                activeVariant.stockOnHand -= item.quantity;
-                product.totalStock = product.variants.reduce((total, v) => {
-                  return total + (v.isActive ? v.stockOnHand : 0);
-                }, 0);
-              }
-            } else {
-              if (product.totalStock >= item.quantity) {
-                product.totalStock -= item.quantity;
-              }
-            }
-            await product.save();
-
-            // Create inventory transaction
-            await InventoryTransaction.create({
-              productId: item.productId,
-              type: 'sale',
-              quantity: -item.quantity,
-              reason: `Order ${order.code} - MoMo payment confirmed`,
-              orderId: order._id,
-              performedBy: order.userId || null
-            });
-          }
-        }
 
         // Add loyalty points if user exists
         if (order.userId) {
@@ -307,6 +287,14 @@ export async function checkPaymentStatus(req, res) {
           // Update order status if needed
           const order = await Order.findById(orderId);
           if (order && order.status === 'pending') {
+            // 1. Reduce inventory
+            try {
+              await reduceStockFIFO(order);
+            } catch (invError) {
+              console.error('Inventory reduction failed during MoMo status check:', invError);
+            }
+
+            // 2. Update status
             order.status = 'processing';
             order.paymentStatus = 'paid';
             await order.save();
@@ -549,40 +537,17 @@ export async function vnpayIPN(req, res) {
 
       // Update order status
       if (order.status === 'pending') {
+        // 1. Reduce inventory first!
+        try {
+          await reduceStockFIFO(order);
+        } catch (invError) {
+          console.error('Inventory reduction failed during VNPay IPN:', invError);
+        }
+
+        // 2. Update status
         order.status = 'processing';
         order.paymentStatus = 'paid';
         await order.save();
-
-        // Reduce inventory (same logic as MoMo)
-        for (const item of order.items) {
-          const product = await Product.findById(item.productId);
-          if (product) {
-            if (product.variants && product.variants.length > 0) {
-              const activeVariant = product.variants.find(v => v.isActive);
-              if (activeVariant && activeVariant.stockOnHand >= item.quantity) {
-                activeVariant.stockOnHand -= item.quantity;
-                product.totalStock = product.variants.reduce((total, v) => {
-                  return total + (v.isActive ? v.stockOnHand : 0);
-                }, 0);
-              }
-            } else {
-              if (product.totalStock >= item.quantity) {
-                product.totalStock -= item.quantity;
-              }
-            }
-            await product.save();
-
-            // Create inventory transaction
-            await InventoryTransaction.create({
-              productId: item.productId,
-              type: 'sale',
-              quantity: -item.quantity,
-              reason: `Order ${order.code} - VNPay payment confirmed`,
-              orderId: order._id,
-              performedBy: order.userId || null
-            });
-          }
-        }
 
         // Add loyalty points if user exists
         if (order.userId) {
@@ -717,40 +682,17 @@ export async function vnpayVerifyReturn(req, res) {
 
       // Update order status
       if (order.status === 'pending') {
+        // 1. Reduce inventory first!
+        try {
+          await reduceStockFIFO(order);
+        } catch (invError) {
+          console.error('Inventory reduction failed during VNPay verify return:', invError);
+        }
+
+        // 2. Update status
         order.status = 'processing';
         order.paymentStatus = 'paid';
         await order.save();
-
-        // Reduce inventory
-        for (const item of order.items) {
-          const product = await Product.findById(item.productId);
-          if (product) {
-            if (product.variants && product.variants.length > 0) {
-              const activeVariant = product.variants.find(v => v.isActive);
-              if (activeVariant && activeVariant.stockOnHand >= item.quantity) {
-                activeVariant.stockOnHand -= item.quantity;
-                product.totalStock = product.variants.reduce((total, v) => {
-                  return total + (v.isActive ? v.stockOnHand : 0);
-                }, 0);
-              }
-            } else {
-              if (product.totalStock >= item.quantity) {
-                product.totalStock -= item.quantity;
-              }
-            }
-            await product.save();
-
-            // Create inventory transaction
-            await InventoryTransaction.create({
-              productId: item.productId,
-              type: 'sale',
-              quantity: -item.quantity,
-              reason: `Order ${order.code} - VNPay payment confirmed`,
-              orderId: order._id,
-              performedBy: order.userId || null
-            });
-          }
-        }
 
         // Add loyalty points
         if (order.userId) {

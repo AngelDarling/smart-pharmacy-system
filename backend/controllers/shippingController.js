@@ -50,5 +50,47 @@ export async function trackShipment(req, res) {
     res.status(500).json({ message: "Internal server error" });
   }
 }
+export async function confirmDelivered(req, res) {
+  try {
+    const { code } = req.params;
+    let shipment = await Shipment.findOne({ shippingCode: code });
+    
+    if (!shipment) {
+      // Fallback: search by order code
+      const order = await Order.findOne({ code }).select("_id shipment");
+      if (order && order.shipment) {
+        shipment = await Shipment.findById(order.shipment);
+      }
+    }
 
+    if (!shipment) {
+      return res.status(404).json({ message: "Không tìm thấy thông tin vận chuyển" });
+    }
 
+    // Update status to Delivered
+    shipment.status = "delivered";
+    const now = new Date();
+    
+    const tl = [...shipment.timeline];
+    if (!tl.find(t => t.status === "shipping")) {
+      tl.push({ status: "shipping", timestamp: new Date(now.getTime() - 2 * 60000) });
+    }
+    if (!tl.find(t => t.status === "delivered")) {
+      tl.push({ status: "delivered", timestamp: now });
+    }
+    
+    shipment.timeline = tl;
+    await shipment.save();
+
+    // Update order status to Completed
+    await Order.findByIdAndUpdate(shipment.orderId, { 
+      status: "completed",
+      paymentStatus: "paid"
+    });
+
+    res.json({ success: true, message: "Xác nhận giao hàng thành công", shipment });
+  } catch (error) {
+    console.error("Error confirming delivery:", error);
+    res.status(500).json({ message: "Lỗi hệ thống khi xác nhận giao hàng" });
+  }
+}

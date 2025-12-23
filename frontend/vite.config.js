@@ -8,6 +8,8 @@ export default defineConfig({
     exclude: []
   },
   server: {
+    host: true,                 // ⭐ cho phép truy cập từ ngoài
+    port: 5173,                 // ⭐ giữ cố định port
     proxy: {
       "/api": {
         target: "http://localhost:5000",

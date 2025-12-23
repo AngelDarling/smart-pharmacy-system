@@ -49,7 +49,9 @@ export const usePermissions = () => {
   const hasLegacyPermission = (permission) => {
     if (!user) return false;
     if (user.role === 'admin') return true;
-    return user.permissions && user.permissions.includes(permission);
+    // New permissions structure is object-based, not array
+    // Legacy permissions are no longer supported
+    return false;
   };
 
   // Common permission checks - memoized
@@ -63,11 +65,29 @@ export const usePermissions = () => {
     canEditProducts: () => canEdit('products'),
     canDeleteProducts: () => canDelete('products'),
     
+    // Brands
+    canViewBrands: () => canView('brands'),
+    canCreateBrands: () => canCreate('brands'),
+    canEditBrands: () => canEdit('brands'),
+    canDeleteBrands: () => canDelete('brands'),
+    
+    // Categories
+    canViewCategories: () => canView('categories'),
+    canCreateCategories: () => canCreate('categories'),
+    canEditCategories: () => canEdit('categories'),
+    canDeleteCategories: () => canDelete('categories'),
+    
     // Inventory
     canViewInventory: () => canView('inventory'),
     canCreateInventory: () => canCreate('inventory'),
     canEditInventory: () => canEdit('inventory'),
     canDeleteInventory: () => canDelete('inventory'),
+    
+    // Suppliers
+    canViewSuppliers: () => canView('suppliers'),
+    canCreateSuppliers: () => canCreate('suppliers'),
+    canEditSuppliers: () => canEdit('suppliers'),
+    canDeleteSuppliers: () => canDelete('suppliers'),
     
     // Orders
     canViewOrders: () => canView('orders'),
@@ -101,6 +121,17 @@ export const usePermissions = () => {
     canCreatePromotions: () => canCreate('promotions'),
     canEditPromotions: () => canEdit('promotions'),
     canDeletePromotions: () => canDelete('promotions'),
+    
+    // Reviews
+    canViewReviews: () => canView('reviews'),
+    canEditReviews: () => canEdit('reviews'),
+    canDeleteReviews: () => canDelete('reviews'),
+    
+    // Health Checks
+    canViewHealthChecks: () => canView('healthChecks'),
+    canCreateHealthChecks: () => canCreate('healthChecks'),
+    canEditHealthChecks: () => canEdit('healthChecks'),
+    canDeleteHealthChecks: () => canDelete('healthChecks'),
     
     // Health News
     canViewHealthNews: () => canView('healthNews'),

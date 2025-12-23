@@ -31,6 +31,7 @@
     "react-quill-new": "^3.6.0",
     "react-router-dom": "^7.9.1",
     "recharts": "^3.5.1",
+    "socket.io-client": "^4.8.2",
     "sweetalert2": "^11.14.5",
     "xlsx": "^0.18.5"
   },

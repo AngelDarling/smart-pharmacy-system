@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../../api/client.js';
 import { Avatar, Button, Space } from 'antd';
 import { FileTextOutlined, BarChartOutlined, FolderOutlined, PlusOutlined } from '@ant-design/icons';
 import { useHealthNewsCategories } from '../../../hooks/useHealthNewsCategories';
+import { usePermissions } from '../../../hooks/usePermissions';
 import Swal from 'sweetalert2';
 
-const API_URL = 'http://localhost:5000/api';
-
 function HealthNewsManagement() {
+    const { permissions } = usePermissions();
     const [news, setNews] = useState([]);
     const { categories } = useHealthNewsCategories();
     const [loading, setLoading] = useState(true);
@@ -24,15 +24,12 @@ function HealthNewsManagement() {
 
     const fetchNews = async () => {
         try {
-            const token = localStorage.getItem('token');
             const params = new URLSearchParams();
             if (filters.category) params.append('category', filters.category);
             if (filters.status) params.append('status', filters.status);
             if (filters.search) params.append('search', filters.search);
 
-            const response = await axios.get(`${API_URL}/health-news?${params.toString()}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get(`/health-news?${params.toString()}`);
 
             console.log('Response:', response.data);
             setNews(response.data.items || response.data);
@@ -58,10 +55,7 @@ function HealthNewsManagement() {
         if (!result.isConfirmed) return;
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${API_URL}/health-news/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/health-news/${id}`);
 
             Swal.fire({
                 title: 'Đã xóa!',
@@ -84,10 +78,7 @@ function HealthNewsManagement() {
 
     const handlePublish = async (id) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.put(`${API_URL}/health-news/${id}/publish`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/health-news/${id}/publish`, {});
             fetchNews();
         } catch (error) {
             console.error('Error publishing news:', error);
@@ -137,11 +128,13 @@ function HealthNewsManagement() {
                             Danh mục
                         </Button>
                     </Link>
-                    <Link to="/admin/health-news/new">
-                        <Button type="primary" icon={<PlusOutlined />} size="large">
-                            Tạo bài viết
-                        </Button>
-                    </Link>
+                    {permissions.canCreateHealthNews() && (
+                        <Link to="/admin/health-news/new">
+                            <Button type="primary" icon={<PlusOutlined />} size="large">
+                                Tạo bài viết
+                            </Button>
+                        </Link>
+                    )}
                 </Space>
             </div>
 
@@ -294,23 +287,25 @@ function HealthNewsManagement() {
                                 <td style={{ padding: 12, textAlign: 'center' }}>{article.likeCount || 0}</td>
                                 <td style={{ padding: 12, textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                                        <Link
-                                            to={`/admin/health-news/edit/${article._id}`}
-                                            style={{
-                                                padding: '6px 12px',
-                                                background: '#3b82f6',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: 4,
-                                                cursor: 'pointer',
-                                                fontSize: 13,
-                                                textDecoration: 'none',
-                                                display: 'inline-block'
-                                            }}
-                                        >
-                                            Sửa
-                                        </Link>
-                                        {article.status === 'draft' && (
+                                        {permissions.canEditHealthNews() && (
+                                            <Link
+                                                to={`/admin/health-news/edit/${article._id}`}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    background: '#3b82f6',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: 4,
+                                                    cursor: 'pointer',
+                                                    fontSize: 13,
+                                                    textDecoration: 'none',
+                                                    display: 'inline-block'
+                                                }}
+                                            >
+                                                Sửa
+                                            </Link>
+                                        )}
+                                        {permissions.canEditHealthNews() && article.status === 'draft' && (
                                             <button
                                                 onClick={() => handlePublish(article._id)}
                                                 style={{
@@ -326,20 +321,22 @@ function HealthNewsManagement() {
                                                 Xuất bản
                                             </button>
                                         )}
-                                        <button
-                                            onClick={() => handleDelete(article._id)}
-                                            style={{
-                                                padding: '6px 12px',
-                                                background: '#ef4444',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: 4,
-                                                cursor: 'pointer',
-                                                fontSize: 13
-                                            }}
-                                        >
-                                            Xóa
-                                        </button>
+                                        {permissions.canDeleteHealthNews() && (
+                                            <button
+                                                onClick={() => handleDelete(article._id)}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    background: '#ef4444',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: 4,
+                                                    cursor: 'pointer',
+                                                    fontSize: 13
+                                                }}
+                                            >
+                                                Xóa
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

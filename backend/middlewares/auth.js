@@ -115,14 +115,68 @@ export function requirePermission(permission) {
       return next();
     }
     
-    // Check if user has the specific permission (old array-based)
-    if (!req.user.permissions || !req.user.permissions.includes(permission)) {
+    // Map legacy permissions to new resource-based permissions
+    const legacyPermissionMap = {
+      'manage_content': { resource: 'healthNews', action: 'view' },
+      'read_products': { resource: 'products', action: 'view' },
+      'write_products': { resource: 'products', action: 'edit' },
+      'delete_products': { resource: 'products', action: 'delete' },
+      // User management permissions (general)
+      'read_users': { resource: 'users', action: 'view' },
+      'write_users': { resource: 'users', action: 'edit' },
+      'delete_users': { resource: 'users', action: 'delete' },
+      // Customer-specific permissions
+      'read_customers': { resource: 'customers', action: 'view' },
+      'write_customers': { resource: 'customers', action: 'edit' },
+      'delete_customers': { resource: 'customers', action: 'delete' },
+      // Staff-specific permissions
+      'read_staff': { resource: 'staff', action:'view' },
+      'write_staff': { resource: 'staff', action: 'edit' },
+      'delete_staff': { resource: 'staff', action: 'delete' },
+      // Reports permissions
+      'read_reports': { resource: 'reports', action: 'view' },
+      // Inventory permissions
+      'read_inventory': { resource: 'inventory', action: 'view' },
+      'write_inventory': { resource: 'inventory', action: 'edit' }
+    };
+    
+    // Check if user has permissions
+    if (!req.user.permissions) {
       return res.status(403).json({ 
         message: `Không có quyền truy cập: ${permission}` 
       });
     }
     
-    next();
+    // Check old array-based permissions
+    if (Array.isArray(req.user.permissions)) {
+      if (req.user.permissions.includes(permission)) {
+        return next();
+      }
+      return res.status(403).json({ 
+        message: `Không có quyền truy cập: ${permission}` 
+      });
+    }
+    
+    // Check new object-based permissions
+    if (typeof req.user.permissions === 'object') {
+      // Convert Map to object if needed
+      const perms = req.user.permissions instanceof Map 
+        ? Object.fromEntries(req.user.permissions)
+        : req.user.permissions;
+      
+      // Check if legacy permission can be mapped to new format
+      const mapping = legacyPermissionMap[permission];
+      if (mapping) {
+        const resourcePerms = perms[mapping.resource] || [];
+        if (resourcePerms.includes(mapping.action) || resourcePerms.includes('manage')) {
+          return next();
+        }
+      }
+    }
+    
+    return res.status(403).json({ 
+      message: `Không có quyền truy cập: ${permission}` 
+    });
   };
 }
 

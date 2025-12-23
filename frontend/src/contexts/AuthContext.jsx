@@ -11,7 +11,10 @@ export function AuthProvider({ children }) {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const isAdminPath = window.location.pathname.startsWith("/admin");
+      const tokenKey = isAdminPath ? "admin_token" : "token";
+      const token = localStorage.getItem(tokenKey);
+
       if (!token) {
         setUser(null);
         return;
@@ -32,18 +35,18 @@ export function AuthProvider({ children }) {
     try {
       const response = await api.post("/auth/login", { phone, password });
       const { token, user: userData } = response.data;
-      
+
       localStorage.setItem("token", token);
-      
+
       // Force state update với callback để đảm bảo re-render
       setUser(prevUser => {
         console.log('AuthContext login: setting user from', prevUser, 'to', userData);
         return userData;
       });
-      
+
       // Trigger refresh để force re-render
       setRefreshTrigger(prev => prev + 1);
-      
+
       setLoading(false);
       console.log('AuthContext login: user set to:', userData);
       return userData;
@@ -65,6 +68,7 @@ export function AuthProvider({ children }) {
   function logout() {
     localStorage.setItem("flash", "logout_success");
     localStorage.removeItem("token");
+    localStorage.removeItem("admin_token");
     try {
       clearGlobalCart();
     } catch (e) {

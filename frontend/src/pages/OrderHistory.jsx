@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/client.js";
 
 export default function OrderHistory() {
   const navigate = useNavigate();
@@ -13,18 +14,8 @@ export default function OrderHistory() {
 
   async function fetchOrders() {
     try {
-      const response = await fetch("/api/orders", {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        }
-      });
-
-      if (response.ok) {
-        const ordersData = await response.json();
-        setOrders(ordersData);
-      } else {
-        console.error("Failed to fetch orders");
-      }
+      const response = await api.get("/orders");
+      setOrders(response.data);
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
@@ -63,8 +54,8 @@ export default function OrderHistory() {
     return methodMap[method] || method;
   }
 
-  const filteredOrders = filter === "all" 
-    ? orders 
+  const filteredOrders = filter === "all"
+    ? orders
     : orders.filter(order => order.status === filter);
 
   if (loading) {
@@ -178,9 +169,9 @@ export default function OrderHistory() {
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ 
-                    padding: "6px 12px", 
-                    borderRadius: 16, 
+                  <div style={{
+                    padding: "6px 12px",
+                    borderRadius: 16,
                     background: getStatusColor(order.status),
                     color: "white",
                     fontWeight: 600,

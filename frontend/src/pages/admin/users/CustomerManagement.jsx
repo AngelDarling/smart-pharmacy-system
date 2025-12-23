@@ -48,11 +48,14 @@ import {
 import { useCustomers } from '../../../hooks/admin/useCustomers';
 import CustomerForm from '../../../components/admin/CustomerForm';
 import api from '../../../api/client.js';
+import { usePermissions } from '../../../hooks/usePermissions';
+import Swal from 'sweetalert2';
 
 const { Search } = Input;
 const { Option } = Select;
 
 const CustomerManagement = () => {
+  const { permissions } = usePermissions();
   const {
     customers,
     loading,
@@ -109,13 +112,52 @@ const CustomerManagement = () => {
   };
 
   // Handle delete user
-  const handleDeleteUser = async (userId) => {
-    try {
-      await deleteCustomer(userId);
-      // Reload customers
-      await fetchCustomers(filters);
-    } catch (error) {
-      console.error('Delete error:', error);
+  const handleDeleteUser = async (userId, userName) => {
+    // Show confirmation dialog
+    const result = await Swal.fire({
+      title: 'Xác nhận xóa khách hàng',
+      html: `
+        <p>Bạn có chắc chắn muốn xóa khách hàng <strong>${userName}</strong> không?</p>
+        <p style="color: #ff4d4f; font-weight: 500; margin-top: 12px;">
+          ⚠️ Cảnh báo: Hành động này không thể hoàn tác!
+        </p>
+        <p style="color: #8c8c8c; font-size: 13px; margin-top: 8px;">
+          Tất cả dữ liệu của khách hàng sẽ bị xóa vĩnh viễn khỏi hệ thống.
+        </p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ff4d4f',
+      cancelButtonColor: '#d9d9d9',
+      confirmButtonText: 'Xóa khách hàng',
+      cancelButtonText: 'Hủy bỏ',
+      reverseButtons: true
+    });
+
+    // If user confirmed, proceed with deletion
+    if (result.isConfirmed) {
+      try {
+        await deleteCustomer(userId);
+        // Reload customers
+        await fetchCustomers(filters);
+
+        // Show success message
+        Swal.fire({
+          title: 'Đã xóa!',
+          text: 'Khách hàng đã được xóa thành công.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('Delete error:', error);
+        Swal.fire({
+          title: 'Lỗi!',
+          text: 'Không thể xóa khách hàng. Vui lòng thử lại.',
+          icon: 'error',
+          confirmButtonColor: '#1890ff'
+        });
+      }
     }
   };
 
@@ -355,22 +397,22 @@ const CustomerManagement = () => {
             label: 'Xem lịch sử tích điểm',
             onClick: () => handleViewPointHistory(record)
           },
-          {
+          ...(permissions.canEditCustomers() ? [{
             key: 'edit',
             icon: <EditOutlined />,
             label: 'Chỉnh sửa',
             onClick: () => handleEditUser(record)
-          },
-          {
+          }] : []),
+          ...(permissions.canEditCustomers() || permissions.canDeleteCustomers() ? [{
             type: 'divider'
-          },
-          {
+          }] : []),
+          ...(permissions.canDeleteCustomers() ? [{
             key: 'delete',
             icon: <DeleteOutlined />,
             label: 'Xóa người dùng',
             danger: true,
-            onClick: () => handleDeleteUser(record._id)
-          }
+            onClick: () => handleDeleteUser(record._id, record.name)
+          }] : [])
         ];
 
         return (
@@ -388,19 +430,21 @@ const CustomerManagement = () => {
                 }}
               />
             </Tooltip>
-            <Tooltip title="Chỉnh sửa">
-              <Button
-                type="text"
-                size="small"
-                shape="circle"
-                icon={<EditOutlined />}
-                onClick={() => handleEditUser(record)}
-                style={{
-                  color: '#52c41a',
-                  border: '1px solid #b7eb8f'
-                }}
-              />
-            </Tooltip>
+            {permissions.canEditCustomers() && (
+              <Tooltip title="Chỉnh sửa">
+                <Button
+                  type="text"
+                  size="small"
+                  shape="circle"
+                  icon={<EditOutlined />}
+                  onClick={() => handleEditUser(record)}
+                  style={{
+                    color: '#52c41a',
+                    border: '1px solid #b7eb8f'
+                  }}
+                />
+              </Tooltip>
+            )}
             <Dropdown menu={{ items: actionMenu }} trigger={['click']}>
               <Button
                 type="text"

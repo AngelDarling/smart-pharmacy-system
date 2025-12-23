@@ -2,10 +2,12 @@ import axios from "axios";
 
 // Lightweight axios client; interceptors can be added later if needed
 
-const api = axios.create({ baseURL: "http://localhost:5000/api" });
+const api = axios.create({ baseURL: "/api" });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const isAdminPath = window.location.pathname.startsWith("/admin");
+  const tokenKey = isAdminPath ? "admin_token" : "token";
+  const token = localStorage.getItem(tokenKey);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

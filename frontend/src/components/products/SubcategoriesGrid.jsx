@@ -70,7 +70,7 @@ export default function SubcategoriesGrid({
                                         }}>
                                             {subCategory.iconUrl ? (
                                                 <img
-                                                    src={subCategory.iconUrl.startsWith('http') ? subCategory.iconUrl : `http://localhost:5000${subCategory.iconUrl}`}
+                                                    src={subCategory.iconUrl.startsWith('http') ? subCategory.iconUrl : `${subCategory.iconUrl}`}
                                                     alt={subCategory.name}
                                                     style={{ width: 24, height: 24, objectFit: 'contain' }}
                                                     onError={(e) => {
@@ -125,7 +125,7 @@ export default function SubcategoriesGrid({
                                         }}>
                                             {subCategory.iconUrl ? (
                                                 <img
-                                                    src={subCategory.iconUrl.startsWith('http') ? subCategory.iconUrl : `http://localhost:5000${subCategory.iconUrl}`}
+                                                    src={subCategory.iconUrl.startsWith('http') ? subCategory.iconUrl : `${subCategory.iconUrl}`}
                                                     alt={subCategory.name}
                                                     style={{ width: 28, height: 28, objectFit: 'contain' }}
                                                     onError={(e) => {

@@ -162,19 +162,33 @@ export async function list(req, res) {
   if (req.query.minPrice) q.price = { ...(q.price || {}), $gte: Number(req.query.minPrice) };
   if (req.query.maxPrice) q.price = { ...(q.price || {}), $lte: Number(req.query.maxPrice) };
   if (req.query.isActive !== undefined) q.isActive = req.query.isActive === "true";
+  if (req.query.outOfStock !== undefined) {
+    const isOutOfStock = req.query.outOfStock === "true";
+    q.totalStock = isOutOfStock ? 0 : { $gt: 0 };
+  }
+
 
   const text = req.query.q?.trim();
   if (text) {
-    // Escape special regex characters to prevent injection
-    const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Search across multiple fields with case-insensitive regex
-    q.$or = [
-      { name: { $regex: escapedText, $options: 'i' } },
-      { description: { $regex: escapedText, $options: 'i' } },
-      { sku: { $regex: escapedText, $options: 'i' } },
-      { barcode: { $regex: escapedText, $options: 'i' } }
-    ];
+    // Split search query into individual words (minimum 2 characters)
+    const words = text
+      .split(/\s+/)
+      .filter(word => word.length >= 2)
+      .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); // Escape special chars
+    
+    if (words.length > 0) {
+      // AND logic: ALL words must match (but each word can be in any field)
+      q.$and = words.map(word => ({
+        $or: [
+          { name: { $regex: word, $options: 'i' } },
+          { description: { $regex: word, $options: 'i' } },
+          { sku: { $regex: word, $options: 'i' } },
+          { barcode: { $regex: word, $options: 'i' } }
+        ]
+      }));
+    }
   }
+  
   const filter = q;
 
   console.log(`[ProductController] Query filter:`, JSON.stringify(filter, null, 2));
@@ -995,5 +1009,29 @@ export async function getTodayFeatured(req, res, next) {
   } catch (err) {
     console.error('[getTodayFeatured] Error:', err);
     next(err);
+  }
+}
+
+/**
+ * Export product list to Excel
+ */
+export async function exportProductList(req, res) {
+  try {
+    const { generateProductListExcel } = await import('../utils/excelUtils.js');
+    
+    // Get all active products
+    const products = await Product.find({ isActive: true })
+      .select('sku name unit price costPrice totalStock')
+      .sort({ name: 1 })
+      .lean();
+
+    const buffer = generateProductListExcel(products);
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=Danh_Sach_San_Pham.xlsx');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Export product list error:', error);
+    res.status(500).json({ message: 'Lỗi khi export danh sách sản phẩm' });
   }
 }

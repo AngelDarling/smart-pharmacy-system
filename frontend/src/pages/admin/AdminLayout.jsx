@@ -29,7 +29,8 @@ import {
   SettingOutlined,
   TeamOutlined,
   UsergroupAddOutlined,
-  HeartOutlined
+  HeartOutlined,
+  MessageOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -108,8 +109,13 @@ const AdminLayout = () => {
       icon: <DashboardOutlined />,
       label: 'Dashboard',
     },
+    {
+      key: '/admin/chats',
+      icon: <MessageOutlined />,
+      label: 'Trò chuyện',
+    },
     // Products section
-    ...(permissions.canReadProducts() || permissions.canReadCategories() ? [{
+    ...(permissions.canReadProducts() || permissions.canViewBrands() || permissions.canReadCategories() || permissions.canViewPromotions() || permissions.canViewReviews() || permissions.canViewHealthChecks() ? [{
       key: 'products',
       icon: <ShoppingOutlined />,
       label: 'Sản phẩm',
@@ -118,26 +124,26 @@ const AdminLayout = () => {
           key: '/admin/products',
           label: 'Sản phẩm',
         }] : []),
-        {
+        ...(permissions.canViewBrands() ? [{
           key: '/admin/brands',
           label: 'Thương hiệu',
-        },
-        ...(permissions.canReadCategories() ? [{
+        }] : []),
+        ...(permissions.canReadCategories() || permissions.canViewCategories() ? [{
           key: '/admin/categories',
           label: 'Danh mục',
         }] : []),
-        {
+        ...(permissions.canViewPromotions() ? [{
           key: '/admin/coupons',
           label: 'Mã khuyến mãi',
-        },
-        {
+        }] : []),
+        ...(permissions.canViewReviews() ? [{
           key: '/admin/reviews',
           label: 'Đánh giá sản phẩm',
-        },
-        {
+        }] : []),
+        ...(permissions.canViewHealthChecks() ? [{
           key: '/admin/health-checks',
           label: 'Kiểm tra sức khỏe',
-        },
+        }] : []),
       ].filter(Boolean),
     }] : []),
     // Health News section
@@ -215,16 +221,16 @@ const AdminLayout = () => {
       ],
     }] : []),
     // Users section
-    ...(permissions.canReadUsers() || permissions.canManageStaff() ? [{
+    ...(permissions.canViewCustomers() || permissions.canViewStaff() ? [{
       key: 'users',
       icon: <UsergroupAddOutlined />,
       label: 'Quản lý người dùng',
       children: [
-        ...(permissions.canReadUsers() ? [{
+        ...(permissions.canViewCustomers() ? [{
           key: '/admin/customers',
           label: 'Khách hàng',
         }] : []),
-        ...(permissions.canManageStaff() ? [{
+        ...(permissions.canViewStaff() ? [{
           key: '/admin/staff',
           label: 'Nhân viên',
         }] : []),
@@ -279,6 +285,7 @@ const AdminLayout = () => {
   const getSelectedKeys = () => {
     const path = location.pathname;
     if (path === '/admin/dashboard') return ['/admin/dashboard'];
+    if (path === '/admin/chats') return ['/admin/chats'];
     if (path.startsWith('/admin/products') || path.startsWith('/admin/categories')) {
       return ['products'];
     }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import api from "../api/client.js";
 
 export default function OrderDetail() {
   const { orderId } = useParams();
@@ -13,22 +14,12 @@ export default function OrderDetail() {
 
   async function fetchOrder() {
     try {
-      const response = await fetch(`/api/orders/${orderId}`, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        }
-      });
-
-      if (response.ok) {
-        const orderData = await response.json();
-        setOrder(orderData);
-      } else {
-        alert("Không tìm thấy đơn hàng");
-        navigate("/orders");
-      }
+      const response = await api.get(`/orders/${orderId}`);
+      setOrder(response.data);
     } catch (error) {
       console.error("Error fetching order:", error);
       alert("Có lỗi xảy ra khi tải đơn hàng");
+      navigate("/orders");
     } finally {
       setLoading(false);
     }
@@ -92,9 +83,9 @@ export default function OrderDetail() {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ color: "#1f2937" }}>Chi tiết đơn hàng #{order.code}</h1>
-        <div style={{ 
-          padding: "8px 16px", 
-          borderRadius: 20, 
+        <div style={{
+          padding: "8px 16px",
+          borderRadius: 20,
           background: getStatusColor(order.status),
           color: "white",
           fontWeight: 600,
@@ -108,7 +99,7 @@ export default function OrderDetail() {
         <div style={{ flex: 1 }}>
           <div className="card" style={{ marginBottom: 20 }}>
             <h3 style={{ marginBottom: 16, color: "#1f2937" }}>Thông tin giao hàng</h3>
-            
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div>
                 <strong>Họ và tên:</strong>
@@ -144,14 +135,14 @@ export default function OrderDetail() {
 
           <div className="card">
             <h3 style={{ marginBottom: 16, color: "#1f2937" }}>Sản phẩm đã đặt</h3>
-            
+
             <div style={{ marginBottom: 16 }}>
               {order.items.map((item, index) => (
-                <div key={index} style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  padding: "12px 0", 
-                  borderBottom: "1px solid #e5e7eb" 
+                <div key={index} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "12px 0",
+                  borderBottom: "1px solid #e5e7eb"
                 }}>
                   <div style={{ width: 60, height: 60, background: "#f3f4f6", borderRadius: 4, marginRight: 12 }}></div>
                   <div style={{ flex: 1 }}>
@@ -172,7 +163,7 @@ export default function OrderDetail() {
         <div style={{ width: 400 }}>
           <div className="card" style={{ position: "sticky", top: 20 }}>
             <h3 style={{ marginBottom: 16, color: "#1f2937" }}>Tóm tắt đơn hàng</h3>
-            
+
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <span>Tạm tính:</span>
@@ -208,8 +199,8 @@ export default function OrderDetail() {
             </div>
 
             {order.status === "pending" && (
-              <button 
-                className="btn-secondary" 
+              <button
+                className="btn-secondary"
                 style={{ width: "100%", padding: 12, fontSize: 16, marginBottom: 12 }}
                 onClick={() => {
                   if (confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
@@ -222,9 +213,9 @@ export default function OrderDetail() {
               </button>
             )}
 
-            <button 
-              onClick={() => navigate("/products")} 
-              className="btn-primary" 
+            <button
+              onClick={() => navigate("/products")}
+              className="btn-primary"
               style={{ width: "100%" }}
             >
               Tiếp tục mua sắm

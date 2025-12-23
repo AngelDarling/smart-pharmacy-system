@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Table, Tag, Space, Input, Button, Row, Col, message, Avatar, Select, DatePicker, Statistic, Card } from 'antd';
 import { SearchOutlined, ReloadOutlined, CarOutlined, ClearOutlined, EyeOutlined, DollarOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -130,6 +131,15 @@ export default function ShippingOrders() {
             </div>
           </div>
         </div>
+        <Link to="/shipper-simulator">
+          <Button
+            type="primary"
+            icon={<span>🚚</span>}
+            style={{ backgroundColor: '#10b981', borderColor: '#059669' }}
+          >
+            Mô phỏng giao hàng
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}

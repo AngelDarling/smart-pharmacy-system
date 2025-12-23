@@ -38,23 +38,12 @@ const ProductForm = ({ visible, onCancel, onSubmit, initialValues, isEditing }) 
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Debug categories (temporary)
-  useEffect(() => {
-    if (visible) {
-      console.log('ProductForm - Categories:', categories);
-      console.log('ProductForm - Categories length:', categories?.length);
-      console.log('ProductForm - TreeSelectData:', getTreeSelectData(categories));
-      console.log('ProductForm - TreeSelectData length:', getTreeSelectData(categories)?.length);
-    }
-  }, [visible, categories, getTreeSelectData]);
-
   // Force fetch categories if not loaded
   useEffect(() => {
-    if (visible && (!categories || categories.length === 0)) {
-      console.log('ProductForm - Forcing category fetch');
+    if (visible && (!categories || categories.length === 0) && !loading) {
       fetchCategories();
     }
-  }, [visible, categories, fetchCategories]);
+  }, [visible, categories, fetchCategories, loading]);
 
   // Load brands
   useEffect(() => {
